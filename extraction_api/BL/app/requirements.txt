@@ -1,0 +1,17 @@
+Flask
+Flask-Cors
+fuzzywuzzy
+nltk
+pandas
+regex
+kafka
+mpu
+flask
+flask-cors
+pandas
+sqlalchemy
+mysqlclient
+opencv-python
+ntpath
+pillow
+numpy

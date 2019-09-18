@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title></title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/plugins/bootstrap/bootstrap.css">
+    <link rel="stylesheet" href="css/plugins/materialize/materialize.css">
+    <link rel="stylesheet" href="css/plugins/materialize/mstepper.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/plugins/select_areas/jquery.selectareas.css">
+    <link rel="stylesheet" href="css/helper.css">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div class="row main_body">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sl no</th>
+                    <th>Case Id</th>
+                    <th>File Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody class="displayFiles">
+
+            </tbody>
+        </table>
+    </div>
+    <div class="row">
+
+    </div>
+
+
+
+    <!-- All script tags -->
+    <script src="js/plugins/jquery/jquery.min.js" charset="utf-8"></script>
+    <script src="js/plugins/jquery/jquery-ui.min.js" charset="utf-8"></script>
+    <script src="js/plugins/jquery/moment.min.js" charset="utf-8"></script>
+    <script src="js/plugins/bootstrap/bootstrap.min.js" charset="utf-8"></script>
+    <script src="js/plugins/materialize/materialize.js" charset="utf-8"></script>
+    <script src="js/common.js" charset="utf-8"></script>
+    <script type="text/javascript">
+    $(document).ready(function () {
+        var settings11 = {
+            "async": true,
+            "crossDomain": true,
+            "url": "http://127.0.0.1:5002/give_files",
+            "method": "POST",
+            "processData": false,
+            "contentType": false,
+            "mimeType": "multipart/form-data"
+        };
+        $.ajax(settings11).done(function (msg) {
+            msg = JSON.parse(msg)[0];
+            console.log(msg);
+            tr = ''
+            for (var i = 0; i < msg.length; i++) {
+                tr += '<tr>'
+                tr += '<td>'
+                tr += (i+1)
+                tr += '</td>'
+                tr += '<td>'
+                tr += msg[i][1]
+                tr += '</td>'
+                tr += '<td>'
+                tr += msg[i][0]
+                tr += '</td>'
+                tr += '<td>'
+                tr += '<a href="train.html?case_id='+msg[i][1]+'&file_name='+msg[i][0]+'" target="_blank">Train</a>'
+                tr += '</td>'
+
+                tr += '</tr>'
+            }
+            $(".displayFiles").html(tr)
+        });
+    })
+    </script>
+</body>
+</html>

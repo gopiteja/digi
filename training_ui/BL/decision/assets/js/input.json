@@ -1,0 +1,150 @@
+input_data = {
+    "data": [
+        {
+            "id": "14",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"process_queue\", \"column\": \"queue\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input\", \"value\": \"Processing\"}}}",
+            "rule_id": "14",
+            "next_if_sucess": "15",
+            "next_if_failure": "28",
+            "group": "chain",
+            "stage": "validation"
+        },
+        {
+            "id": "15",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"ContainsCPTandState\", \"parameters\": {\"table_name1\": \"master\", \"column_name1\": \"CPT_Code\", \"table_name2\": \"master\", \"column_name2\": \"State\", \"value1\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Add_on_Table\"}, \"value2\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"STATE\"}}}",
+            "rule_id": "15",
+            "next_if_sucess": "16",
+            "next_if_failure": "28",
+            "group": "chain",
+            "stage": "member"
+        },
+        {
+            "id": "16",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"CheckMultipleCategory\", \"parameters\": {\"value\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Add_on_Table\"}}}",
+            "rule_id": "16",
+            "next_if_sucess": "17",
+            "next_if_failure": "28",
+            "group": "chain",
+            "stage": "member"
+        },
+        {
+            "id": "17",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"CheckMultipleCategoryPA\", \"parameters\": {\"value\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Add_on_Table\"}}}",
+            "rule_id": "17",
+            "next_if_sucess": "BOT",
+            "next_if_failure": "32",
+            "group": "chain",
+            "stage": "bot"
+        },
+        {
+            "id": "19",
+            "rule_string": "",
+            "rule_id": "BOT",
+            "next_if_sucess": "20",
+            "next_if_failure": "20",
+            "group": "chain",
+            "stage": "bot"
+        },
+        {
+            "id": "20",
+            "rule_string": "{\"rule_type\": \"condition\", \"evaluations\": [{\"conditions\": [{\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"rule\", \"value\": {\"rule_type\": \"static\", \"function\": \"Count\", \"parameters\": {\"from_table\": \"demographics\", \"lookup_filters\": [{\"column_name\": \"Last_name\", \"compare_with\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Patient_last_name\"}}, {\"column_name\": \"DOB\", \"compare_with\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"DOB\"}}]}}}, \"operator\": \"==\", \"right_param\": {\"source\": \"input\", \"value\": 1}}}, \"AND\", {\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"member\", \"column\": \"Member_card_id\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Member_card_id\"}}}], \"executions\": []}]}",
+            "rule_id": "20",
+            "next_if_sucess": "21",
+            "next_if_failure": "28",
+            "group": "chain",
+            "stage": "validate member"
+        },
+        {
+            "id": "21",
+            "rule_string": "{\"rule_type\": \"condition\", \"evaluations\": [{\"conditions\": [{\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"demographics\", \"column\": \"First_name\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Patient_first_name\"}}}, \"AND\", {\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"demographics\", \"column\": \"Last_name\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"Patient_last_name\"}}}, \"AND\", {\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"demographics\", \"column\": \"DOB\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"DOB\"}}}, \"AND\", {\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"demographics\", \"column\": \"State\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"STATE\"}}}], \"executions\": []}]}",
+            "rule_id": "21",
+            "next_if_sucess": "25",
+            "next_if_failure": "28",
+            "group": "chain",
+            "stage": "validate member"
+        },
+        {
+            "id": "25",
+            "rule_string": "{\"rule_type\": \"condition\", \"evaluations\": [{\"conditions\": [{\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"insurance\", \"column\": \"Insurance_type\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input\", \"value\": \"medicaid\"}}}, \"AND\", {\"rule_type\": \"static\", \"function\": \"CheckDate\", \"parameters\": {\"value\": {\"source\": \"input_config\", \"table\": \"ocr\", \"column\": \"End_date\"}}}, \"AND\", {\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"insurance\", \"column\": \"Legacy_entity\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input\", \"value\": \"UHC C&S\"}}}], \"executions\": []}]}",
+            "rule_id": "25",
+            "next_if_sucess": "33",
+            "next_if_failure": "32",
+            "group": "chain",
+            "stage": "validate insurance"
+        },
+        {
+            "id": "28",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"Assign\", \"parameters\": {\"assign_table\": {\"table\": \"process_queue\", \"column\": \"queue\"}, \"assign_value\": {\"source\": \"input\", \"value\": \"Manual\"}}}",
+            "rule_id": "28",
+            "next_if_sucess": "END",
+            "next_if_failure": "END",
+            "group": "chain",
+            "stage": "moving to manual queue"
+        },
+        {
+            "id": "30",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"Assign\", \"parameters\": {\"assign_table\": {\"table\": \"process_queue\", \"column\": \"case_type\"}, \"assign_value\": {\"source\": \"input\", \"value\": \"duplicate case\"}}}",
+            "rule_id": "30",
+            "next_if_sucess": "35",
+            "next_if_failure": "35",
+            "group": "chain",
+            "stage": "updating duplicate case"
+        },
+        {
+            "id": "31",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"Assign\", \"parameters\": {\"assign_table\": {\"table\": \"process_queue\", \"column\": \"case_type\"}, \"assign_value\": {\"source\": \"input\", \"value\": \"new case\"}}}",
+            "rule_id": "31",
+            "next_if_sucess": "35",
+            "next_if_failure": "35",
+            "group": "chain",
+            "stage": "updating new case"
+        },
+        {
+            "id": "32",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"Assign\", \"parameters\": {\"assign_table\": {\"table\": \"process_queue\", \"column\": \"case_type\"}, \"assign_value\": {\"source\": \"input\", \"value\": \"end contact\"}}}",
+            "rule_id": "32",
+            "next_if_sucess": "35",
+            "next_if_failure": "35",
+            "group": "chain",
+            "stage": "updating end case"
+        },
+        {
+            "id": "33",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"history\", \"column\": \"History_match\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input\", \"value\": \"Yes\"}}}",
+            "rule_id": "33",
+            "next_if_sucess": "34",
+            "next_if_failure": "31",
+            "group": "chain",
+            "stage": "validate history"
+        },
+        {
+            "id": "34",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"CompareKeyValue\", \"parameters\": {\"left_param\": {\"source\": \"input_config\", \"table\": \"history\", \"column\": \"Case_Status\"}, \"operator\": \"==\", \"right_param\": {\"source\": \"input\", \"value\": \"Open\"}}}",
+            "rule_id": "34",
+            "next_if_sucess": "30",
+            "next_if_failure": "32",
+            "group": "chain",
+            "stage": "validate history"
+        },
+        {
+            "id": "35",
+            "rule_string": "{\"rule_type\": \"static\", \"function\": \"Assign\", \"parameters\": {\"assign_table\": {\"table\": \"process_queue\", \"column\": \"queue\"}, \"assign_value\": {\"source\": \"input\", \"value\": \"Review\"}}}",
+            "rule_id": "35",
+            "next_if_sucess": "END",
+            "next_if_failure": "END",
+            "group": "chain",
+            "stage": "move to review"
+        }
+    ],
+    "trace": ["14","15","16","17","BOT","20","21","25","32","35"],
+    "testData": {
+        "sample": [
+            "This is line 1.",
+            "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer Aldus PageMaker including versions of Lorem Ipsum.",
+            "interdum tincidunt tortor sit amet, mattis venenatis mi. Nam id magna pretium, euismod metus sed, tincidunt arcu. Sed vel ipsum a purus eleifend dictum ut sit amet ante. Praesent accumsan, massa ac vestibulum",
+            "interdum tincidunt tortor sit amet, mattis venenatis mi. Nam id magna pretium, euismod metus sed, tincidunt arcu. Sed vel ipsum a purus eleifend dictum ut sit amet ante. Praesent accumsan, massa ac vestibulum",
+            "interdum tincidunt tortor sit amet, mattis venenatis mi. Nam id magna pretium, euismod metus sed, tincidunt arcu. Sed vel ipsum a purus eleifend dictum ut sit amet ante. Praesent accumsan, massa ac vestibulum",
+            "interdum tincidunt tortor sit amet, mattis venenatis mi. Nam id magna pretium, euismod metus sed, tincidunt arcu. Sed vel ipsum a purus eleifend dictum ut sit amet ante. Praesent accumsan, massa ac vestibulum"
+        ]
+    }
+}

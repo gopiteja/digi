@@ -1,0 +1,10 @@
+Flask
+Flask-Cors
+kafka
+pandas
+requests
+sqlalchemy
+mysqlclient
+jdcal
+et_xmlfile
+openpyxl

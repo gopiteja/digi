@@ -1,0 +1,14 @@
+chardet
+Flask
+Flask-Cors
+kafka
+nltk
+opencv-python
+pandas
+pdf2image
+pillow
+pdfminer.six
+pymysql
+sqlalchemy
+mysqlclient
+

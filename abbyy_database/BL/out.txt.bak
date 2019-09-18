@@ -1,0 +1,167 @@
+
+C:\Users\Algonox\Downloads\AbbyBlobTest\AbbyBlobTest>call Env.cmd 
+
+C:\Users\Algonox\Downloads\AbbyBlobTest\AbbyBlobTest>set JDK=C:\Program Files\Java\jdk1.8.0_181 
+
+C:\Users\Algonox\Downloads\AbbyBlobTest\AbbyBlobTest>"C:\Program Files\Java\jdk1.8.0_181\bin\java" -classpath ".;src\.;lib\abbyy.FREngine.jar;lib\mysql-connector-java-8.0.17.jar" com.algonox.abbyy.OCRExtraction 1 
+{}
+java.io.BufferedInputStream@6bc7c054
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<document xmlns="http://www.abbyy.com/FineReader_xml/FineReader10-schema-v1.xml" version="1.0" producer="ABBYY FineReader Engine 12" languages="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.abbyy.com/FineReader_xml/FineReader10-schema-v1.xml http://www.abbyy.com/FineReader_xml/FineReader10-schema-v1.xml">
+<page width="827" height="1158" resolution="100" originalCoords="1">
+<block blockType="Text" blockName="" l="47" t="0" r="494" b="19"><region><rect l="47" t="0" r="494" b="19"/></region>
+<text>
+<par align="Justified">
+<line baseline="17" l="48" t="6" r="492" b="17"><formatting lang="EnglishUnitedStates">Children’s Health 2 7/25/2019 3:21:51 PM PAGE&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="521" t="0" r="570" b="19"><region><rect l="521" t="0" r="570" b="19"/></region>
+<text>
+<par align="Justified">
+<line baseline="16" l="523" t="6" r="567" b="17"><formatting lang="EnglishUnitedStates">1/007&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="596" t="0" r="606" b="19"><region><rect l="596" t="0" r="606" b="19"/></region>
+<text>
+<par align="Justified">
+<line baseline="17" l="597" t="6" r="605" b="17"><formatting lang="EnglishUnitedStates">F&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="361" r="83" b="374"><region><rect l="51" t="361" r="83" b="374"/></region>
+<text>
+<par align="Justified">
+<line baseline="371" l="53" t="362" r="81" b="371"><formatting lang="EnglishUnitedStates">Date:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="148" t="363" r="216" b="377"><region><rect l="148" t="363" r="216" b="377"/></region>
+<text>
+<par align="Justified">
+<line baseline="373" l="150" t="364" r="213" b="374"><formatting lang="EnglishUnitedStates">07/25/2019&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="50" t="397" r="71" b="410"><region><rect l="50" t="397" r="71" b="410"/></region>
+<text>
+<par align="Justified">
+<line baseline="408" l="52" t="398" r="68" b="408"><formatting lang="EnglishUnitedStates">To:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="147" t="399" r="296" b="416"><region><rect l="147" t="399" r="296" b="416"/></region>
+<text>
+<par align="Justified">
+<line baseline="409" l="149" t="400" r="293" b="413"><formatting lang="EnglishUnitedStates">authorization department&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="434" r="77" b="447"><region><rect l="51" t="434" r="77" b="447"/></region>
+<text>
+<par align="Justified">
+<line baseline="444" l="53" t="435" r="74" b="444"><formatting lang="EnglishUnitedStates">Fax:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="148" t="436" r="220" b="450"><region><rect l="148" t="436" r="220" b="450"/></region>
+<text>
+<par align="Justified">
+<line baseline="447" l="150" t="437" r="217" b="447"><formatting lang="EnglishUnitedStates">8779401972&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="470" r="99" b="487"><region><rect l="51" t="470" r="99" b="487"/></region>
+<text>
+<par align="Justified">
+<line baseline="481" l="53" t="472" r="96" b="484"><formatting lang="EnglishUnitedStates">Subject:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="507" r="87" b="521"><region><rect l="51" t="507" r="87" b="521"/></region>
+<text>
+<par align="Justified">
+<line baseline="518" l="53" t="508" r="84" b="518"><formatting lang="EnglishUnitedStates">From:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="148" t="509" r="220" b="523"><region><rect l="148" t="509" r="220" b="523"/></region>
+<text>
+<par align="Justified">
+<line baseline="520" l="150" t="510" r="217" b="520"><formatting lang="EnglishUnitedStates">Natosha Lee&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="544" r="111" b="560"><region><rect l="51" t="544" r="111" b="560"/></region>
+<text>
+<par align="Justified">
+<line baseline="554" l="53" t="545" r="108" b="557"><formatting lang="EnglishUnitedStates">Company:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="592" r="111" b="608"><region><rect l="51" t="592" r="111" b="608"/></region>
+<text>
+<par align="Justified">
+<line baseline="602" l="53" t="593" r="109" b="605"><formatting lang="EnglishUnitedStates">Company:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="628" r="90" b="645"><region><rect l="51" t="628" r="90" b="645"/></region>
+<text>
+<par align="Justified">
+<line baseline="639" l="53" t="629" r="87" b="642"><formatting lang="EnglishUnitedStates">Pages:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="148" t="630" r="158" b="644"><region><rect l="148" t="630" r="158" b="644"/></region>
+<text>
+<par align="Justified">
+<line baseline="641" l="150" t="631" r="155" b="640"><formatting lang="EnglishUnitedStates">7&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="51" t="658" r="106" b="675"><region><rect l="51" t="658" r="106" b="675"/></region>
+<text>
+<par align="Justified">
+<line baseline="669" l="53" t="660" r="103" b="672"><formatting lang="EnglishUnitedStates">Message:&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="23" t="1143" r="748" b="1156"><region><rect l="23" t="1143" r="748" b="1156"/></region>
+<text>
+<par align="Justified">
+<line baseline="1152" l="24" t="1144" r="745" b="1154"><formatting lang="EnglishUnitedStates">PAGE 1/3 • RCVD AT 7/25/2019 3:21:50 PM [Central Daylight Time] • APSEP3287/48 • DNIS:8779401972 * UNIQUE ID: TX05D39C9EC1E11 • CSDiCMdretfs Health 2&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="605" t="0" r="693" b="19"><region><rect l="605" t="0" r="693" b="19"/></region>
+<text>
+<par align="Justified">
+<line baseline="16" l="606" t="6" r="690" b="16"><formatting lang="EnglishUnitedStates">ax Server&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="Text" blockName="" l="98" t="70" r="539" b="137"><region><rect l="98" t="70" r="539" b="137"/></region>
+<text>
+<par>
+<line baseline="82" l="100" t="71" r="499" b="85"><formatting lang="EnglishUnitedStates">The CPT/HCPC code(s) do not have Prior Authorization requirements</formatting></line>
+<line baseline="98" l="100" t="87" r="536" b="101"><formatting lang="EnglishUnitedStates">However, that docs not guarantee coverage. To determine if the code(s) arc a</formatting></line>
+<line baseline="114" l="100" t="104" r="524" b="117"><formatting lang="EnglishUnitedStates">covered benefit, please either refer to the Provider website or call Provider</formatting></line>
+<line baseline="131" l="100" t="120" r="303" b="134"><formatting lang="EnglishUnitedStates">Services for coverage requirements.&#xa;</formatting></line></par>
+</text>
+</block>
+<block blockType="SeparatorsBox" blockName="" l="0" t="0" r="827" b="1158"><region><rect l="0" t="0" r="827" b="7"/><rect l="0" t="7" r="827" b="1155"/><rect l="0" t="1155" r="827" b="1158"/></region>
+<separatorsBox>
+<separator type="Black" thickness="7"><start x="0" y="3"/><end x="827" y="3"/>
+</separator>
+<separator type="Black" thickness="3"><start x="0" y="1156"/><end x="827" y="1156"/>
+</separator>
+<separator type="Black" thickness="2"><start x="1" y="0"/><end x="1" y="1158"/>
+</separator>
+<separator type="Black" thickness="10"><start x="822" y="0"/><end x="822" y="1158"/>
+</separator>
+</separatorsBox>
+</block>
+<block blockType="Separator" blockName="" l="75" t="48" r="600" b="52"><region><rect l="75" t="48" r="600" b="52"/></region>
+<separator type="Black" thickness="4"><start x="75" y="50"/><end x="600" y="50"/>
+</separator>
+</block>
+<block blockType="Separator" blockName="" l="75" t="173" r="600" b="176"><region><rect l="75" t="173" r="600" b="176"/></region>
+<separator type="Black" thickness="3"><start x="75" y="174"/><end x="600" y="174"/>
+</separator>
+</block>
+<block blockType="Separator" blockName="" l="75" t="48" r="79" b="176"><region><rect l="75" t="48" r="79" b="176"/></region>
+<separator type="Black" thickness="4"><start x="77" y="48"/><end x="77" y="176"/>
+</separator>
+</block>
+<block blockType="Separator" blockName="" l="596" t="48" r="600" b="176"><region><rect l="596" t="48" r="600" b="176"/></region>
+<separator type="Black" thickness="4"><start x="598" y="48"/><end x="598" y="176"/>
+</separator>
+</block>
+</page>
+</document>
+C:\Users\Algonox\Downloads\AbbyBlobTest\AbbyBlobTest>pause
+Press any key to continue . . . 
+0

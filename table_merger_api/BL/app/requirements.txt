@@ -1,0 +1,7 @@
+kafka
+flask
+flask_cors
+mysqlclient
+pandas
+sqlalchemy
+requests

@@ -1,0 +1,42 @@
+{
+  "ocr": "abbyy",
+  "ocr_user": "Invoice_processor_3219",
+  "ocr_pass": "H7jZDWjCahVyImkTD0/0AAC8",
+  "threshold": 0.6,
+  "methodology": "word_vector_match",
+  "default_img_width": 670,
+  "pdf_resolution": 300,
+  "ocr_confidence": 100,
+  "overlap_threshold": 0.7,
+  "platform": "win32 darwin linux",
+  "database_name": "standard_ace",
+  "abbyy_xml": "./table_api/table_xml/",
+  "supported_excels": [
+    "xlsx",
+    "xltm",
+    "xltx",
+    "xlsb",
+    "xls",
+    "xlc",
+    "xlm",
+    "xlw",
+    "xlk",
+    "csv"
+  ],
+  "supported_images": [
+    "jpeg",
+    "jpg",
+    "png",
+    "tiff",
+    "tif",
+    "gif",
+    "pdf"
+  ],
+  "status": {
+    "processed": "processed",
+    "field_exception": "field",
+    "validation_queue": "validation"
+  },
+  "handwritten_engine": "vision",
+  "ui_folder": "/opt/lampp/htdocs/training/"
+}

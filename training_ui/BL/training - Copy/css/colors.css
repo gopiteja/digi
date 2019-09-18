@@ -1,0 +1,22 @@
+:root {
+    --bg-color: rgb(244,243,239);
+    --table-border-color: #e7e7e7;
+    --background-color: #f1f1f1;
+
+    --btn-bg: #4472c4;
+    --border-color: #cccccc;
+
+
+    /* single colors */
+    --green-color: #619d32;
+    --pink-color: #fd747d;
+
+    --table-crop-line: #D80027;
+
+    --blue-clr: #457add;
+    --red-color: #e74c3c;
+
+    /* Fonts */
+
+    --lexend-font : 'Lexend Deca'
+}

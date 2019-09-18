@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title></title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/plugins/bootstrap/bootstrap.css">
+    <link rel="stylesheet" href="css/plugins/materialize/materialize.css">
+    <link rel="stylesheet" href="css/plugins/materialize/mstepper.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/plugins/select_areas/jquery.selectareas.css">
+    <link rel="stylesheet" href="css/plugins/toastr/toastr.css">
+    <link rel="stylesheet" href="css/helper.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/confirm.css">
+    <link rel="stylesheet" href="css/fonts.css">
+</head>
+<style>
+.display_block {
+    display: block !important;
+    border: 1px solid #ccc;
+    background-color: rgb(248, 248, 248);
+    height: 35px;
+}
+
+.cropingFT {
+    right: 19px;
+    bottom: 66px;
+    top: 74px;
+
+}
+</style>
+
+<body>
+    <div class="row main_body">
+        <div class="col-sm-7 pd-l-0 imagsHere">
+            <!-- <div class="zoombts ">
+                <img src="images/zoom.svg" title="Zoom to 200%" class="zoomFit mr-b-10" alt="">
+                <img src="images/zoom-in.svg" class="zoomIn mr-b-10" alt="">
+                <img src="images/zoom-out.svg" class="zoomOut" alt="">
+            </div> -->
+            <div class="image_box showImgs">
+                <div class="HorZOn pos_rl">
+
+                </div>
+
+            </div>
+        </div>
+        <div class="col-sm-5">
+            <div class="initial_view">
+                <div class="forForceDiv">
+                    <p>Try with existing Template.</p>
+                    <select class="forceTemp">
+
+                    </select>
+                </div>
+                <div>
+                    <button class="waves-effect waves-dark btn blue create_new_temp">Create New</button>
+                    <button class="waves-effect waves-dark btn blue skipTraining">Skip Training</button>
+                </div>
+            </div>
+
+            <ul class="secondary_view stepper horizontal linear" style="display:none">
+                <li class="step active">
+                    <div class="step-title waves-effect" alt_title="header">Header Training</div>
+                    <div class="step-content">
+                        <p class='heading_font' id='crop_ind'>Crop Header,Address,Footer</p>
+                        <p class='heading_font' id='header_crop'>1) Please Crop Header</p>
+                        <div class="allHeaderResults">
+                            <div class="vendorValidation">
+
+                            </div>
+                        </div>
+                        <div class="step-actions">
+                            <button class="waves-effect waves-dark btn blue  nextToFields" from="header" to="field"
+                            onclick="return false;">Next</button>
+                            <button class="waves-effect waves-dark btn white black-text closeBtn"
+                            onclick="return false;">Close</button>
+                        </div>
+                    </div>
+                </li>
+                <li class="step">
+                    <div class="step-title waves-effect" alt_title="field">Field Training</div>
+                    <div class="step-content">
+                        <div class="allFieldResults" style="overflow-y: hidden;height: 77vh;">
+                            <div class="displayresults">
+
+                            </div>
+                        </div>
+                        <div class="step-actions">
+                            <button class="waves-effect waves-dark btn blue testBtn" clickedType="test"
+                            onclick="return false;">Test</button>
+                            <button class="waves-effect waves-dark btn white black-text closeBtn"
+                            onclick="return false;">Close</button>
+                        </div>
+                    </div>
+                </li>
+                <li class="step" id='#tableStep'>
+                    <div class="step-title waves-effect tableStep" alt_title="table">Table Training</div>
+                    <div class="step-content">
+                        <div class="pos_rl forTableScroll">
+                            <button type="button" count="0" class="waves-effect waves-dark btn blue addNewTable hidden" onclick="return false;">Add Table</button>
+                            <div>
+                                <p>1) Please crop the table</p>
+                                <div class="intialTableConfirm mr-t-10"></div>
+                                <div class="allTablesShow mr-t-20" style="overflow-x: auto;"></div>
+                                <div class="anyBtns mr-t-20"></div>
+                            </div>
+                            <div class="allTableResults">
+
+                            </div>
+                        </div>
+
+                        <div class="step-actions">
+
+                            <button class="waves-effect waves-dark btn green forSave" clickedType="save"
+                            onclick="return false;">Save</button>
+                            <button class="waves-effect waves-dark btn white black-text closeBtn"
+                            onclick="return false;">Close</button>
+                            <button class="waves-effect waves-dark btn purple forSkip" clickedType="skip"
+                            onclick="return false;">Skip</button>
+                            <!-- <button class="waves-effect waves-dark btn   previous-step" from="table" to="field">Back</button> -->
+                        </div>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="testView">
+                <h3>Test Data</h3>
+                <div class="fieldsDisplayTest">
+
+                </div>
+                <div class="text-right mr-r-15 mr-t-20">
+                    <button class="waves-effect waves-dark btn white black-text closeTest" clickedType="close"
+                    onclick="return false;">Cancel</button>
+                    <button class="waves-effect waves-dark btn green confirmForce nextToTable" clickedType="save"
+                    onclick="return false;">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+
+    </div>
+
+    <div class="extraTrainingDiv">
+        <div class="header">
+            <p class="invoiceName"></p>
+        </div>
+        <div class="body">
+            <div class="row" style="height: 100%;">
+                <div class="newTrainDiv">
+                    <div class="col-sm-7 overflowY">
+                        <div class="displayHereImages pos_rl">
+
+                        </div>
+                    </div>
+                    <div class="col-sm-5 overflowY">
+                        <div class="displayHereContent">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <button type="button" class="waves-effect waves-dark btn white black-text extraTrainingDivCancel">Cancel</button>
+
+            <button type="button" class="waves-effect waves-dark btn green extraTrainingDivSave">Save</button>
+        </div>
+    </div>
+
+
+    <div class="template_name_modal">
+        <div class="template_content">
+            <div class="header">
+                <h4>Template Name</h4>
+            </div>
+            <div class="content">
+                <input type="text" class="template_name_val" list="templates_list" placeholder="Enter Template Name">
+                <datalist id="templates_list">
+
+                </datalist>
+            </div>
+            <div class="footer">
+                <button type="button" class="waves-effect waves-dark btn  closeTempModal">Cancel</button>
+                <button type="button" class="waves-effect waves-dark btn green saveBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="skipCheckModal">
+        <div class="template_content">
+            <div class="header">
+                <h4>Do you want to skip table training?</h4>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="waves-effect waves-dark btn   closeSkipbtn">Cancel</button>
+                <button type="button" class="waves-effect waves-dark btn green okSkipbtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- All script tags -->
+    <script src="js/plugins/jquery/jquery.min.js" charset="utf-8"></script>
+    <script src="js/plugins/jquery/jquery-ui.min.js" charset="utf-8"></script>
+    <script src="js/plugins/jquery/moment.min.js" charset="utf-8"></script>
+    <script src="js/plugins/bootstrap/bootstrap.min.js" charset="utf-8"></script>
+    <script src="js/plugins/materialize/materialize.js" charset="utf-8"></script>
+    <script src="js/plugins/materialize/mstepper.js" charset="utf-8"></script>
+    <script src="js/plugins/pdf/pdf.min.js" charset="utf-8"></script>
+    <script src="js/plugins/tiff/tiff.min.js" charset="utf-8"></script>
+    <script src="js/plugins/select_areas/jquery.selectareas.js" charset="utf-8"></script>
+    <script src="js/common.js" charset="utf-8"></script>
+    <script src="js/plugins/toastr/toastr.min.js" charset="utf-8"></script>
+    <script src="js/main.js" charset="utf-8"></script>
+    <script src="js/confirm.js"></script>
+
+
+    <script src="js/json.json"></script>
+
+
+    <!-- <script src="js/main_.js" charset="utf-8"></script> -->
+    <div class="loading_full"><img src="images/loader.svg" width="83px">
+        <p>Loading...</p>
+    </div>
+
+</body>
+
+</html>

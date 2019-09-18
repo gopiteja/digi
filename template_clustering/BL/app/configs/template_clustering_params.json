@@ -1,0 +1,10 @@
+{
+  "platform": "win32 darwin linux",
+  "db_name": "template_db",
+  "host":"127.0.0.1",
+  "db_host": "localhost",
+  "db_port": 32000,
+  "db_user": "root",
+  "db_password": "root",
+  "port":5010
+}

@@ -1,0 +1,206 @@
+{
+  "login": {
+    "host": "userauthapi",
+    "port": "80"
+  },
+  "logout": {
+    "host": "userauthapi",
+    "port": "80"
+  },
+  "verify_session": {
+    "host": "userauthapi",
+    "port": "80"
+  },
+  "send_email": {
+    "host": "emailtrigger",
+    "port": "80"
+  },
+  "folder_monitor": {
+    "host": "folder_monitor",
+    "port": "5007"
+  },
+  "generate_report": {
+    "host": "folder_monitor",
+    "port": "5007"
+  },
+  "database_upload": {
+    "host": "databaseingestion",
+    "port": "80"
+  },
+  "database_ocr": {
+    "host": "abbyydatabase",
+    "port": "5555"
+  },
+  "move_to_verify": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "clear_cache": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_stats": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_fields": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "refresh_fields": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "update_queue": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_queue": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_queues": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "unlock_case": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_display_fields": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "save_changes": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "execute_button_function": {
+    "host": "buttonfunctions",
+    "port": "80"
+  },
+  "get_ocr_data": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_blob_data": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_blob_data1": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "extract_for_template": {
+    "host": "extractionapi",
+    "port": "80"
+  },
+  "predict_field": {
+    "host": "extractionapi",
+    "port": "80"
+  },
+  "run_business_rule": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "validate_rules": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "run_business_rule_cg": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "show_decision_tree": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "open_tabs": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "sample_route_karvy": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "get_ds1_data": {
+    "host": "businessrulesapi",
+    "port": "80"
+  },
+  "sap_inward": {
+    "host": "sapapi",
+    "port": "80"
+  },
+  "sap_ui": {
+    "host": "sapapi",
+    "port": "80"
+  },
+  "sap_portal_inward": {
+    "host": "sapapi",
+    "port": "80"
+  },
+  "generate_json": {
+    "host": "jsonbuilderapi",
+    "port": "80"
+  },
+  "testFields": {
+    "host": "trainingapi",
+    "port": "80"
+  },
+  "train": {
+    "host": "trainingapi",
+    "port": "80"
+  },
+  "retrain": {
+    "host": "trainingapi",
+    "port": "80"
+  },
+  "force_template": {
+    "host": "trainingapi",
+    "port": "80"
+  },
+  "get_ocr_data_training": {
+    "host": "trainingapi",
+    "port": "80"
+  },
+  "predict_with_ui_data": {
+    "host": "tableapi",
+    "port": "80"
+  },
+  "merge_table": {
+    "host": "tablemergerapi",
+    "port": "80"
+  },
+  "cluster": {
+    "host": "clustering",
+    "port": "80"
+  },
+  "produce": {
+    "host": "producer",
+    "port": "6969"
+  },
+  "consume": {
+    "host": "consumer",
+    "port": "6968"
+  },
+  "get_stats_cards":{
+    "host" : "stats",
+    "port" : "80"
+  },
+  "flip_card":{
+    "host" : "stats",
+    "port" : "80"
+  },
+  "chart_data":{
+    "host" : "stats",
+    "port" : "80"
+  },
+  "string_data":{
+    "host" : "stats",
+    "port" : "80"
+  },
+  "text_data":{
+    "host" : "stats",
+    "port" : "80"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "platform": "win32 darwin linux",
+  "database_name": "template_db",
+  "machine_ip" : "127.0.0.1",
+  "db_user": "root",
+  "db_password": "",
+  "template_detection_port" : 5008,
+  "template_training_port" : 5009,
+  "db_port": 3306,
+  "model_path": "C:\\Users\\Git\\microservices\\template_detection\\BL\\models\\model.dat",
+  "training_data_path": "C:\\Users\\Git\\microservices\\template_detection\\BL\\models\\trainingData.dat",
+  "abbyy_detection_thresh": 0.7,
+  "algonox_detection_method": "ngram",
+  "n_training_samples": 5
+}

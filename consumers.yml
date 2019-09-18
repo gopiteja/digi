@@ -1,0 +1,477 @@
+version: '3.6'
+
+networks:
+  service_bridge:
+    name: service_bridge
+    driver: overlay
+
+services:
+  # Bot Watcher
+  bot_watcher:
+    image: 'bot_watcher'
+    container_name: 'bot_watcher'
+    build: ./bot_watcher/BL
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+        
+  # Digital Signature
+  digital_signature:
+    image: 'digital_signature'
+    container_name: 'digital_signature'
+    build: ./digital_signature_api/BL
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - files:/app/files
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:12201
+        tag: "table_merger_tag"
+
+  # Template Detection
+  detection_app:
+    image: 'detection_app'
+    container_name: 'detection_app'
+    build: ./template_detection/BL
+    networks:
+      - service_bridge
+    volumes:
+      - detection_input:/app/input
+      - angular:/app/angular
+      - training_images:/app/training_ui
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  template_db:
+    image: mysql:5.7
+    container_name: 'template_db'
+    volumes:
+      - ./template_detection/DL:/docker-entrypoint-initdb.d/:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
+    networks:
+      - service_bridge
+    restart: on-failure:3
+
+  template_php:
+    image: 'phpmyadmin/phpmyadmin'
+    container_name: 'template_php'
+    ports:
+      - '8086:80'
+    networks:
+      - service_bridge
+    links:
+      - template_db:db
+
+  # Extraction
+  extraction:
+    image: 'extraction'
+    container_name: 'extraction'
+    build:
+      context: ./extraction_api/BL/app
+      dockerfile: consumer.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - invoice_files:/app/invoice_files
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  extraction_api:
+    image: 'extraction_api'
+    container_name: 'extraction_api'
+    build:
+      context: ./extraction_api/BL
+      dockerfile: api.Dockerfile
+    networks:
+      service_bridge:
+        aliases:
+          - extractionapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - invoice_files:/var/www/table_api/app/invoice_files
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  # Table Extraction
+  table_api:
+    image: 'table_api'
+    container_name: 'table_api'
+    build:
+      context: ./table_api/BL
+      dockerfile: api.Dockerfile
+    networks:
+      service_bridge:
+        aliases:
+          - tableapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - invoice_files:/var/www/table_api/app/invoice_files
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  table_consumer:
+    image: 'table_consumer'
+    container_name: 'table_consumer'
+    build:
+      context: ./table_api/BL/app
+      dockerfile: consumer.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - invoice_files:/app/invoice_files
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:12201
+        tag: "table_merger_tag"
+
+  table_db:
+    image: mysql:5.7
+    container_name: 'table_db'
+    volumes:
+      - ./table_api/DL:/docker-entrypoint-initdb.d/:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
+    networks:
+      - service_bridge
+    restart: on-failure:3
+
+  table_php:
+    image: 'phpmyadmin/phpmyadmin'
+    container_name: 'table_php'
+    ports:
+      - '8087:80'
+    networks:
+      - service_bridge
+    links:
+      - table_db:db
+    depends_on:
+      - table_db
+
+  # Business Rules
+  business_rules_api:
+    image: 'business_rules_api'
+    container_name: 'business_rules_api'
+    build:
+      context: ./business_rules_api/BL
+      dockerfile: api.Dockerfile
+    networks:
+      service_bridge:
+        aliases:
+          - businessrulesapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  business_rules_consumer:
+    image: 'business_rules_consumer'
+    container_name: 'business_rules_consumer'
+    build:
+      context: ./business_rules_api/BL/app
+      dockerfile: consumer.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  business_rules_db:
+    image: mysql:5.7
+    container_name: 'business_rules_db'
+    volumes:
+      - ./business_rules_api/DL:/docker-entrypoint-initdb.d/:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    depends_on:
+      - business_rules_consumer
+
+  business_rules_php:
+    image: 'phpmyadmin/phpmyadmin'
+    container_name: 'business_rules_php'
+    ports:
+      - '8085:80'
+    networks:
+      - service_bridge
+    links:
+      - business_rules_db:db
+  
+  # JSON Export
+  # json_export_api:
+  #   image: 'json_export_api'
+  #   container_name: 'json_export_api'
+  #   build: ./json_export_api/BL
+  #   networks:
+  #     service_bridge:
+  #       aliases:
+  #         - jsonexportapi
+  #   volumes:
+  #     - json_output:/app/output
+  #   restart: on-failure:3
+  #   environment:
+  #     - HOST_IP=${HOST_IP}
+  #     - LOG_LEVEL=${LOG_LEVEL}
+  #     - LOG_FORMAT=${LOG_FORMAT}
+  #     - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+  #   depends_on: 
+  #     - json_export_db
+  #     - json_export_php
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  json_export_db:
+    image: mysql:5.7
+    container_name: 'json_export_db'
+    volumes:
+      - ./json_export_api/DL:/docker-entrypoint-initdb.d/:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
+    networks:
+      - service_bridge
+    restart: on-failure:3
+
+  json_export_php:
+    image: 'phpmyadmin/phpmyadmin'
+    container_name: 'json_export_php'
+    ports:
+      - '8091:80'
+    networks:
+      - service_bridge
+    links:
+      - json_export_db:db
+
+  # Table Merger
+  table_merger_consumer:
+    image: 'table_merger_consumer'
+    container_name: 'table_merger_consumer'
+    build:
+      context: ./table_merger_api/BL/app
+      dockerfile: consumer.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  # Save Changes
+  save_changes:
+    image: 'save_changes'
+    container_name: 'save_changes'
+    build:
+      context: ./queue_api/BL/app
+      dockerfile: save_changes.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  # Update Queue
+  update_queue:
+    image: 'update_queue'
+    container_name: 'update_queue'
+    build:
+      context: ./queue_api/BL/app
+      dockerfile: update_queue.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  # Run Business Rules
+  run_business_rule:
+    image: 'run_business_rule'
+    container_name: 'run_business_rule'
+    build:
+      context: ./business_rules_api/BL/app
+      dockerfile: run_business_rule.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+  
+
+  process_time:
+    image: 'process_time'
+    container_name: 'process_time'
+    build: ./process_time/BL
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "process_time_tag"
+
+  update_pq:
+    image: 'update_pq'
+    container_name: 'update_pq'
+    build:
+      context: ./queue_api/BL/app
+      dockerfile: update_pq.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "update_pq_tag"
+
+volumes:
+  # JSON Export
+  # json_output:
+  #   driver: local
+  #   name: json_output
+  #   driver_opts:
+  #     type: 'none'
+  #     o: 'bind'
+  #     device: ${JSON_EXPORT_PATH}
+      
+  # Digital Signature and ACE Template Training
+  files:
+    external: true
+    name: file_output
+
+  # Template Detection
+  detection_input:
+    external: true
+    name: file_output
+
+  angular:
+    external: true
+    name: angular_images
+
+  training_images:
+    external: true
+    name: ui_images
+
+  # Table API
+  invoice_files:
+    external: true
+    name: file_output
