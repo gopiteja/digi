@@ -202,13 +202,5 @@
   "text_data":{
     "host" : "stats",
     "port" : "80"
-  },
-  "karvy_chart_data":{
-    "host" : "karvystats",
-    "port" : "80"
-  },
-  "karvy_email_trigger":{
-    "host" : "karvyemailtrigger",
-    "port" : "80"
   }
 }
