@@ -76,7 +76,7 @@ def execute_button_function():
             }
             kafka_db = DB('kafka', **common_db_config)
             # kafka_db = DB('kafka')
-            
+
             message_flow = kafka_db.get_all('grouped_message_flow')
             group_messages = message_flow.loc[message_flow['message_group'] == group]
 
@@ -87,23 +87,30 @@ def execute_button_function():
 
             first_route = list(group_messages['listen_to_topic'])[0]
             logging.debug(f'First Route: {first_route}')
-
             try:    
                 query_ = f"SELECT * FROM `button_functions` where `route` = '{first_route}'"
                 button_functions_df = queue_db.execute(query_)
                 type_ = list(button_functions_df['type'])[0]
-
                 if type_ == 'api':
+                    # host = 'servicebridge'
+                    # port = 80
+                    # route = first_route
+                    # data = {
+                    #     'case_id': case_id
+                    # }
+                    # response_data = requests.post(f'http://{host}:{port}/{route}', json=data)
                     return jsonify({'flag' : True, 'show_decision_tree': True })
-
-                query = 'UPDATE `process_queue` SET `case_lock`=1, `failure_status`=0, `completed_processes`=0, `total_processes`=0, `status`=NULL WHERE `case_id`=%s'
-                queue_db.execute(query, params=[case_id])
-                
-                produce_with_zipkin(first_route, data)
-                return jsonify({'flag': True, 'message': f'Started processing... ({first_route})'})
             except:
-                logging.exception("failed in the changes made in button functions")
-                return jsonify({'flag': False})
+                print("failed in the changes made in button functions")
+                traceback.print_exc()
+                pass
+
+            query = 'UPDATE `process_queue` SET `case_lock`=1, `failure_status`=0, `completed_processes`=0, `total_processes`=0, `status`=NULL WHERE `case_id`=%s'
+            queue_db.execute(query, params=[case_id])
+            
+            produce_with_zipkin(first_route, data)
+
+            return jsonify({'flag': True, 'message': f'Started processing... ({first_route})'})
         except KeyError as e:
             logging.exception('Something went wrong executing button functions. Check Trace.')
             return jsonify({'flag': False, 'message': f'ERROR: [{e}]'})

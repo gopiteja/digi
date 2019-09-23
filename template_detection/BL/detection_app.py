@@ -262,24 +262,13 @@ def algonox_template_detection(case_id, file_path=''):
 
             predicted_template = ''
 
-            return {'flag': False, 'send_to_topic': 'clustering'}
-        response = {
-                        'flag': True,
-                        'send_data': {
-                            'file_name': '',
-                            'case_id': case_id,
-                            'tenant_id':''
-                        }
-                    }
-        return response
-    #     return {'template_name': predicted_template, 'probability': -1}
-    # # OCR data is empty
+        return {'template_name': predicted_template, 'probability': -1}
+    # OCR data is empty
     else:
         message = f'Template Detection Error: OCR data for case `{case_id}` not found.'
         logging.error(message)
         predicted_template = ''
-        return {'flag': False, 'send_to_topic': 'clustering'}
-        # return {'template_name': predicted_template, 'probability': -1}
+        return {'template_name': predicted_template, 'probability': -1}
 
 # @app.route('/abbyy_detect_template', methods=['POST', 'GET'])
 @zipkin_span(service_name='detection_app', span_name='abbyy_template_detection')

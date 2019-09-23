@@ -34,7 +34,7 @@ class DB(object):
                 is mapped in the compose file. (default = '3306')
         """
 
-        if host in ["extraction_db","queue_db","template_db","table_db","stats_db"]:
+        if host in ["extraction_db","queue_db","template_db","table_db"]:
             self.HOST = os.environ['HOST_IP']
             self.USER = 'root'
             self.PASSWORD = os.environ['LOCAL_DB_PASSWORD']
@@ -308,41 +308,7 @@ class DB(object):
 
         return data.where((pd.notnull(data)), None)
 
-    def insert_dict(self, data, table):
-        """
-        Insert dictionary into a SQL database table.
 
-        Args:
-            data (DataFrame): The DataFrame that needs to be write to SQL database.
-            table (str): The table in which the rcords should be written to.
-
-        Returns:
-            (bool) True is succesfully inserted, else false.
-        """
-        logging.info(f'Inserting dictionary data into `{table}`...')
-        logging.debug(f'Data:\n{data}')
-
-        try:
-            column_names = []
-            params = []
-
-            for column_name, value in data.items():
-                column_names.append(f'`{column_name}`')
-                params.append(value)
-
-            logging.debug(f'Column names: {column_names}')
-            logging.debug(f'Params: {params}')
-
-            columns_string = ', '.join(column_names)
-            param_placeholders = ', '.join(['%s'] * len(column_names))
-
-            query = f'INSERT INTO {table} ({columns_string}) VALUES ({param_placeholders})'
-
-            return self.execute(query, params=params)
-        except:
-            logging.exception('Error inserting data.')
-            return False
-            
     def get_all(self, table, database=None, discard=None):
         """
         Get all data from an SQL table.

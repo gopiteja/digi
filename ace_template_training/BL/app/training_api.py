@@ -1108,10 +1108,8 @@ def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEI
         if 'scope' not in field_data or not field_data['scope']:
             continue
         dis = set()
-        #logging.debug(f'field - {field}')
-        # logging.debug(f'neighbours - {field_neighbourhood[field]}')
-        if field not in field_neighbourhood:
-            continue
+        logging.debug(f'field - {field}')
+        logging.debug(f'neighbours - {field_neighbourhood[field]}')
         for keyword in field_neighbourhood[field]:
             logging.debug(f'field_data - ', field_data['scope'])
             if keyword['right'] - keyword['left'] > 0 \
@@ -1584,6 +1582,7 @@ def force_template():
         fields = {}
         fields['template_name'] = template_name
         fields['cluster'] = None
+        fields['queue'] = 'Processing'
 
         # Insert a new record for each file of the cluster with template name set and cluster removed
         print(f'Extracting for case ID `{case_id}`')
@@ -1802,10 +1801,6 @@ def retrain():
         if table_check:
             standardized_data['Table'] = trained_table
         extraction_db.update('ocr',standardized_data,{'case_id':case_id})
-
-        query = f'update extraction.ocr o, alorica_data.screen_shots ss set o.`Communication_date_time` = ss.`Communication_date`, o.`communication_date_bot` = ss.`History` , o.`remote_id` = ss.`remote_id`,o.`Agent` = ss.Agent, o.Fax_unique_id = ss.Fax_unique_id where o.case_id = ss.Fax_unique_id and case_id = "{case_id}"'
-        extraction_db.execute(query)
-
         audit_data = {
                 "type": "update", "last_modified_by": "Train", "table_name": "ocr", "reference_column": "case_id",
                 "reference_value": case_id, "changed_data": json.dumps(standardized_data)
@@ -1851,7 +1846,7 @@ def test_fields():
         ocr_data_df = queue_db.execute(query, params=[case_id])
 
         ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
-        checkboxes_all={}
+
         if force_check == 'yes':
             template_name = data['template_name']
             trained_info_data = templates_db.get_all('trained_info')
@@ -2123,9 +2118,6 @@ def train():
         standardized_data['Table'] = trained_table
 
         extraction_db.insert_dict(standardized_data, 'ocr')
-        query = f'update extraction.ocr o, alorica_data.screen_shots ss set o.`Communication_date_time` = ss.`Communication_date`, o.`communication_date_bot` = ss.`History` , o.`remote_id` = ss.`remote_id`,o.`Agent` = ss.Agent, o.Fax_unique_id = ss.Fax_unique_id where o.case_id = ss.Fax_unique_id and case_id = "{case_id}"'
-        extraction_db.execute(query)
-
         audit_data = {
                 "type": "insert", "last_modified_by": "Train", "table_name": "ocr", "reference_column": "case_id",
                 "reference_value": case_id, "changed_data": json.dumps(standardized_data)
@@ -2140,7 +2132,7 @@ def train():
         query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
         move_to_queue_df = queue_db.execute(query, params=[move_to_queue_id])
         move_to_queue = list(move_to_queue_df['name'])[0]
-        update = {'queue':move_to_queue,'template_name':template_name,'stats_stage':move_to_queue}
+        update = {'queue':move_to_queue,'template_name':template_name}
         where = {'case_id':case_id}
         queue_db.update('process_queue',update=update,where=where)
         audit_data = {

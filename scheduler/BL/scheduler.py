@@ -53,7 +53,7 @@ def delete_data():
     
     
 def move_to_manual():
-    query = "SELECT * from process_queue where queue not in ('Manual', 'Completed', 'Template Exceptions')"
+    query = "SELECT * from process_queue where queue not in ('Enhance Decision', 'Express Cases', 'Completed', 'Template Exceptions')"
     case_ids = list(queue_db.execute(query).case_id)
     
     for case_id in case_ids:
@@ -67,7 +67,7 @@ def move_to_manual():
             time_difference = (get_current_time - communication_date).total_seconds()/3600
 
             if time_difference > 2:
-                query = f"Update process_queue set queue = 'Manual', case_lock = 0, state = 'Bot failed', failure_status = 2, 'error_logs' = 'remaining TAT is less than 2 hours' where case_id = '{case_id}'"
+                query = f"Update process_queue set queue = 'Express Cases', case_lock = 0, state = 'Bot failed', failure_status = 2, 'error_logs' = 'remaining TAT is less than 2 hours' where case_id = '{case_id}'"
                 queue_db.execute(query)
         except:
             traceback.print_exc()

@@ -130,27 +130,29 @@ services:
       - common_db
 
   # Reports
-  # reports:
-  #   image: reports
-  #   container_name: reports
-  #   build: ./reports/BL
-  #   restart: on-failure:3
-  #   environment:
-  #     - HOST_IP=${HOST_IP}
-  #     - LOG_LEVEL=${LOG_LEVEL}
-  #     - LOG_FORMAT=${LOG_FORMAT}
-  #     - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-  #   networks:
-  #     service_bridge:
-  #       aliases:
-  #         - servicebridge
-  #   depends_on:
-  #     - apache_base
-  #   # logging:
-  #   #   driver: gelf
-  #   #   options:
-  #   #     gelf-address: udp://127.0.0.1:12201
-  #   #     tag: "reports_tag"
+  reports_api:
+    image: reports_api
+    container_name: reports_api
+    build: ./reports_api/BL
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    networks:
+      service_bridge:
+        aliases:
+          - reportsapi
+    depends_on:
+      - apache_base
+    volumes:
+      - reports_folder:/var/www/reports_api/reports
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "reports_tag"
 
   # Stats
   stats:
@@ -291,24 +293,24 @@ services:
     depends_on: 
       - common_db
       - apache_base
-   
-  scheduler:
-    image: 'scheduler'
-    container_name: 'scheduler'
-    build: ./scheduler/BL
-    networks:
-      service_bridge:
-        aliases:
-          - scheduler
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - common_db
-      - apache_base
+
+  # scheduler:
+  #   image: 'scheduler'
+  #   container_name: 'scheduler'
+  #   build: ./scheduler/BL
+  #   networks:
+  #     service_bridge:
+  #       aliases:
+  #         - scheduler
+  #   restart: on-failure:3
+  #   environment:
+  #     - HOST_IP=${HOST_IP}
+  #     - LOG_LEVEL=${LOG_LEVEL}
+  #     - LOG_FORMAT=${LOG_FORMAT}
+  #     - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+  #   depends_on: 
+  #     - common_db
+  #     - apache_base
 
   abbyy_database:
     image: 'abbyy_database'
@@ -319,8 +321,6 @@ services:
         aliases:
           - abbyydatabase
     restart: on-failure:3
-    depends_on:
-      - apache_base
   # logging:
   #   driver: gelf
   #   options:
@@ -618,17 +618,17 @@ volumes:
       device: ${XAMPP_PATH}/htdocs/ace/assets/pdf
 
   files:
-    driver: local
-    name: files
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: ${OUTPUT_PATH}
+    external: true
+    name: file_output
 
   invoice_files:
+    external: true
+    name: file_output
+
+  reports_folder:
     driver: local
-    name: invoice_files
+    name: reports_folder
     driver_opts:
       type: 'none'
       o: 'bind'
-      device: ${OUTPUT_PATH}
+      device: ${REPORT_OUTPUT_PATH}

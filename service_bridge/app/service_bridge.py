@@ -116,11 +116,10 @@ def connect(route, argument=None):
                 except:
                     logging.exception('Could not get tenant ID from request. Setting tenant ID to None.')
                     tenant_id = None
-                try:
-                    if tenant_id.lower() not in ['deloitte','karvy']:
-                        tenant_id = None
-                except:
-                    pass
+                    
+                if tenant_id == '3.208.195.34':
+                    tenant_id = None
+                    
                 data['tenant_id'] = tenant_id
                 logging.info(f'Data after adding tenant ID: {data}')
 

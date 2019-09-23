@@ -111,7 +111,7 @@ class DB(object):
         except exc.ResourceClosedError:
             logging.warning('Query does not have any value to return.')
             return True
-        except (exc.StatementError,OperationalError) as e:
+        except (exc.StatementError, OperationalError) as e:
             logging.warning(f'Creating new connection. Engine/Connection is probably None. [{e}]')
             self.connect()
             data = pd.read_sql(query, self.engine, index_col='id', **kwargs)
@@ -158,7 +158,7 @@ class DB(object):
             params = kwargs['params'] if 'params' in kwargs else None
             return False
 
-        return data.where((pd.notnull(data)), None)
+        return data.replace({pd.np.nan: None})
 
 
     def insert(self, data, table, database=None, **kwargs):
@@ -345,35 +345,28 @@ class DB(object):
         return data.where((pd.notnull(data)), None)
 
 
-    def get_all(self, table, condition=None):
+    def get_all(self, table, database=None, discard=None):
         """
         Get all data from an SQL table.
 
         Args:
             table (str): Name of the table from which data should be extracted.
-            condition (dict): Key-value pair of column name and the value to check.
-                Eg: {'column_1': value_1} => WHERE column_1=value_1
-
+            database (str): Name of the database in which the table lies. Leave
+                it none if you want use database during object creation.
+            discard (list): columns to be excluded while selecting all
         Returns:
             (DataFrame) A pandas dataframe containing the data. (None if an error
             occurs)
         """
-        logging.info(f'Getting all data from table `{table}`...')
+        logging.info(f'Getting all data from `{table}`')
+        if discard:
+            logging.info(f'Discarding columns `{discard}`')
+            columns = list(self.execute_default_index(f'SHOW COLUMNS FROM `{table}`',database).Field)
+            columns = [col for col in columns if col not in discard]
+            columns_str = json.dumps(columns).replace("'",'`').replace('"','`')[1:-1]
+            return self.execute(f'SELECT {columns_str} FROM `{table}`', database)
 
-        if condition is not None:
-            logging.info(f' - Applying condition(s)...')
-
-            where_clause = []
-            where_value_list = []
-
-            for where_column, where_value in condition.items():
-                where_clause.append(f'{where_column}=%s')
-                where_value_list.append(where_value)
-            where_clause_string = ' AND '.join(where_clause)
-            query = f'SELECT * FROM `{table}` WHERE {where_clause_string}'
-            return self.execute(query, params=where_value_list)
-        else:
-            return self.execute(f'SELECT * FROM `{table}`')
+        return self.execute(f'SELECT * FROM `{table}`', database)
 
     def get_latest(self, data, group_by_col, sort_col):
         """

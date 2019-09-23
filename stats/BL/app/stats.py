@@ -76,6 +76,7 @@ def create_data(all_dates, db_data):
 def get_stats():
     data = request.json
     tenant_id = data.pop('tenant_id', None)
+    print(f'tenant id {tenant_id}')
     with zipkin_span(service_name='stats', span_name='get_stats_cards', 
             transport_handler=http_transport, port=5007, sample_rate=0.5,) as  zipkin_context:
         zipkin_context.update_binary_annotations({'Tenant': tenant_id})
@@ -86,7 +87,7 @@ def get_stats():
         except Exception as e:
             logging.error("Unexpected request data", e)
             return "Unexpected request data" 
-        stats_db_obj = Stats_db()
+        stats_db_obj = Stats_db(tenant_id=f'{tenant_id}')
         try:
             active_stats_dict = stats_db_obj.active_stats() #List of dictionaries - one for each card
         except:
@@ -113,23 +114,20 @@ def text_data():
     data = request.json
     from_date = data['fromDate']
     to_date = data['toDate']
-    total_fields = 55
+    total_fields = 10
     if not dummy:
         """Return the ocr stats from the from_date, to_date"""
         print (from_date, to_date, "dates")
         try:
-            # if (not to_date) or (not from_date):
-            #     query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Completed'"
-            #     df = queue_db.execute_(query)
-            # else:
-            #     if to_date == from_date:
-            #         from_date += " 00:00:01"
-            #         to_date += " 23:59:59"
-            #     query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Completed' and pq.created_date > %s and pq.created_date < %s"
-            #     df = queue_db.execute_(query, params=[from_date, to_date])
-
-            query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Completed'"
-            df = queue_db.execute_(query)
+            if (not to_date) or (not from_date):
+                query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Completed'"
+                df = queue_db.execute_(query)
+            else:
+                if to_date == from_date:
+                    from_date += " 00:00:01"
+                    to_date += " 23:59:59"
+                query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Completed' and pq.created_date > %s and pq.created_date < %s"
+                df = queue_db.execute_(query, params=[from_date, to_date])
 
             fields_changes_list = []
 
@@ -159,8 +157,6 @@ def text_data():
 
 @app.route('/string_data', methods=['POST', 'GET'])
 def string_data():
-    stats_db = DB('stats', **db_config)
-    template_db = DB('template_db', **db_config)
     ui_data = request.json
     header = ui_data['header']
     try:
@@ -207,19 +203,18 @@ def string_data():
             # total_invoices = len(list(queue_db.execute(query).case_id))
             
             try:
-                query = f"SELECT date, no_of_files from queue_time where state = 'Completed' and date > '{begin}' and date < '{end}'"
+                query = f"SELECT date, no_of_files from state_stats where date > '{begin}' and date < '{end}' and state = 'Completed'"
                 query_result = stats_db.execute_(query)
                 audit = query_result.to_dict(orient='records')
 
-                total_invoices = sum(list(query_result.no_of_files))
+                total_invoices = sum(list(audit.no_of_files))
                     
                 chart_data = create_data(all_dates, audit)
 
                 chunks = list(make_chunks(chart_data, split))
 
-                return_data = sum_points(chunks)
-                
-                # return_data = chunks
+                # return_data = sum_points(chunks)
+                return_data = chunks
             except:
                 total_invoices = 0
                 return_data = [0]*len(week_days)
@@ -242,29 +237,17 @@ def string_data():
         }
 
     if header.lower() == 'bot flow':
-        if not dummy:     
-            try:      
-                query = f"SELECT date, no_of_files from queue_time where state = 'Completed' and date > '{begin}' and date < '{end}'"
-                query_result = stats_db.execute_(query)
-                audit = query_result.to_dict(orient='records')
-                completed_total = sum(list(query_result.no_of_files))
-                chart_data = create_data(all_dates, audit)
+        if not dummy:           
+            query = f"SELECT date, no_of_files from state_stats where state = 'by bot' and date > '{begin}' and date < '{end}'"
+            query_result = stats_db.execute_(query)
+            audit = query_result.to_dict(orient='records')
+            total_invoices = sum(list(query_result.no_of_files))
+                
+            chart_data = create_data(all_dates, audit)
 
-                completed_chunks = sum_points(list(make_chunks(chart_data, split)))
+            chunks = list(make_chunks(chart_data, split))
 
-                query = f"SELECT date, no_of_files from queue_time where state = 'manual' and date > '{begin}' and date < '{end}'"
-                query_result = stats_db.execute_(query)
-                audit = query_result.to_dict(orient='records')
-                manual_total = sum(list(query_result.no_of_files))
-                chart_data = create_data(all_dates, audit)
-
-                manual_chunks = sum_points(list(make_chunks(chart_data, split)))
-
-                total_invoices = completed_total - manual_total
-                return_data = [a - b for a, b in zip(completed_chunks, manual_chunks)]
-            except:
-                total_invoices = 0
-                return_data = [0]*len(week_days)
+            return_data = sum_points(chunks)  
         else:
             week_days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             today = datetime.today().strftime('%A')[:3]
@@ -285,20 +268,16 @@ def string_data():
  
     if header.lower() == 'manually processed':    
         if not dummy:
-            try:
-                query = f"SELECT date, no_of_files from queue_time where state = 'manual' and date > '{begin}' and date < '{end}'"
-                query_result = stats_db.execute_(query)
-                audit = query_result.to_dict(orient='records')
-                total_invoices = sum(list(query_result.no_of_files))
+            query = f"SELECT date, no_of_files from state_stats where state = 'Enhance Decision' and date > '{begin}' and date < '{end}'"
+            query_result = stats_db.execute_(query)
+            audit = query_result.to_dict(orient='records')
+            total_invoices = sum(list(query_result.no_of_files))
 
-                chart_data = create_data(all_dates, audit)
+            chart_data = create_data(all_dates, audit)
 
-                chunks = list(make_chunks(chart_data, split))
+            chunks = list(make_chunks(chart_data, split))
 
-                return_data = sum_points(chunks)
-            except:
-                total_invoices = 0
-                return_data = [0]*len(week_days)
+            return_data = sum_points(chunks)
         else:
             week_days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             today = datetime.today().strftime('%A')[:3]
@@ -340,22 +319,11 @@ def flip_card():
     flip_side = ui_data['flip_side']
     
     if header.lower() == 'aht(bot)':
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as screenshot_time from queue_time where state = 'Screenshots Completed'"
-        try:
-            screenshot = int(list(stats_db.execute(query).screenshot_time)[0])
-        except:
-            screenshot = 0
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as icue_creation from queue_time where state = 'ICUE Creation InProgress'"
-        try:
-            icue_case = int(list(stats_db.execute(query).icue_creation)[0])
-        except:
-            icue_case = 0
-        values = [screenshot,0,icue_case]
         if flip_side == 'front':
             data = {
                 "data": {
                     "name": "AHT for Bot",
-                    "value": sum(values),
+                    "value": 10,
                     "chartHeading": "",
                     "chartHeadingData": [],
                     "chartData": []
@@ -363,11 +331,17 @@ def flip_card():
                 }
 
         else:
-            legend_data = ["AHT for Screenshot by Bot","AHT for ICUE validation by bot","AHT for ICUE case creation by bot"] 
+            legend_data = ["AHT for Screenshot by Bot","AHT for Ace Fax Fields","AHT for Fax making manually",
+            "AHT for Decisioning in ACE","AHT for ICUE validation by bot","AHT for Checker","AHT for ICUE case creation by bot"] 
+            values = [1,1,2,1,2,2,1]
             stacked_cols = {
-                "AHT for Screenshot by Bot": screenshot,
-                "AHT for ICUE validation by bot":0,
-                "AHT for ICUE case creation by bot":icue_case
+                "AHT for Screenshot by Bot": 1,
+                "AHT for Ace Fax Fields":1,
+                "AHT for Fax making manually":2,
+                "AHT for Decisioning in ACE":1,
+                "AHT for ICUE validation by bot":2,
+                "AHT for Checker":2,
+                "AHT for ICUE case creation by bot":1
             }
             data = {
                 "axiscolumns" : legend_data,
@@ -379,22 +353,11 @@ def flip_card():
                 "chart_type": "column"
                 }
     if header.lower() == 'aht(manual)':
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as fax_time from queue_time where state = 'Maker'"
-        try:
-            maker = int(list(stats_db.execute(query).fax_time)[0])
-        except:
-            maker = 0
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as manual_time from queue_time where state = 'Manual'"
-        try:
-            manual = int(list(stats_db.execute(query).manual_time)[0])
-        except:
-            manual = 0
-        values = [maker,manual,4]
         if flip_side == 'front':
             data = {
                 "data": {
                     "name": "AHT for Manual Processing",
-                    "value": sum(values),
+                    "value": 15,
                     "chartHeading": "",
                     "chartHeadingData": [],
                     "chartData": []
@@ -402,11 +365,15 @@ def flip_card():
                 }
 
         else:
-            legend_data = ["AHT for Ace Fax Fields","AHT for Fax making manually","AHT for Decisioning in ACE"] 
+            legend_data = ["AHT for Screenshot by Bot","AHT for Ace Fax Fields","AHT for Fax making manually",
+            "AHT for Decisioning in ACE","AHT for ICUE case creation by bot"] 
+            values = [1,1,2,1,10]
             stacked_cols = {
-                "AHT for Ace Fax Fields":maker,
-                "AHT for Fax making manually":manual,
-                "AHT for Decisioning in ACE":4,
+                "AHT for Screenshot by Bot": 1,
+                "AHT for Ace Fax Fields":1,
+                "AHT for Fax making manually":2,
+                "AHT for Decisioning in ACE":1,
+                "AHT for ICUE case creation by bot":10
             }
             data = {
                 "axiscolumns" : legend_data,
@@ -425,12 +392,25 @@ def chart_data():
     try:
         ui_data = request.json
         header = ui_data['header']
+
+        tenant_id = ui_data['tenant_id']
+         
+        print(f'Tenant_id_in_chart_data{tenant_id}')
+
+        queue_db_config = {
+            'host': 'queue_db',
+            'port': 3306,
+            'user': 'root',
+            'password': 'root',
+            'tenant_id': tenant_id
+        }
+        queue_db = DB('queues', **queue_db_config)
         
         if header.lower() == 'snapshot details':
             if not dummy:
-                query = "SELECT id, queue as name, COUNT(*) as value FROM process_queue where (queue != 'Completed' or queue is null) GROUP BY queue order by queue"
+                query = "SELECT id, queue as name, COUNT(*) as value FROM process_queue GROUP BY queue"
                 real_time = queue_db.execute(query).to_dict(orient='records')
-            
+
                 legend_data = []
                 for i in real_time:
                     if not i['name']:
@@ -447,7 +427,7 @@ def chart_data():
                         ele['name'] = 'Unassigned'
                     stacked_cols[ele['name']] = ele['value']
             else:
-                stacked_cols = {'Completed': 63, 'Maker': 25, 'Manual': 36, 'Review': 13, 'Processing': 17}
+                stacked_cols = {'Completed': 63, 'Fax Data': 25, 'Enhance Decision': 36, 'Decision Review': 13, 'Processing': 17}
                 legend_data = list(stacked_cols.keys())
                 values = list(stacked_cols.values())
 
@@ -456,10 +436,14 @@ def chart_data():
             "barname": "Cases",
             "axisvalues": values,
             "stackedcolumns":stacked_cols,
-            "heading":'In progress cases ' + str(sum(values[:])),
+            "heading":'In progress cases ' + str(sum(values[1:])),
             "subheading": '',
             "chart_type": "column"
             }
+
+            data = {"axiscolumns":["Unassigned","Completed","Decision Review","DEF345","Enhance Decision","Fax Data","GHI678","Manual","Processing","QRS234","Review Cases","Template Exceptions"],"axisvalues":[1,2,2,3,1,7,1,2,1,1,4,14],"barname":"Cases","chart_type":"stacked_column","heading":"In progress cases 38","stackedcolumns":{"Completed":2,"DEF345":3,"Decision Review":2,"Enhance Decision":1,"Fax Data":7,"GHI678":1,"Manual":2,"Processing":1,"QRS234":1,"Review Cases":4,"Template Exceptions":14,"Unassigned":1},"subheading":""}
+
+
     except Exception as e:
         logging.exception(f"Unexpected error in snapshot{e}")
  

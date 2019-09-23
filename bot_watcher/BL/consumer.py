@@ -34,15 +34,26 @@ def get_column_vaue(database, table, column, unique_column, unique_column_value)
         return column_value
     return ''
 
-def bot_watcher(unique_id, next_rule_id):
+def bot_watcher(unique_id, next_rule_id=None):
     """Check for the column to look for and wait till it finishes and return """
-    msg_finshed = "Bot finished"
-    msg_failed = "Bot failed"
+    #msg_finshed = "Bot finished"
+    #msg_failed = "Bot failed"
+    # not ideal should check with database
+    icue_finished = "extraction success"
+    icue_failed = "extraction failed"
+    case_finished = "creation success"
+    case_failed = "creation failed"
     column_value = get_column_vaue('queues', 'process_queue', 'state', 'case_id', unique_id)
-    while (column_value != msg_finshed and column_value != msg_failed):
-        print (column_value, msg_finshed, msg_failed)
-        time.sleep(240)
+    column_value = str(column_value).strip().lower()
+    while (column_value != icue_finished and column_value != icue_failed and column_value != case_finished and column_value != case_failed):
+        print (column_value, icue_finished, icue_failed, case_finished, case_failed)
+        time.sleep(6)
         column_value = get_column_vaue('queues', 'process_queue', 'state', 'case_id', unique_id)
+
+    if column_value == 'creation success' or column_value == 'creation failed' :
+        next_rule_id = 'icue'
+
+    print (f"\n NEXT RULE ID IS {next_rule_id} \n")
     return unique_id, next_rule_id, True, column_value
 
 
@@ -143,10 +154,15 @@ def consume(broker_url='broker:9092'):
                 print ("HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEe")
                 print ("BOT WAIT STARTED")
                 try:
-                    data_from_bot_watcher = bot_watcher(case_id, data['next_rule_id'])
+                    next_rule_id =  data.get('next_rule_id', None)
+                    data_from_bot_watcher = bot_watcher(case_id, next_rule_id)
                     print ("BOT PROCESS FINISHED")
                     print (data_from_bot_watcher)
-                    data['case_id'], data['rule_id'], data['bot_message'], data['bot_status'] = data_from_bot_watcher
+                    data['case_id'], data['next_rule_id'], data['bot_message'], data['bot_status'] = data_from_bot_watcher
+                    if data['next_rule_id'] == "icue":
+                        data['is_button'] = False
+                    else:
+                        data['is_button'] = True
                     print ("SENT DATA FROM BOT WATCHER", data) 
                     produce('run_business_rule', data)
                 except Exception as e:

@@ -263,8 +263,10 @@ def value_extract(result, api=False, retrained=False):
     stats_db = DB('stats', **stats_db_config)
 
     # process_queue = queues_db.get_all('process_queue')
-    query = 'Select * from process_queue where case_id = %s'
-    process_file = queues_db.execute(query, params=[case_id])
+    process_queue = queues_db.get_all('process_queue',discard=['ocr_text','xml_data'])
+
+    latest_process_queue = queues_db.get_latest(process_queue, 'case_id', 'created_date')
+    process_file = latest_process_queue.loc[latest_process_queue['case_id'] == case_id]
     ocr_data = []
     if not process_file.empty:
         logging.debug(process_file)
@@ -600,23 +602,23 @@ def value_extract(result, api=False, retrained=False):
         logging.info('Its API fields')
         output_.pop('method_used', 0)
         return output_
-    # else:
-    #     output_['Vendor Name'] = template_name
+    else:
+        output_['Vendor Name'] = template_name
 
     # Update queue of the file. Field exceptions if there are any suspicious value else Verify queue.
     is_field_exception = False
-    updated_queue = 'Field Exceptions' if is_field_exception else 'Maker'
+    updated_queue = 'Field Exceptions' if is_field_exception else 'Verify'
     query = "UPDATE `process_queue` SET `queue`=%s WHERE `case_id`=%s"
     params = [updated_queue, case_id]
     queues_db.execute(query, params=params)
     audit_data = {
                 "type": "update", "last_modified_by": "Extraction", "table_name": "process_queue", "reference_column": "case_id",
-                "reference_value": case_id, "changed_data": json.dumps({"queue":updated_queue,"stats_stage":updated_queue})
+                "reference_value": case_id, "changed_data": json.dumps({"queue":updated_queue})
             }
     stats_db.insert_dict(audit_data, 'audit')
     logging.debug(f'Updated queue of case ID `{case_id}` to `{updated_queue}`')
 
-    update_queue_trace(queues_db,case_id,'Maker')
+    update_queue_trace(queues_db,case_id,'Verify')
 
     # * Add the fields to the OCR table of extraction DB
     logging.debug('Adding extracted data to the database')
@@ -683,20 +685,20 @@ def value_extract(result, api=False, retrained=False):
 
     query = f'INSERT INTO `ocr` (`case_id`, `highlight`, {query_columns}) VALUES (%s, %s, {value_placeholders})'
     params = [case_id, json.dumps(word_highlights)] + values
-
-
     try:
         extraction_db.execute(query, params=params)
-
     except Exception as e:
         message = f'Error inserting extracted data into the database. {e}'
         logging.exception(message)
         return {'flag': False, 'message': message}
 
     try:
-        query = f'update extraction.ocr o, alorica_data.screen_shots ss set o.`Communication_date_time` = ss.`Communication_date`, o.`communication_date_bot` = ss.`History` , o.`remote_id` = ss.`remote_id`,o.`Agent` = ss.Agent, o.Fax_unique_id = ss.Fax_unique_id where o.case_id = ss.Fax_unique_id and case_id = "{case_id}"'
+        query = f"Select id, communication_date_time, communication_date_time_bot from process_queue where case_id = '{case_id}'"
+        communication_date_bot = list(queues_db.execute(query).communication_date_time_bot)[0]
+        communication_date = list(queues_db.execute(query).communication_date_time)[0]
+
+        query = f"update ocr set Fax_unique_id = '{case_id}', communication_date_time_bot = '{communication_date_bot}', Communication_date_time = '{communication_date}' where case_id = '{case_id}'"
         extraction_db.execute(query)
- 
     except:
         pass
 
@@ -1346,7 +1348,7 @@ def keyword_selector_cluster_method(ocr_data, keyword, inp, field_data, page, co
     
 
     # Search OCR for the key pattern
-    # print('keywords - ', keyList)
+    print('keywords - ', keyList)
     ori_keyList = keyList
     
     keyCords_list, keywords_list, counter = compute_all_key_list_coord(keyList, char_index_list, haystack)
@@ -1356,8 +1358,8 @@ def keyword_selector_cluster_method(ocr_data, keyword, inp, field_data, page, co
 
         keyList = ' '.join(keyList)
 
-        # print(keyList)
-        # print(keyCords)
+        print(keyList)
+        print(keyCords)
         box_top=keyCords['top']+rel_top
         box_bottom=keyCords['bottom']+rel_bottom
         box_left=keyCords['left']+rel_left

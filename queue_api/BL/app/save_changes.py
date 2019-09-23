@@ -1,4 +1,5 @@
 import json
+import os
 import traceback
 
 from kafka import KafkaConsumer, TopicPartition
@@ -57,7 +58,7 @@ def prepare_trained_info(coordinates, field, value, width):
     return trained_info
 
 
-def save_changes(data):
+def save_changes(data, tenant_id):
     try:
         logging.info('Saving changes...')
         logging.info(f'Data recieved: {data}')
@@ -72,22 +73,16 @@ def save_changes(data):
             logging.warning('Operator not in data. Setting as None')
             verify_operator = None
 
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        queue_db = DB('queues', **queue_db_config)
+        db_config = {
+                'host': os.environ['HOST_IP'],
+                'port': '3306',
+                'user': 'root',
+                'password': os.environ['LOCAL_DB_PASSWORD'],
+                'tenant_id': tenant_id
+            }
+        queue_db = DB('queues', **db_config)
 
-        stats_db_config = {
-            'host': 'stats_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306'
-        }
-
-        stats_db = DB('stats', **stats_db_config)
+        stats_db = DB('stats', **db_config)
 
         try:
             update_table(queue_db, case_id, "", changed_fields)
@@ -103,6 +98,7 @@ def save_changes(data):
         for unique_name, value in fields.items():
             logging.debug(f'Unique name: {unique_name}')
             unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
+            print(f'heeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrrrrrrreeeeeeeeeeeeeeeeeeeeeeee{unique_field_def.display_name}')
             display_name = list(unique_field_def.display_name)[0]
             tab_id = list(unique_field_def.tab_id)[0]
             tab_info = tabs_def_df.ix[tab_id]
@@ -127,15 +123,7 @@ def save_changes(data):
 
             changed_fields_w_name[table_name][display_name] = fields_w_name[table_name][display_name]
 
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
-
-
+        extraction_db = DB('extraction', **db_config)
 
         try:
             trained_info = {}
@@ -160,22 +148,12 @@ def save_changes(data):
                                         'width' : width,
                                         'force_check' : 'no'
                                     }
-
-            
-            # host = 'servicebridge'
-            # port = 80
-            # route = 'testFields'
-            # response = requests.post(f'http://{host}:{port}/{route}', json=value_extract_params)
-            # print('retrained NER model')
         except:
             traceback.print_exc()
             print('not able to train')
 
         for table, fields in fields_w_name.items():
-            if table == 'business_rule':
-                fields['Verify Operator'] = verify_operator if verify_operator else ''
-            extraction_db.update(table, update=fields,
-                                 where={'case_id': case_id})
+            extraction_db.update(table, update=fields, where={'case_id': case_id})
 
         for table, fields in changed_fields_w_name.items():
             audit_data = {
@@ -194,26 +172,6 @@ def consume(broker_url='broker:9092'):
     try:
         route = 'save_changes'
         logging.info(f'Listening to topic: {route}')
-
-        common_db_config = {
-            'host': 'common_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        kafka_db = DB('kafka', **common_db_config)
-        # kafka_db = DB('kafka')
-
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        queue_db = DB('queues', **queue_db_config)
-        # queue_db = DB('queues')
-
-        message_flow = kafka_db.get_all('grouped_message_flow')
 
         consumer = KafkaConsumer(
             bootstrap_servers=broker_url,
@@ -250,12 +208,6 @@ def consume(broker_url='broker:9092'):
         partitions = [TopicPartition(route, p) for p in parts]
         consumer.assign(partitions)
 
-        query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
-        function_info = queue_db.execute(query, params=[route])
-        in_progress_message = list(function_info['in_progress_message'])[0]
-        failure_message = list(function_info['failure_message'])[0]
-        success_message = list(function_info['success_message'])[0]
-
         for message in consumer:
             data = message.value
             logging.info(f'Message: {data}')
@@ -263,10 +215,30 @@ def consume(broker_url='broker:9092'):
             try:
                 case_id = data['case_id']
                 functions = data['functions']
+                tenant_id = data['tenant_id']
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
                 consumer.commit()
                 continue
+            
+            db_config = {
+                'host': os.environ['HOST_IP'],
+                'port': '3306',
+                'user': 'root',
+                'password': os.environ['LOCAL_DB_PASSWORD'],
+                'tenant_id': tenant_id
+            }
+
+            queue_db = DB('queues', **db_config)
+            kafka_db = DB('kafka', **db_config)
+
+            query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
+            function_info = queue_db.execute(query, params=[route])
+            in_progress_message = list(function_info['in_progress_message'])[0]
+            failure_message = list(function_info['failure_message'])[0]
+            success_message = list(function_info['success_message'])[0]
+
+            message_flow = kafka_db.get_all('grouped_message_flow')
 
             # Get which button (group in kafka table) this function was called from
             group = data['group']
@@ -282,7 +254,7 @@ def consume(broker_url='broker:9092'):
             
             if not first_topic.empty:
                 logging.debug(f'`{route}` is the first topic in the group `{group}`.')
-                logging.debug(f'Number of topics in grou `{group}` is {len(group_messages)}')
+                logging.debug(f'Number of topics in group `{group}` is {len(group_messages)}')
                 if list(first_flow['send_to_topic'])[0] is None:
                     queue_db.execute(query, params=[in_progress_message, len(group_messages), case_id])
                 else:
@@ -299,7 +271,7 @@ def consume(broker_url='broker:9092'):
             # Call the function
             try:
                 logging.debug(f'Calling function `save_changes`')
-                result = save_changes(function_params)
+                result = save_changes(function_params, tenant_id)
             except:
                 # Unlock the case.
                 logging.exception(f'Something went wrong while saving changes. Check trace.')

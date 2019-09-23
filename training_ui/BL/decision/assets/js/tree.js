@@ -48,11 +48,8 @@ $.ajax(settings11).done(function (msg) {
     if ($.type(msg) == 'string') {
         $.alert('Something went wrong', 'Alert')
     }
-    else if (msg.flag != 'False' || msg.flag != 'false'){
-        inputConverter(msg)
-    }
     else {
-        $.alert(msg.msg, 'Alert')
+        inputConverter(msg)
     }
 });
 
@@ -81,11 +78,12 @@ function inputConverter(dt){
     //         ]
     //     }
     // }
+    // decision_display = dt['testData'];
 
     links = [];
     nodes = [];
     var end_id = '';
-
+    //console.log(input,trace,"odfsfgsd")
     for (var i = 0; i < input.length; i++) {
         // node generation
         obj = {}
@@ -187,6 +185,7 @@ function inputConverter(dt){
             fontFamily: "Roboto Condensed",
             fontWeight: "Normal",
             strokeWidth: 0
+
         };
         obj.attrs.root = {
             dataTooltipPosition: "left",
@@ -276,6 +275,7 @@ function TableDataConverter(table_obj,rule_id){
 }
 
 function displayCellData(cell_id) {
+    console.log(cell_id);
     ic = ''
     if(testData[cell_id]){
         node_data = testData[cell_id];
@@ -283,16 +283,15 @@ function displayCellData(cell_id) {
         ic += '<p><span>Output:</span> '+node_data['output']+'</p>';
         ic += '<p><span>Description:</span> '+node_data['description']+'</p>';
 
-        if (node_data['input'].length > 0) {
-            ic += '<div class=forTable><span>Input:</span><div class="widthFull">' + generateTable(node_data['input']) + '</div></div>'
-        }
+        ic += '<div class=forTable><span>Input:</span><div class="widthFull">' + generateTable(node_data['input']) + '</div></div>'
+
     }
     $(".inspector-container").html(ic);
 }
 
 
 function generateTable(table) {
-    cols = ["table", "column", "value"];
+    cols = Object.keys(table[0])
     th = '<tr>'
     for (var i = 0; i < cols.length; i++) {
         console.log(cols[i]);

@@ -5,12 +5,12 @@ import json
 import requests
 import traceback
 import warnings
-import locale
+import os
+import pandas as pd
 
 from datetime import datetime, timedelta
 from db_utils import DB
 from flask import Flask, request, jsonify
-
 from flask_cors import CORS
 from pandas import Series, Timedelta, to_timedelta
 from time import time
@@ -138,7 +138,7 @@ def get_template_exceptions(db, data):
         queue_files = process_queue_df
         files = queue_files[columns].to_dict(orient='records')
         for document in files:
-            document['created_date'] = (document['created_date']).strftime(r'%x %X')
+            document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
         # trained_templates = sorted(list(trained_info.template_name),key=str.lower)
         trained_templates = []
 
@@ -174,15 +174,13 @@ def get_snapshot(db, data):
     columns = [
             'case_id',
             'queue',
-            'agent',
-            'last_updated'
+            'created_date',
         ]
 
     column_mapping = {
         "fax_unique_id": "case_id",
         "current_queue": "queue",
-        "Agent": "agent",
-        "last_updated": "last_updated"
+        "created_date": "created_date",
         }
 
     column_order = list(column_mapping.keys())
@@ -195,14 +193,13 @@ def get_snapshot(db, data):
 
     logging.debug(f'Loading process queue {time()-all_st}')
     rest_st = time()
-   
     # trained_info = template_db.get_all('trained_info')
     
     try:
         queue_files = process_queue_df
         files = queue_files[columns].to_dict(orient='records')
         for document in files:
-            document['last_updated'] = (document['last_updated']).strftime(r'%x %X')
+            document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
 
         if end_point > total_files:
             end_point = total_files
@@ -215,7 +212,6 @@ def get_snapshot(db, data):
         logging.error(message)
         db.engine.close()
         return {'flag': False, 'message': message}
-
 
 @cache.memoize(86400)
 def get_blob(case_id, tenant_id):
@@ -320,7 +316,7 @@ def get_button_attributes(queue_id, queue_definition, tenant_id):
         if button_rule_group is not None:
             button['stage'] = button_rule_group.split(',')
         if button_move_to is not None:
-            button['move_to'] = list(queue_definition.loc[[button_move_to]]['name'])[0]
+            button['move_to'] = list(queue_definition.loc[[button_move_to]]['unique_name'])[0]
 
     return button_attributes
 
@@ -341,11 +337,13 @@ def queue_name_type(queue_id, tenant_id):
     queue_df = queue_definition.loc[queue_id]
 
     queue_name = queue_df['name']
+    queue_uid = queue_df['unique_name']
     queue_type = queue_df['type']
     logging.info(f'Queue name: {queue_name}')
+    logging.info(f'Queue UID: {queue_uid}')
     logging.debug(f'Time taken for fetching q name {time()-qid_st}')
 
-    return queue_name, queue_type, queue_definition
+    return queue_uid, queue_name, queue_type, queue_definition
 
 @cache.memoize(86400)
 def get_columns(queue_id, queue_name, tenant_id):
@@ -416,9 +414,8 @@ def get_fields_tab_queue(queue_id, tenant_id):
         'tenant_id': tenant_id
     }
     extraction_db = DB('extraction', **extraction_db_config)
-    query = "SELECT field_id from queue_field_mapping where queue_id = %s"
-    query = f"SELECT * from field_definition where id in ({query})"
-    fields_df = db.execute(query, params=[queue_id])
+    query = f"SELECT * FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
+    fields_df = db.execute(query)
     tab_definition = db.get_all('tab_definition')
     # Replace tab_id in fields with the actual tab names
     # Also create unique name for the buttons by combining display name
@@ -461,6 +458,281 @@ def get_fields_tab_queue(queue_id, tenant_id):
 
     return field_attributes, tabs_reordered, excel_display_data, tab_type_mapping
 
+def recon_get_columns(table_unique_id, tenant_id):
+
+    db_config = {
+                'host': os.environ['HOST_IP'],
+                'port': 3306,
+                'user': 'root',
+                'password': 'AlgoTeam123',
+                'tenant_id': tenant_id
+            }
+    db = DB('queues', **db_config)
+
+    # * COLUMNS
+#    logging.info(f'Getting column details for `{queue_name}`...')
+    # query = "SELECT id, column_id from recon_column_mapping where table_unique_id = %s ORDER BY column_order ASC"
+    # table_column_ids = list(db.execute(query, params=[table_unique_id]).column_id) 
+
+    # Get columns using column ID and above result from column configuration table
+#    columns_time = time()
+    query = f"SELECT `column_definition`.*, `recon_column_mapping`.`column_order` FROM `column_definition`, `recon_column_mapping` where `column_definition`.`id` = `recon_column_mapping`.`column_id` and `recon_column_mapping`.`table_unique_id` = %s ORDER BY `recon_column_mapping`.`column_order` ASC"
+    columns_df = db.execute_(query, params=[table_unique_id])
+    # columns_df = columns_definition_df[columns_definition_df['id'].isin(table_column_ids)]
+
+    extraction_columns_df = columns_df.loc[columns_df['source'] != 'process_queue']
+#    logging.debug(f'Columns DF: {columns_df}')
+    columns = list(columns_df['column_name'])
+#    logging.debug(f'Columns: {columns}')
+#    logging.debug(f'Time taken for columns in q {time()-columns_time}')
+
+#    util_columns = ['total_processes', 'completed_processes', 'case_lock', 'failure_status']
+#    logging.debug(f'Appending utility columns {util_columns}')
+#    columns += util_columns
+#    logging.debug(f'Columns after appending utility columns: {columns}')
+
+    extraction_columns_list = list(extraction_columns_df['column_name'])
+
+    return_data = {
+        'columns': columns,
+        # 'util_columns': util_columns,
+        'extraction_columns_df': extraction_columns_df.to_dict(orient= 'records'),
+        'extraction_columns_list': extraction_columns_list,
+        'columns_df': columns_df
+    }
+
+    return return_data
+
+def get_recon_data(queue_id, queue_name, tenant_id):
+    db_config = {
+                'host': os.environ['HOST_IP'],
+                'port': 3306,
+                'user': 'root',
+                'password': 'AlgoTeam123',
+                'tenant_id': tenant_id
+                }
+    db = DB('queues', **db_config)
+    
+    # queue_id = '49'
+    query = f"SELECT * FROM `recon_table_mapping` where `queue_id` = '{queue_id}'"
+    recon_table_mapping_df = db.execute(query)
+    
+    table_unique_ids_mapped = list(recon_table_mapping_df['table_unique_id'])
+    table_unique_ids_mapped = ["'" +x+ "'" for x in table_unique_ids_mapped]
+    in_clause = ','.join(table_unique_ids_mapped)
+    
+
+    query_1 = f"SELECT * FROM `recon_definition` where `table_unique_id` in (SELECT `table_unique_id` FROM `recon_table_mapping` where `queue_id` = '{queue_id}')"
+    recon_definition_df = db.execute(query_1)
+    
+    if len(recon_definition_df) > 2:
+        return {'flag' : 'False', 'msg' : 'Too many queues mapped in DB.'}
+    to_return = {}
+    keys_ = {}  #for the UI to know which is primary and secondary table
+    for _, row in recon_definition_df.iterrows():
+        table_column_mapping = recon_get_columns(row['table_unique_id'], 'karvy')
+        
+        if row['dependency']:
+            keys_['primary_table'] = row['table_unique_id']
+        else:
+            keys_['secondary_table'] = row['table_unique_id']
+        
+        if len(recon_definition_df) == 1:
+            keys_['primary_table'] = row['table_unique_id']
+            
+        dd = table_column_mapping['columns_df'].to_dict(orient='list')
+        final ={}
+        to_map = []
+        logging.debug(f'DD: {dd}')
+
+        for key, value in dd.items():
+            to_map.append(value)
+
+        logging.debug(f'To Map: {to_map}')
+        column_mapping = {}
+        print("********************to_map" , to_map)
+        for i in range(len(to_map[0])):
+            column_mapping[to_map[2][i]] = to_map[1][i] 
+        logging.debug(f'Column Mapping: {column_mapping}') 
+        #Check if unique id is in columns extracted from recon_get_columns
+        to_return[row['table_unique_id']] = { 
+                'route' : row['route'],
+                'parameters' : row['parameters'],
+                'show_table' : row['show_table'],
+                'unique_key' : row['unique_key'],
+                'match_id_field': row['match_id_field'],
+                'match_table' : row['match_table'],
+                'dependency' : row['dependency'] if row['dependency'] else '',
+                'columns' : table_column_mapping['columns'],
+                'columns_df' : table_column_mapping['columns_df'].to_dict(orient= 'records'),
+                'column_mapping': column_mapping,
+                'column_order': list(column_mapping.keys()),
+                'queue_table_name' : row['queue_table_name'] if row['queue_table_name'] else '',
+                'check_box' : row['check_box']
+                }
+    to_return  = {**to_return, **keys_}
+    #Add button_attributes_key
+    return to_return
+
+@app.route('/get_recon_secondary_table', methods = ['GET', 'POST'])
+def get_recon_secondary_table():
+    data = request.json
+    tenant_id = data['tenant_id']
+    db_config = {
+                'host': os.environ['HOST_IP'],
+                'port': 3306,
+                'user': 'root',
+                'password': 'AlgoTeam123',
+                'tenant_id': tenant_id
+                }
+    unique_key = data['unique_key']
+    primary_unique_key_value = data['primary_unique_key_value']
+    primary_table_unique_key = data['primary_table_unique_key']
+    primary_queue_table_name = data['primary_queue_table_name']
+    columns_df = data['columns_df']
+    columns = data['columns']
+    queue_id = data['queue_id'] #Need UI to send this 
+    queue_db = DB('queues', **db_config)
+    extraction_db = DB('extraction', **db_config)
+    # query = f"SELECT `unique_name` FROM `queue_definition` where `id` = '{queue_id}'"
+    # print(query)
+    # queue_unique_name = queue_db.execute_(query)
+    # print(queue_unique_name)
+    # queue_unique_name  = list(queue_unique_name['unique_name'])[0]
+    # invoice_files_df = extraction_db.execute_(f"SELECT * from `{queue_table_name}` where `queue`= '{queue_unique_name}'")
+    # # files = invoice_files_df[columns].to_dict(orient='records')
+    # case_ids = list(invoice_files_df[unique_key].unique())
+    extraction_columns_df = pd.DataFrame(columns_df)
+    # extraction_columns_df = columns_df[columns_df['source'] != 'process_queue']
+    # print("case_id ",case_ids)
+    # if case_ids:    
+    #     placeholders = ','.join(['%s'] * len(case_ids))
+    if not extraction_columns_df.empty:
+        select_columns_list = []
+        for index, row in extraction_columns_df.iterrows():
+            col_name = row['column_name']                   
+            table = row['source']
+        
+            if table:
+                select_columns_list.append(f'`{table}`.`{col_name}`')
+        
+        tables_list = [source for source in list(extraction_columns_df['source'].unique()) if source]
+        print(f'Tables to fetch from: {tables_list}')
+        tables_list_ = []
+        if primary_queue_table_name not in tables_list:
+            tables_list_ = tables_list + [primary_queue_table_name]
+            print(tables_list_)
+        else:
+            tables_list_ = tables_list
+        where_conditions_list = []
+        for combo in combinations(tables_list_, 2):
+            where_conditions_list.append(f'`{combo[0]}`.`{primary_table_unique_key}` = `{combo[1]}`.`{primary_table_unique_key}`')
+
+        # select_columns_list += ['`ocr`.`id`', '`ocr`.`case_id`']
+        where_conditions_list += [f"`{tables_list[0]}`.`{primary_table_unique_key}` IN ('{primary_unique_key_value}')"]
+
+        select_part = ', '.join(select_columns_list)
+        from_part = ', '.join([f'`{table}`' for table in tables_list_])
+        where_part = ' AND '.join(where_conditions_list)
+        
+        
+        query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
+        print('query is ',query)
+        query_result_df = extraction_db.execute_(query)
+        try:
+            query_result_list = query_result_df.to_dict('records')
+        except:
+            pass
+        print(f'Extraction data: {query_result_list}')
+        
+        rows_arr = []
+        for idx, row in query_result_df.iterrows():
+            rows_dict = {}
+            for col in columns:
+                rows_dict = {**rows_dict, **{col : row[col]}}
+            rows_arr.append(rows_dict)
+        return jsonify({'columns' : columns,'rows' : rows_arr})
+    else:
+        sample = {"columns":["case_id","operator"],"rows":[{"case_id":"2000443305","operator":"ab"},{"case_id":"2000443312","operator":"abc"},{"case_id":"2000443320","operator":"a"},{"case_id":"2000443334","operator":"ab"},{"case_id":"2000443344","operator":"123"},{"case_id":"2000443415","operator":"abc"}]}  
+        return jsonify("No data to display")
+
+@app.route('/get_recon_table_data', methods = ['GET', 'POST'])
+def get_recon_table_data():
+    data = request.json
+    tenant_id = data['tenant_id']
+    db_config = {
+                'host': os.environ['HOST_IP'],
+                'port': 3306,
+                'user': 'root',
+                'password': 'AlgoTeam123',
+                'tenant_id': tenant_id
+                }
+    unique_key = data['unique_key']
+    queue_table_name = data['queue_table_name']
+    columns_df = data['columns_df']
+    columns = data['columns']
+    queue_id = data['queue_id'] #Need UI to send this 
+    queue_db = DB('queues', **db_config)
+    extraction_db = DB('extraction', **db_config)
+    query = f"SELECT `unique_name` FROM `queue_definition` where `id` = '{queue_id}'"
+    print(query)
+    queue_unique_name = queue_db.execute_(query)
+    print(queue_unique_name)
+    queue_unique_name  = list(queue_unique_name['unique_name'])[0]
+    invoice_files_df = extraction_db.execute_(f"SELECT * from `{queue_table_name}` where `queue`= '{queue_unique_name}'")
+    # files = invoice_files_df[columns].to_dict(orient='records')
+    case_ids = list(invoice_files_df[unique_key].unique())
+    extraction_columns_df = pd.DataFrame(columns_df)
+    # extraction_columns_df = columns_df[columns_df['source'] != 'process_queue']
+    print("case_id ",case_ids)
+    if case_ids:    
+        placeholders = ','.join(['%s'] * len(case_ids))
+        if not extraction_columns_df.empty:
+            select_columns_list = []
+            for index, row in extraction_columns_df.iterrows():
+                col_name = row['column_name']                   
+                table = row['source']
+            
+                if table:
+                    select_columns_list.append(f'`{table}`.`{col_name}`')
+            
+            tables_list = [source for source in list(extraction_columns_df['source'].unique()) if source]
+            print(f'Tables to fetch from: {tables_list}')
+            tables_list_ = []
+            if queue_table_name not in tables_list:
+                tables_list_ = tables_list + [queue_table_name]
+                print(tables_list_)
+            else:
+                tables_list_ = tables_list
+            where_conditions_list = []
+            for combo in combinations(tables_list_, 2):
+                where_conditions_list.append(f'`{combo[0]}`.`{unique_key}` = `{combo[1]}`.`{unique_key}`')
+
+            # select_columns_list += ['`ocr`.`id`', '`ocr`.`case_id`']
+            where_conditions_list += [f'`{queue_table_name}`.`{unique_key}` IN ({placeholders})']
+        
+            select_part = ', '.join(select_columns_list)
+            from_part = ', '.join([f'`{table}`' for table in tables_list_])
+            where_part = ' AND '.join(where_conditions_list)
+
+
+            query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
+            print('query is ',query)
+            query_result_df = extraction_db.execute_(query, params=case_ids)
+            query_result_list = query_result_df.to_dict('records')
+            print(f'Extraction data: {query_result_list}')
+            
+            rows_arr = []
+            for idx, row in query_result_df.iterrows():
+                rows_dict = {}
+                for col in columns:
+                    rows_dict = {**rows_dict, **{col : row[col]}}
+                rows_arr.append(rows_dict)
+            return jsonify({'columns' : columns,'rows' : rows_arr})
+    else:
+        sample = {"columns":["case_id","operator"],"rows":[{"case_id":"2000443305","operator":"ab"},{"case_id":"2000443312","operator":"abc"},{"case_id":"2000443320","operator":"a"},{"case_id":"2000443334","operator":"ab"},{"case_id":"2000443344","operator":"123"},{"case_id":"2000443415","operator":"abc"}]}  
+        return jsonify("No data to display")
+
 @app.route('/get_queue', methods=['POST', 'GET'])
 @app.route('/get_queue/<queue_id>', methods=['POST', 'GET'])
 def get_queue(queue_id=None):
@@ -474,7 +746,7 @@ def get_queue(queue_id=None):
             logging.info(f'Queue ID: {queue_id}')
             
             operator = data.get('user', None)
-            tenant_id = data.get('tenant_id', None)
+            tenant_id = data.get('tenant_id', '')
             
             zipkin_context.update_binary_annotations({'Tenant':tenant_id})
 
@@ -504,19 +776,28 @@ def get_queue(queue_id=None):
                 return jsonify({'flag': False, 'message': message})
 
             db_config = {
-                'host': 'queue_db',
+                'host': os.environ['HOST_IP'],
                 'port': 3306,
                 'user': 'root',
-                'password': 'root',
+                'password': 'AlgoTeam123',
                 'tenant_id': tenant_id
             }
             db = DB('queues', **db_config)
+
+            # user_db_config = {
+            #     'host': os.environ['HOST_IP'],
+            #     'user': 'root',
+            #     'password': 'AlgoTeam123',
+            #     'port': '3306',
+            #     'tenant_id':tenant_id
+            # }
+            # user_db = DB('authentication', **user_db_config)
 
             extraction_db_config = {
                 'host': 'extraction_db',
                 'port': 3306,
                 'user': 'root',
-                'password': 'root',
+                'password': 'AlgoTeam123',
                 'tenant_id': tenant_id
             }
             extraction_db = DB('extraction', **extraction_db_config)
@@ -528,7 +809,7 @@ def get_queue(queue_id=None):
                 logging.debug(f'Time taken for operator update: {time()-oper_st}')
 
             try:
-                queue_name, queue_type, queue_definition = queue_name_type(queue_id, tenant_id)
+                queue_uid, queue_name, queue_type, queue_definition = queue_name_type(queue_id, tenant_id)
             except:
                 message = 'Some column ID not found in column definition table.'
                 logging.exception(message)
@@ -539,6 +820,7 @@ def get_queue(queue_id=None):
 
                 response = get_template_exceptions(db, {'start': start_point, 'end': end_point})
 
+                # user_db.engine.close()
                 extraction_db.engine.close()
 
                 logging.info(f'Response: {response}')
@@ -546,7 +828,7 @@ def get_queue(queue_id=None):
             elif queue_type == 'reports':
                 logging.info(f' > Redirecting to `get_reports_queue` route.')
 
-                host = 'servicebridge'
+                host = 'reportsapi'
                 port = 80
                 route = 'get_reports_queue'
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
@@ -557,18 +839,29 @@ def get_queue(queue_id=None):
             elif queue_type == 'snapshot':
                 logging.info(f' > Redirecting to `get_snapshot` route.')
 
-                response = get_snapshot(db, {'start': start_point, 'end': end_point})
-                logging.info(f'Response: {response}')
-                return jsonify(response)
+                response_data = get_snapshot(db, {'start': start_point, 'end': end_point})
+
+                return jsonify(response_data)
             
+            elif queue_type == 'recon':
+                logging.info(f' > Redirecting to `/get_recon` route.')
+                response_data = get_recon_data(queue_id, queue_name, tenant_id)
+                button_time = time()
+                logging.info(f'Getting button details for `{queue_name}`...')
+                button_attributes = get_button_attributes(queue_id, queue_definition, tenant_id)
+                logging.debug(f'Time taken for button functions {time()-button_time}')
+                response_data['buttons'] = button_attributes
+                
+                return jsonify({'data':response_data, 'flag' : True})
             # Get data related to the queue name from OCR table
             all_st = time()
-            invoice_files_df = db.execute("SELECT * from `process_queue` where `queue`= %s ORDER by `failure_status` desc, `last_updated` desc LIMIT %s, %s", params=[queue_name, start_point, offset])
-            total_files = list(db.execute("SELECT id, COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=[queue_name])['COUNT(DISTINCT `case_id`)'])[0]
+            invoice_files_df = db.execute("SELECT * from `process_queue` where `queue`= %s ORDER by `failure_status` desc, `created_date` desc LIMIT %s, %s", params=[queue_uid, start_point, offset])
+            total_files = list(db.execute("SELECT id, COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=[queue_uid])['COUNT(DISTINCT `case_id`)'])[0]
             logging.debug(f'Loading process queue {time()-all_st}')
             case_ids = list(invoice_files_df['case_id'].unique())
             logging.debug(f'Case IDs: {case_ids}')
 
+            
             try:
                 columns_data = get_columns(queue_id, queue_name, tenant_id)
                 columns = columns_data['columns']
@@ -583,17 +876,16 @@ def get_queue(queue_id=None):
                 logging.exception(message)
                 return jsonify({'flag': False, 'message': message})
             
-            
             queue_files = invoice_files_df
             logging.debug(f'Queue Files: {queue_files}')
             files = queue_files[columns].to_dict(orient='records')
             logging.debug(f'Files info: {files}')
 
-            if case_ids:
-                placeholders = ','.join(['%s'] * len(case_ids))
+            if queue_type != 'formqueue':
+                if case_ids:
+                    placeholders = ','.join(['%s'] * len(case_ids))
 
-                select_columns_list = []
-                if not extraction_columns_df.empty:
+                    select_columns_list = []
                     for index, row in extraction_columns_df.iterrows():
                         col_name = row['column_name']                   
                         table = row['source']
@@ -619,34 +911,42 @@ def get_queue(queue_id=None):
                     logging.debug(f'From part: {from_part}')
                     logging.debug(f'Where part: {where_part}')
 
+                    
                     # query = f'SELECT `business_rule`.`id`, `business_rule`.`case_id`, `business_rule`.`Verify Operator`, `ocr`.`Vendor Name` FROM `business_rule`, `ocr` WHERE `business_rule`.`case_id`=`ocr`.`case_id` AND `business_rule`.`case_id` in ({placeholders})'
                     query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
                     
                     query_result = extraction_db.execute(query, params=case_ids)
                     query_result_list = query_result.to_dict('records')
                     logging.debug(f'Extraction data: {query_result_list}')
+                
 
-                for document in files:
-                    try:
-                        percentage_done = str(int((document['completed_processes']/document['total_processes'])*100))
-                    except:
-                        percentage_done = '0'
-                    if int(percentage_done) > 100:
-                        percentage_done = '100'
+                    for document in files:
+                        try:
+                            document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
+                        except:
+                            logging.debug(f'Could not parse created date value. `created_date` might not be mapped for the queue `{queue_name}`.')
+                            pass
                         
-                    try:
-                        if document['status']:
-                            document['status'] = {
-                                'percent_done': percentage_done,
-                                'current_status':document['status'],
-                                'case_lock':document['case_lock'],
-                                'failure_status':document['failure_status']
-                            }
-                        else:
-                            document['status'] = None
-                    except:
-                        pass
-                    if not extraction_columns_df.empty:
+                        try:
+                            percentage_done = str(int((document['completed_processes']/document['total_processes'])*100))
+                        except:
+                            percentage_done = '0'
+                        if int(percentage_done) > 100:
+                            percentage_done = '100'
+                            
+                        try:
+                            if document['status']:
+                                document['status'] = {
+                                    'percent_done': percentage_done,
+                                    'current_status':document['status'],
+                                    'case_lock':document['case_lock'],
+                                    'failure_status':document['failure_status']
+                                }
+                            else:
+                                document['status'] = None
+                        except:
+                            pass
+
                         for row in query_result_list:
                             row_case_id = row['case_id']
                             logging.debug(f'Row Case: {row_case_id}')
@@ -657,40 +957,27 @@ def get_queue(queue_id=None):
                                     logging.debug(f'Case matched!\n')
                                     document[col] = val
                                     continue
-                    columns_to_change = [
-                        'created_date', 
-                        'last_updated', 
-                        'communication_date_time', 
-                        'Communication_date_time', 
-                        'communication_date_time_ocr'
-                    ]
 
-                    for column in columns_to_change:
-                        try:
-                            document[column] = (document[column]).strftime(r'%x %X')
-                        except:
-                            logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
-                            pass
+                columns = [col for col in columns if col not in util_columns]
+                columns += extraction_columns_list
+                logging.debug(f'New columns: {columns}')
+
                 
+                dd = columns_df.to_dict(orient='list')
+                final ={}
+                to_map = []
+                logging.debug(f'DD: {dd}')
 
-            columns = [col for col in columns if col not in util_columns]
-            columns += extraction_columns_list
-            logging.debug(f'New columns: {columns}')
+                for key, value in dd.items():
+                    to_map.append(value)
 
-            dd = columns_df.to_dict(orient='list')
-            final ={}
-            to_map = []
-            logging.debug(f'DD: {dd}')
-
-            for key, value in dd.items():
-                to_map.append(value)
-
-            logging.debug(f'To Map: {to_map}')
-            column_mapping = {}
-            for i in range(len(to_map[0])):
-                column_mapping[to_map[1][i]] = to_map[0][i] 
-            logging.debug(f'Column Mapping: {column_mapping}')
-
+                logging.debug(f'To Map: {to_map}')
+                column_mapping = {}
+                for i in range(len(to_map[0])):
+                    column_mapping[to_map[1][i]] = to_map[0][i] 
+                logging.debug(f'Column Mapping: {column_mapping}')
+            else:
+                column_mapping = {}
             # * RENAME COLUMNS
             # logging.debug(f'Before Renaming Columns: {columns}')
             # temp_columns = columns.copy()
@@ -727,12 +1014,22 @@ def get_queue(queue_id=None):
 
             pagination = {"start": start_point + 1, "end": end_point, "total": total_files}
 
+            # query = "SELECT id,username from users where role = 'TL_Prod'"
+            # retrain_access = operator in list(user_db.execute(query).username)
+
+            # if queue_name == 'Verify' and retrain_access:
+            #     retrain = 1
+            # else:
+            #     retrain = 0
+
             db.engine.close()
+            # user_db.engine.close()
             extraction_db.engine.close()
 
             db.db_.dispose()
+            # user_db.db_.dispose()
             extraction_db.db_.dispose()
-
+            
             data = {
                 'files': files,
                 'buttons': button_attributes,
@@ -741,10 +1038,10 @@ def get_queue(queue_id=None):
                 'excel_source_data': excel_display_data,
                 'tab_type_mapping': tab_type_mapping,
                 'pagination': pagination,
-                'retrain': 0,
+                # 'retrain': retrain,
                 'column_mapping': column_mapping,
                 'column_order': list(column_mapping.keys()),
-                'pdf_type': 'blob'
+                'pdf_type': 'folder' if tenant_id else 'blob'
             }
             logging.debug(f'Total time taken to get `{queue_name}` {time()-rt_time}')
 
@@ -811,7 +1108,7 @@ def get_display_fields(case_id=None):
         raw_move_to_ids = list(queue_workflow['move_to'])
         move_to_ids = [id if id is not None else -1 for id in raw_move_to_ids]
         move_to_df = queue_definition.ix[move_to_ids]
-        move_to = list(move_to_df['name'])
+        move_to = list(move_to_df['unique_name'])
         for index, button in enumerate(button_attributes):
             if move_to[index] != -1:
                 button['move_to'] = move_to[index]
@@ -846,9 +1143,8 @@ def get_display_fields(case_id=None):
 
         logging.debug(f'Fetching queue field maping for queue `{queue_id}`')
         # Get field IDs for the queue field mapping
-        queue_field_mapping = db.get_all('queue_field_mapping')
-        queue_id_field_mapping = queue_field_mapping.loc[queue_field_mapping['queue_id'] == queue_id]
-        field_ids = list(queue_id_field_mapping['field_id'])
+        query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
+        field_ids = list(db.execute_(query).id)
 
         logging.debug(f'Fetching field defintion for queue `{queue_id}`')
         # Get field definition corresponding the field IDs
@@ -992,17 +1288,16 @@ def get_fields(case_id=None):
 
         queue_name = list(case_files['queue'])[0]
         queue_definition = queue_db.get_all('queue_definition')
-        queue_info = queue_definition.loc[queue_definition['name'] == queue_name]
+        queue_info = queue_definition.loc[queue_definition['unique_name'] == queue_name]
         print("queue_name", queue_name)
-        queue_id = queue_definition.index[queue_definition['name'] == queue_name].tolist()[0]
+        queue_id = queue_definition.index[queue_definition['unique_name'] == queue_name].tolist()[0]
         logging.debug(f'Time taken for getting qid basis exception type {time()-qid_st}')
 
         logging.debug(f'Getting queue field mapping info for case `{case_id}`')
         # Get field related to case ID from queue_field_mapping
         fields_ids_time = time()
-        queue_field_mapping = queue_db.get_all('queue_field_mapping')
-        queue_id_field_mapping = queue_field_mapping.loc[queue_field_mapping['queue_id'] == queue_id]
-        field_ids = list(queue_id_field_mapping['field_id'].unique())
+        query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
+        field_ids = list(queue_db.execute_(query).id)
         print("field list ids", field_ids)
         logging.debug(f'Time taken for getting fields ids {time()-fields_ids_time}')
 
@@ -1033,9 +1328,12 @@ def get_fields(case_id=None):
         except:
             highlight = {}
         try:
-            table = list(case_id_ocr['Table'])[0]
+            if 'Table' in list(case_id_ocr.columns):
+                table = list(case_id_ocr['Table'])[0]
+            else:
+                table = '[]'
         except:
-            table = '[[]]'
+            table = '[]'
 
         # Renaming of fields
         rename_time = time()
@@ -1055,6 +1353,9 @@ def get_fields(case_id=None):
 
             display_name = row['display_name']
             unique_name = row['unique_name']
+
+            if unique_name == 'addon_table':
+                continue
 
             # Get data related to the case from table for the corresponding tab
             get_all_time = time()
@@ -1105,15 +1406,15 @@ def get_fields(case_id=None):
 
         logging.debug('Fetching failure messages')
         failure_msgs_data = {}
-        query = "SELECT * from `validation` where `case_id` = %s"
-        validation_results = extraction_db.execute(query, params=[case_id])
-        if not validation_results.empty:
-            validation_results = validation_results.to_dict(orient='records')[0]
+        # query = "SELECT * from `validation` where `case_id` = %s"
+        # validation_results = extraction_db.execute(query, params=[case_id])
+        # if not validation_results.empty:
+        #     validation_results = validation_results.to_dict(orient='records')[0]
             
-            for field in validation_results:
-                msg = validation_results[field] 
-                if  msg and (msg != '1') and (msg != '0'):
-                    failure_msgs_data[field] = msg
+        #     for field in validation_results:
+        #         msg = validation_results[field] 
+        #         if  msg and (msg != '1') and (msg != '0'):
+        #             failure_msgs_data[field] = msg
         failure_msgs_data.pop('case_id', None)
         failure_msgs_data.pop('highlight', None)
         
@@ -1135,31 +1436,30 @@ def get_fields(case_id=None):
         
         logging.debug(f'Failures: {failures}')
 
-        query = "SELECT id, pattern FROM field_definition WHERE unique_name = 'addon_table'"
-        table_pattern = json.loads(list(queue_db.execute(query).pattern)[0])
+        response_data = {}
+        query = "SELECT id, tab_id, pattern FROM field_definition WHERE unique_name = 'addon_table'"
+        try:
+            result = queue_db.execute(query)
+            pattern = list(result.pattern)
+            tab_id = list(result.tab_id)[0]
+            query = f"Select id, text from tab_definition where id = {tab_id}"
+            addon_column = list(queue_db.execute(query).text)[0]
+            if pattern:
+                table_pattern = json.loads(pattern[0])
+                addon_table = get_addon_table(table_pattern,case_id_ocr)
+            else:
+                addon_table = {}
+        except:
+            logging.debug(f'Failed while fetching addon table details. Initializing it to empty dictionary')
+            addon_table = {}
 
-        addon_table = get_addon_table(table_pattern,case_id_ocr)
-
-        # Convert datetime to str
-
-        columns_to_change = [
-            'communication_date_time_ocr',
-            'dob_ocr',
-            'start_date_ocr',
-            'end_date_ocr',
-            'load_date_ocr'
-        ]
-
-        for k,v in renamed_fields.items():
-            if k in columns_to_change:
-                try:
-                    renamed_fields[k] = v.strftime(r'%m/%d/%Y %X')
-                except:
-                    logging.warning(f'Could not parse {v} value for field `{k}`')
-                    pass
-
+        if table:
+            response_data['table'] = table
+        
         response_data = {
             'flag': True,
+            'addon_table': addon_table,
+            'addon_tab': addon_column,
             'data': renamed_fields,
             'dropdown_values': dropdown,
             'highlight': renamed_higlight,
@@ -1172,7 +1472,7 @@ def get_fields(case_id=None):
             'failures':failures,
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
-            'pdf_type': 'blob'
+            'pdf_type': 'folder' if tenant_id else 'blob'
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
@@ -1204,6 +1504,7 @@ def refresh_fields(case_id=None):
 
         logging.info(f'Request data: {data}')
         case_id = data.pop('case_id')
+        tenant_id = data.get('tenant_id', None)
 
         if case_id is None:
             message = f'Case ID not provided.'
@@ -1214,7 +1515,8 @@ def refresh_fields(case_id=None):
             'host': 'queue_db',
             'port': 3306,
             'user': 'root',
-            'password': 'root'
+            'password': 'root',
+            'tenant_id': tenant_id
         }
         queue_db = DB('queues', **queue_db_config)
         # queue_db = DB('queues')
@@ -1223,7 +1525,8 @@ def refresh_fields(case_id=None):
             'host': 'extraction_db',
             'port': 3306,
             'user': 'root',
-            'password': 'root'
+            'password': 'root',
+            'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extraction_db_config)
 
@@ -1242,12 +1545,11 @@ def refresh_fields(case_id=None):
         logging.debug('Fetching queue info')
         queue_name = list(case_files['queue'])[0]
         queue_definition = queue_db.get_all('queue_definition')
-        queue_info = queue_definition.loc[queue_definition['name'] == queue_name]
-        queue_id = queue_definition.index[queue_definition['name'] == queue_name].tolist()[0]
+        queue_info = queue_definition.loc[queue_definition['unique_name'] == queue_name]
+        queue_id = queue_definition.index[queue_definition['unique_name'] == queue_name].tolist()[0]
 
-        query = 'SELECT * FROM `queue_field_mapping` WHERE `queue_id`=%s'
-        queue_id_field_mapping = queue_db.execute(query, params=[queue_id])
-        field_ids = list(queue_id_field_mapping['field_id'])
+        query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
+        field_ids = list(queue_db.execute_(query).id)
         field_definition = queue_db.get_all('field_definition')
 
         fields_df = field_definition.ix[field_ids] # Get field names using the unique field IDs
@@ -1672,6 +1974,30 @@ def execute_button_function():
     except Exception as e:
         return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
 
+def create_children(queue, queue_definition_record,list_):
+    queue_name = queue['name']
+    queue_uid = queue['unique_name']
+    queue_children = list(queue_definition_record.loc[queue_definition_record['parent'] == queue_uid].name)
+    logging.debug(f'Queue Name: {queue_name}')
+    logging.debug(f'Queue UID: {queue_uid}')
+    logging.debug(f'Queue Children: {queue_children}')
+    if queue_children:
+        queue['children'] = []
+        temp_dict = queue_definition_record.loc[queue_definition_record['parent'] == queue_uid].to_dict(orient='records')
+        for index, definition in enumerate(temp_dict):
+            if definition['id'] not in list_:
+                continue
+            children = {}
+            children['name'] = definition['name']
+            tokens = definition['name'].split()
+            children['path'] = definition['unique_name'].replace(' ', '')
+            children['pathId'] = definition['id']
+            children['type'] = definition['type'] 
+            children['unique_name'] = definition['unique_name']
+            queue['children'].append(children)
+    
+    return queue
+
 @cache.memoize(86400)
 def get_queues_cache(username, tenant_id=None):
     logging.info('First time. Caching.')
@@ -1687,6 +2013,7 @@ def get_queues_cache(username, tenant_id=None):
     }
 
     group_db = DB('group_access', **db_config)
+    queue_db = DB('queues', **db_config)
 
     query = "SELECT id, username from active_directory"
     user_list = group_db.execute(query).username.to_dict()
@@ -1752,24 +2079,31 @@ def get_queues_cache(username, tenant_id=None):
 
     for user, group_id in classify_users.items():
         user_queues[user] = list(set(queue_group_id.loc[queue_group_id['group_id'].isin(group_id)].queue_id))
-    
 
     for user, value in user_queues.items(): 
         queues = []
-        placeholders = ','.join(['%s'] * len(value))
-        query = f"SELECT * from queue_definition where id in ({placeholders})"
-        queue_definition_dict = group_db.execute(query, params=[value]).to_dict(orient='records')
-        for index, definition in enumerate(queue_definition_dict):
-            queue = {}
-            queue['name'] = definition['name']
-            if queue['name'] == 'Template Exceptions':
-                queue['name'] = 'Template Training'
-            tokens = definition['name'].split()
-            queue['path'] = tokens[0].lower() + ''.join(x.title() for x in tokens[1:]) if len(tokens) > 1 else tokens[0].lower()
-            queue['pathId'] = value[index]
-            queue['type'] = definition['type']
-            queue['fields_disable'] = definition['fields_disable']
-            queues.append(queue)
+        if value:
+            placeholders = ','.join(['%s'] * len(value))
+            query = f"SELECT * FROM queue_definition WHERE `id` IN ({placeholders}) ORDER BY `queue_order` ASC"
+            full_query = "SELECT * FROM queue_definition ORDER BY `queue_order` ASC"
+            queue_definition_full = queue_db.execute_(full_query)
+            queue_definition_dict = queue_db.execute_(query, params=[value]).to_dict(orient='records')
+            child_query = "SELECT * FROM queue_definition WHERE level=2 ORDER BY `queue_order` ASC"
+            child_queues = list(queue_db.execute_(child_query).unique_name)
+            for index, definition in enumerate(queue_definition_dict):
+                if definition['unique_name'] in child_queues:
+                    continue
+                queue = {}
+                queue['name'] = definition['name']
+                tokens = definition['unique_name'].split()
+                # queue['path'] = tokens[0].lower() + ''.join(x.title() for x in tokens[1:]) if len(tokens) > 1 else tokens[0].lower()
+                queue['path'] = definition['unique_name'].replace(' ','')
+                queue['pathId'] = definition['id']
+                queue['type'] = definition['type']
+                queue['unique_name'] = definition['unique_name']
+                queue = create_children(queue, queue_definition_full,value)
+                queues.append(queue) 
+                
         user_queues[user] = queues
 
     return user_queues[username]
@@ -1867,629 +2201,6 @@ def get_ocr_stats(db,from_date=None, to_date=None, total_fields  = 9):
 
     return manual_changes, extracted_ace, total
 
-def pad_infinite(iterable, padding=None):
-    return chain(iterable, repeat(padding))
-
-def pad(iterable, size, padding=None):
-    return islice(pad_infinite(iterable, padding), size)
-
-
-@app.route('/get_stats', methods=['POST', 'GET'])
-def get_stats():
-    try:
-        data = request.json
-        from_date = data['fromDate']
-        to_date = data['toDate']
-        if from_date:
-            if to_date == from_date:
-                from_date += " 00:00:01"
-                to_date += " 23:59:59"
-
-        db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        db = DB('queues', **db_config)
-
-        if from_date:
-            query = "SELECT id, case_id from process_queue WHERE created_date > %s and created_date < %s"
-            total_invoices_received = len(list(db.execute(query, params=[from_date, to_date]).case_id))
-        else:
-            query = "SELECT id, case_id from `process_queue`"
-            total_invoices_received = len(list(db.execute(query).case_id))
-
-        total_invoices_received_format = list(pad([total_invoices_received, total_invoices_received], 16, None))
-
-
-        if from_date:
-            query = "SELECT id, case_id from process_queue WHERE queue = 'Rejected' and created_date > %s and created_date < %s"
-            rejected = len(list(db.execute(query, params=[from_date, to_date]).case_id))
-        else:
-            query = "SELECT id, case_id from process_queue WHERE queue = 'Rejected'"
-            rejected = len(list(db.execute(query).case_id))
-        rejected_format = list(pad([None, None, rejected, rejected], 16, None))
-
-
-        query = "SELECT id, case_id from process_queue WHERE queue = 'Template Exceptions'"
-        template_exceptions = len(list(db.execute(query).case_id))
-
-        query = "SELECT id, case_id from process_queue WHERE queue = 'Verify'"
-        verify = len(list(db.execute(query).case_id))
-
-        query = "SELECT id, case_id from process_queue WHERE queue = 'TL Verify'"
-        tl_verify = len(list(db.execute(query).case_id))
-
-        query = "SELECT id, case_id from process_queue WHERE queue = 'Quality Control'"
-        quality_control = len(list(db.execute(query).case_id))
-
-        cumulative_data_format = list(pad([None, None, None, None, template_exceptions, template_exceptions, verify, verify, (quality_control+tl_verify), (quality_control+tl_verify)], 16, None))
-
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
-
-
-        combined_df_query = "SELECT id, `Bot Processed`, `created_date` from combined GROUP BY `case_id`"
-        unique_combined_files = extraction_db.execute(combined_df_query)
-
-        if not from_date:
-            bot_processed = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('Yes', na=False)]
-            bot_exception = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('No', na=False)]
-        else:
-            bot_processed = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('Yes', na=False)].loc[unique_combined_files['created_date'] <= to_date]
-            bot_processed = bot_processed.loc[bot_processed['Bot Processed'].str.contains('Yes', na=False)].loc[bot_processed['created_date'] >= from_date]
-            bot_exception = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('No', na=False)].loc[unique_combined_files['created_date'] <= to_date]
-            bot_exception = bot_exception.loc[bot_exception['Bot Processed'].str.contains('No', na=False)].loc[bot_exception['created_date'] >= from_date]
-
-        bot_processed_count = len(list(bot_processed)) #please optimize. this was coded at 5am
-        bot_exception_count = len(list(bot_exception))
-
-        fourteen_nones = [None]*14
-        bot_processed_format = fourteen_nones+[bot_processed_count, bot_processed_count]
-
-
-
-        if not from_date:
-            business_rules_df_query = "SELECT id, `Verify Operator`, `Bot Queue` from business_rule GROUP BY case_id"
-            business_rules_df = extraction_db.execute(business_rules_df_query)
-        else:
-            business_rules_df_query = "SELECT id, `Verify Operator`, `Bot Queue` from business_rule where created_date > %s and created_date < %s GROUP BY case_id"
-            business_rules_df = extraction_db.execute(business_rules_df_query, params=[from_date, to_date])
-
-        unique_business_rules_files = business_rules_df
-        manual_ace = unique_business_rules_files.loc[unique_business_rules_files['Bot Queue'].str.contains('No', na=False)]
-        num_of_invoice_manual_ace = len(list(manual_ace))
-
-        ten_nones = [None]*10
-        num_of_invoice_manual_ace_format = list(pad(ten_nones+[num_of_invoice_manual_ace,num_of_invoice_manual_ace, bot_exception_count, bot_exception_count], 16, None))
-
-        data = [
-
-            ["Invoice Received"]+total_invoices_received_format,
-            ["Rejected"]+rejected_format,
-            ["Cumulative Pending - Current"]+cumulative_data_format,
-            ["Sent to Manual"]+num_of_invoice_manual_ace_format,
-            ["Processed"]+bot_processed_format
-
-        ]
-
-        charts = {
-            "BOT vs Manual": [["Sent to Manual Queue", len(bot_exception)],["By BOT", len(bot_processed)]],
-            }
-
-        column_names =  ['Process', 'Invoice Received', {'role': 'annotation'}, 'Rejected', {'role': 'annotation'}, 'New Template', {'role': 'annotation'},'Verification Pending', {'role': 'annotation'},'QL + TL',{'role': 'annotation'},
-        'ACE Deviation',{'role': 'annotation'}, 'Bot Deviation',{'role': 'annotation'}, 'By Bot',{'role': 'annotation'}]
-
-        stats = []
-
-        charts = {
-            "BOT vs Manual": [["Sent to Manual Queue", len(bot_exception)],["By BOT", len(bot_processed)]],
-            }
-
-        query = "SHOW COLUMNS FROM combined"
-        df = extraction_db.execute_(query)
-        # total_fields = len(list(df['Field']))-5
-        total_fields = 9
-        
-        query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Approved' and pq.created_date > %s and pq.created_date < %s"
-        df = db.execute_(query, params=[from_date, to_date])
-        fields_changes_list = []
-        for ele in list(df['fields_changed']):
-            try:
-                fields_changes_list.append(len(json.loads(ele,strict=False)))
-            except Exception as e:
-                logging.error(f'JSON loads error: {ele} [{e}]')
-
-        manual_changes = sum(fields_changes_list)
-        total = len(df['fields_changed'])*total_fields
-        extracted_ace = total - manual_changes
-
-
-        auto = len(df['fields_changed'])*total_fields
-
-        manual, extracted, total = list(get_ocr_stats(db, from_date, to_date))
-        ocr_stats_data = {"ocr_column_names": ['OCR Extraction', 'Value'],
-                            "ocr_values": [["Manual", manual], ["Extracted", extracted], [ "Total", total]]}
-
-        pie_data = [['Manual', manual], ['Auto',extracted]]
-
-        return jsonify({"charts": charts, "data": data, "column_names":column_names, "stats": stats, "piechart":pie_data, "ocr_stats":ocr_stats_data})
-    except Exception as e:
-        return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
-
-# @app.route('/get_stats', methods=['POST', 'GET'])
-# def get_stats():
-    data = request.json
-    try:
-        from_date = data['fromDate']
-        to_date = data['toDate']
-    except:
-        from_date = None
-        to_date = None
-
-    bar = True
-
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root'
-    }
-    db = DB('queues', **db_config)
-    # db = DB('queues')
-
-    extraction_db_config = {
-        'host': 'extraction_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root'
-    }
-    extraction_db = DB('extraction', **extraction_db_config)
-    # extraction_db = DB('extraction')
-
-    all_st = time()
-    process_queue_df_master = db.get_all('process_queue',discard=['ocr_data','ocr_text','xml_data'])
-    logging.debug(f'Loading process queue {time()-all_st}')
-
-    if bar:
-        process_queue_df = process_queue_df_master
-
-        if from_date:
-            process_queue_filter = process_queue_df.loc[process_queue_df['created_date'] <= to_date]
-            process_queue_filter = process_queue_filter.loc[process_queue_filter['created_date'] >= from_date]
-        else:
-            process_queue_filter = process_queue_df_master
-
-    else:
-        process_queue_df = process_queue_df_master
-        process_queue_filter = process_queue_df_master
-    sap_df = extraction_db.get_all('sap')
-    business_rules_df = extraction_db.get_all('business_rule')
-
-    # * Number of invoices uploaded. All unique case IDs.
-    unique_case_ids = process_queue_df.case_id.unique()
-    if not from_date:
-        # latest_unique_cases = db.get_latest(process_queue_df, 'case_id', 'created_date')
-        latest_unique_cases = process_queue_df
-    else:
-        # latest_unique_cases = db.get_latest(process_queue_df, 'case_id', 'created_date')
-        latest_unique_cases = process_queue_df
-        latest_unique_cases = latest_unique_cases.loc[latest_unique_cases['created_date'] <= to_date]
-        latest_unique_cases = latest_unique_cases.loc[latest_unique_cases['created_date'] >= from_date]
-    # latest_unique_cases = db.get_latest(process_queue_df, 'case_id', 'created_date')
-    latest_unique_cases = process_queue_df
-    num_of_invoice_uploaded = len(latest_unique_cases)
-
-    # * Number of invoices pending. All queues except 'Approved' and 'Reject'.
-    exclude_queue = ['Approved', 'Reject']
-    if bar:
-        invoices_pending_df = process_queue_df.loc[~process_queue_df['queue'].isin(exclude_queue)]
-    else:
-        invoices_pending_df = latest_unique_cases.loc[~latest_unique_cases['queue'].isin(exclude_queue)]
-    num_of_invoice_pending = len(invoices_pending_df.case_id.unique())
-
-    # * Number of invoices in 'Template Exceptions'.
-    if bar:
-        template_exceptions_current = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Template Exceptions']
-        template_exceptions = process_queue_filter.loc[process_queue_filter['queue'] == 'Template Exceptions']
-    else:
-        template_exceptions = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Template Exceptions']
-    num_of_template_exceptions = len(template_exceptions.case_id.unique())
-    num_of_template_exceptions_current = len(template_exceptions_current)
-
-    # * Number of invoices 'Approved'.
-    if bar:
-        invoices_approved_current = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Approved']
-        invoices_approved_df = process_queue_filter.loc[process_queue_filter['queue'] == 'Approved']
-    else:
-        invoices_approved_df = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Approved']
-    approved_ids = invoices_approved_df.case_id.unique()
-    num_of_invoice_approved = len(approved_ids)
-
-    # * Number of invoices 'Rejected'.
-    if bar:
-        invoices_rejected_df = process_queue_filter.loc[process_queue_filter['queue'] == 'Reject']
-    else:
-        invoices_rejected_df = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Reject']
-    num_of_invoice_rejected = len(invoices_rejected_df.case_id.unique())
-
-    # * Number of invoices 'Quality'.
-    if bar:
-        invoices_quality_current = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Quality Control']
-        invoices_quality_df = process_queue_filter.loc[process_queue_filter['queue'] == 'Quality Control']
-    else:
-        invoices_quality_df = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Quality Control']
-    num_of_invoice_quality = len(invoices_quality_df.case_id.unique())
-    num_of_invoice_quality_current = len(invoices_quality_current)
-
-    # * Number of invoices 'Verify'.
-    invoices_verify_current = latest_unique_cases.loc[latest_unique_cases['queue'] == 'Verify']
-    invoices_verify_df = process_queue_filter.loc[process_queue_filter['queue'] == 'Verify']
-    verify_list = invoices_verify_df.case_id.unique()
-    num_of_invoice_verify = len(verify_list)
-    num_of_invoice_verify_current = len(invoices_verify_current)
-
-    # * Number of invoices 'TL Verify'.
-    if bar:
-        invoices_tl_df = process_queue_filter.loc[process_queue_filter['queue'] == 'TL Verify']
-        invoices_tl_current = latest_unique_cases.loc[latest_unique_cases['queue'] == 'TL Verify']
-    else:
-        invoices_tl_df = latest_unique_cases.loc[latest_unique_cases['queue'] == 'TL Verify']
-    num_of_invoice_tl = len(invoices_tl_df.case_id.unique())
-    num_of_invoice_tl_current = len(invoices_tl_current)
-
-    ql_tl = num_of_invoice_quality + num_of_invoice_tl
-    ql_tl_current = num_of_invoice_quality_current + num_of_invoice_tl_current
-
-    # * Successful/Unsuccessful SAP Inwards
-    unique_sap_files = sap_df.drop_duplicates('case_id')
-    successful_sap = unique_sap_files.loc[unique_sap_files['SAP Inward Status'].str.contains('Success', na=False)]
-    unsuccessful_sap = unique_sap_files.loc[~unique_sap_files['SAP Inward Status'].str.contains('Success', na=True)]
-    if not from_date:
-        pass
-    else:
-        successful_sap = successful_sap.loc[successful_sap['created_date'] <= to_date]
-        successful_sap = successful_sap.loc[successful_sap['created_date'] >= from_date]
-        unsuccessful_sap = unsuccessful_sap.loc[unsuccessful_sap['created_date'] <= to_date]
-        unsuccessful_sap = unsuccessful_sap.loc[unsuccessful_sap['created_date'] >= from_date]
-    num_of_succssful_sap = len(successful_sap)
-    num_of_unsuccssful_sap = len(unsuccessful_sap)
-
-    # * Processed by TL IDs
-    unique_business_rules_files = business_rules_df.drop_duplicates('case_id')
-    tl_processed = unique_business_rules_files.loc[unique_business_rules_files['Verify Operator'].str.contains('P40000009', na=False)]
-    ql_tl = len(tl_processed.case_id.unique())
-
-    tl_list = tl_processed.case_id.unique()
-
-    # * Manual from ACE
-    manual_ace = unique_business_rules_files.loc[unique_business_rules_files['Bot Queue'].str.contains('No', na=False)]
-    if not from_date:
-        pass
-    else:
-        manual_ace = manual_ace.loc[manual_ace['created_date'] <= to_date]
-        manual_ace = manual_ace.loc[manual_ace['created_date'] >= from_date]
-    num_of_invoice_manual_ace = len(manual_ace)
-
-    # Auto vs Manual Inward
-    not_in = ['Verify', 'TL Verify', 'Quality Control']
-    # if bar:
-    #     process_queue_df = db.get_all('process_queue')
-    #     if from_date:
-    #         process_queue_df = process_queue_df.loc[process_queue_df['created_date'] <= to_date]
-    #         process_queue_df = process_queue_df.loc[process_queue_df['created_date'] >= from_date]
-    manual_approved = process_queue_filter.loc[(process_queue_filter['case_id'].isin(approved_ids)) & (process_queue_filter['queue'].isin(not_in))]
-    manual_ids = manual_approved.case_id.unique()
-    manual_inward = len(manual_ids)
-    # manual_inward = 299
-    auto_inward = num_of_invoice_approved - manual_inward
-
-
-    one_month_date = (datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d')
-    three_month_date = (datetime.today() - timedelta(days=90)).strftime('%Y-%m-%d')
-    combined_df = extraction_db.get_all('combined')
-
-    unique_combined_files = combined_df.drop_duplicates('case_id')
-    if not from_date:
-        bot_processed = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('Yes', na=False)]
-        bot_exception = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('No', na=False)]
-    else:
-        bot_processed = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('Yes', na=False)].loc[unique_combined_files['created_date'] <= to_date]
-        bot_processed = bot_processed.loc[bot_processed['Bot Processed'].str.contains('Yes', na=False)].loc[bot_processed['created_date'] >= from_date]
-        bot_exception = unique_combined_files.loc[unique_combined_files['Bot Processed'].str.contains('No', na=False)].loc[unique_combined_files['created_date'] <= to_date]
-        bot_exception = bot_exception.loc[bot_exception['Bot Processed'].str.contains('No', na=False)].loc[bot_exception['created_date'] >= from_date]
-
-
-    #Exceptions charts
-    exceptions = {"No GRN": len(bot_exception.loc[bot_exception['Bot Exception'].str.contains('no grn', na=False)]),
-                        "Reference Mismatch": len(bot_exception.loc[bot_exception['Bot Exception'].str.contains('reference mismatch', na=False)]),
-                        "Balance greater than 1": len(bot_exception.loc[bot_exception['Bot Exception'].str.contains('balance greater than 1', na=False)]),
-                        "Withholding Tax Tab": len(bot_exception.loc[bot_exception['Bot Exception'].str.contains('withholding tax tab', na=False)])}
-
-
-
-
-    invoice_received = manual_inward + auto_inward
-    pending_for_period = num_of_template_exceptions+ql_tl+num_of_invoice_verify
-    cumulative_pending = num_of_template_exceptions_current+ql_tl_current+num_of_invoice_verify_current
-    sent_to_manual = num_of_invoice_manual_ace+len(bot_exception)
-
-    data = [
-        ["Invoice Received", manual_inward if manual_inward else None, manual_inward if manual_inward else None, auto_inward if auto_inward else None, auto_inward if auto_inward else None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None],
-        ["Rejected", None, None, None, None, num_of_invoice_rejected if num_of_invoice_rejected else None, num_of_invoice_rejected if num_of_invoice_rejected else None, None, None, None, None, None, None, None,None,None,None,None,None,None,None, None,None,None,None],
-        ["Pending for the Period", None, None, None, None,None,None,num_of_template_exceptions if num_of_template_exceptions else None, num_of_template_exceptions if num_of_template_exceptions else None, ql_tl if ql_tl else None,ql_tl if ql_tl else None, num_of_invoice_verify if num_of_invoice_verify else None,num_of_invoice_verify if num_of_invoice_verify else None,None,None,None,None,None,None,None,None,None,None,None,None],
-        ["Cumulative Pending - Current", None, None, None, None,None,None,None,None,None,None,None,None,num_of_template_exceptions_current if num_of_template_exceptions_current else None, num_of_template_exceptions_current if num_of_template_exceptions_current else None, ql_tl_current if ql_tl_current else None,ql_tl_current if ql_tl_current else None, num_of_invoice_verify_current if num_of_invoice_verify_current else None,num_of_invoice_verify_current if num_of_invoice_verify_current else None,None,None,None,None,None,None],
-        ["Sent to Manual",None, None, None, None,None,None,None,None,None,None,None,None,None, None, None,None,None,None,num_of_invoice_manual_ace if num_of_invoice_manual_ace else None,num_of_invoice_manual_ace if num_of_invoice_manual_ace else None,len(bot_exception) if len(bot_exception) else None,len(bot_exception) if len(bot_exception) else None,None,None],
-        ["Processed", 0, None, 0, None,0,None,0,None,0,None,0,None,0, None, 0, None,0,None,0,None,0,None,len(bot_processed) if len(bot_processed) else 0,len(bot_processed) if len(bot_processed) else None]]
-    column_names =  ['Process', 'Inwarded Manually', {'role': 'annotation'},'Inwarded by Bot', {'role': 'annotation'},'Rejected', {'role': 'annotation'}, 'New Template', {'role': 'annotation'},'QL + TL',{'role': 'annotation'}, 'Verification Pending', {'role': 'annotation'},'New Template', {'role': 'annotation'},'QL + TL',{'role': 'annotation'}, 'Verification Pending', {'role': 'annotation'},
-    'ACE Deviation',{'role': 'annotation'}, 'Bot Deviation',{'role': 'annotation'}, 'By Bot',{'role': 'annotation'}]
-
-    stats = [
-        {
-            'name': 'Invoices Pending',
-            'value': num_of_invoice_pending,
-            'icon': './assets/images/stats/doc.png'
-        },
-        {
-            'name': 'Invoices Approved',
-            'value': num_of_invoice_approved,
-            'icon': './assets/images/stats/checked.svg'
-        },
-        {
-            'name': 'Invoices Rejected',
-            'value': num_of_invoice_rejected,
-            'icon': './assets/images/stats/doc.png'
-        },
-        {
-            'name': 'Invoice Processed (TL)',
-            'value': ql_tl,
-            'icon': './assets/images/stats/queue_1.png'
-        },
-        {
-            'name': 'Successful SAP Inwards',
-            'value': num_of_succssful_sap,
-            'icon': './assets/images/stats/checked.svg'
-        }
-    ]
-
-    charts = {
-        "BOT vs Manual": [["Sent to Manual Queue", len(bot_exception)],["By BOT", len(bot_processed)]],
-        "Exceptions Chart": [["No GRN", exceptions["No GRN"]],["Reference Mismatch", exceptions["Reference Mismatch"]],["Balance greater than 1", exceptions["Balance greater than 1"]],["Withholding Tax Tab", exceptions["Withholding Tax Tab"]]],
-      }
-    query = "SHOW COLUMNS FROM combined"
-    df = extraction_db.execute_(query)
-    # total_fields = len(list(df['Field']))-5
-    total_fields = 9
-    
-    query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Approved' and pq.created_date > %s and pq.created_date < %s"
-    df = db.execute_(query, params=[from_date, to_date])
-    fields_changes_list = []
-    for ele in list(df['fields_changed']):
-        try:
-            fields_changes_list.append(len(json.loads(ele,strict=False)))
-        except Exception as e:
-            logging.error(f'JSON loads error: {ele} [{e}]')
-    manual_changes = sum(fields_changes_list)
-    total = len(df['fields_changed'])*total_fields
-    extracted_ace = total - manual_changes
-
-
-    auto = len(df['fields_changed'])*total_fields
-
-    query = "SELECT COUNT(*) FROM combined"
-    df = extraction_db.execute_(query)
-
-    if df['COUNT(*)'].iloc[0] == 0:
-        pie_data = [['Auto', 0], ['No Data',auto]]
-    else:
-        pie_data = [['Manual', manual_changes], ['Auto',auto - manual_changes]]
-
-
-    manual, extracted, total = list(get_ocr_stats(db, from_date, to_date))
-    ocr_stats_data = {"ocr_column_names": ['OCR Extraction', 'Value'],
-                        "ocr_values": [["Manual", manual], ["Extracted", extracted], [ "Total", total]]}
-
-    return jsonify({"charts": charts, "data": data, "column_names":column_names, "stats": stats, "piechart":pie_data, "ocr_stats":ocr_stats_data})
-
-@app.route('/get_dashboard_data', methods=['POST', 'GET'])
-def get_dashboard_data():
-    try:
-        db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        db = DB('queues', **db_config)
-        # db = DB('queues')
-
-        process_queue = db.get_all('process_queue')
-
-        # * Trace data. Trace of file from start till end.
-        unique_cases = list(process_queue.case_id.unique())
-        required_columns = ['case_id', 'queue', 'operator', 'created_date', 'time_spent', 'last_updated_by', 'last_updated']
-        trace_data = {}
-        for unique_case in unique_cases:
-            case_trace = process_queue.loc[process_queue['case_id'] == unique_case]
-            case_trace_filtered = case_trace[required_columns]
-            trace_data[unique_case] = case_trace_filtered.to_dict(orient='records')
-
-        # * All the queues
-        logging.debug('Getting queues...')
-        queue_definition = db.get_all('queue_definition')
-        queues = list(queue_definition.name)
-
-        # * Queue wise movement
-        # How many invoices moved from one queue to another queue
-        queue_movement = {}
-        for _, case_flow in trace_data.items():
-            for index, node in enumerate(case_flow):
-                to_queue = node['queue']
-
-                # 'Upload' is starting point
-                if index == 0:
-                    if 'Upload' not in queue_movement:
-                        queue_movement['Upload'] = {}
-
-                    if to_queue not in queue_movement['Upload']:
-                        queue_movement['Upload'][to_queue] = 1
-                    else:
-                        queue_movement['Upload'][to_queue] += 1
-                    from_queue = to_queue
-                    continue
-
-                # Create 'from' key
-                if from_queue not in queue_movement:
-                    queue_movement[from_queue] = {}
-
-                # Create 'to' key
-                if to_queue not in queue_movement[from_queue]:
-                    queue_movement[from_queue][to_queue] = {
-                        'number_of_records': 0
-                    }
-
-                queue_movement[from_queue][to_queue]['number_of_records'] += 1
-
-                if node['last_updated_by'] is not None or not node['last_updated_by']:
-                    time_spent_by_user = {
-                        node['last_updated_by']: node['time_spent'],
-                    }
-                    queue_movement[from_queue][to_queue]['time_spent_by_user'] = time_spent_by_user
-                else:
-                    logging.debug(f'Last updated by field is None/empty. Skipping.')
-                from_queue = to_queue
-
-        dashboard_data = {
-            'trace': trace_data,
-            'queues': queues,
-            'queue_movement': queue_movement
-        }
-
-        return jsonify({'flag': True, 'data': dashboard_data})
-    except Exception as e:
-        logging.exception('Something went wrong getting dashboard data. Check trace.')
-        return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
-
-
-def update_table(db, case_id, file_name, changed_fields):
-    logging.info('Updating table...')
-
-    query = f"SELECT `fields_changed` from `field_accuracy` WHERE case_id={case_id}"
-    fields_json_string_df = db.execute_(query)
-    if not fields_json_string_df.empty:
-        fields_json_string = fields_json_string_df['fields_changed'][0]
-        fields_json = json.loads(fields_json_string)
-        total_fields = changed_fields.pop('total_fields', 1)
-        logging.debug(f"Fields JSON before: {fields_json}")
-        fields_json.update(changed_fields)
-        logging.debug(f"Fields JSON after: {fields_json}")
-        percentage = len(fields_json.keys())/total_fields
-        query = f"UPDATE `field_accuracy` SET `fields_changed` = '{json.dumps(fields_json)}', `percentage`= '{percentage}'  WHERE case_id={case_id}"
-        db.execute(query)
-        logging.info(f"Updated field accuracy table for case `{case_id}`")
-    else:
-        # new case_id that means insert record into the database
-        total_fields = changed_fields.pop('total_fields', 1)
-        percentage = len(changed_fields.keys())/total_fields
-        logging.debug(f"Changed fields are {changed_fields}")
-        query = f"INSERT INTO `field_accuracy` (`id`, `case_id`, `file_name`, `fields_changed`, `percentage`) VALUES (NULL,'{case_id}','{file_name}','{json.dumps(changed_fields)}','{percentage}')"
-        db.execute(query)
-        logging.info(f"Inserted into field accuracy for case `{case_id}`")
-
-    return "UPDATED TABLE"
-
-def prepare_trained_info(coordinates, ):
-    trained_info['cropped_ui_fields'] = [coordinates]
-    trained_info['field'] = ''
-    trained_info['keyCheck'] = False
-    trained_info['keyword'] = ''
-    trained_info['validations'] = ''
-    trained_info['value'] = ''
-    trained_info['width'] = ''
-    trained_info['page'] = coordinates['page']
-
-    return trained_info
-
-
-@app.route('/save_changes', methods=['POST', 'GET'])
-def save_changes():
-    try:
-        data = request.json
-        case_id = data['case_id']
-        fields = data['fields']
-        changed_fields = data['field_changes']
-
-        try:
-            verify_operator = data['operator']
-        except:
-            logging.warning("Operator key not found. Setting to None.")
-            verify_operator = None
-
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        queue_db = DB('queues', **queue_db_config)
-
-        case_meta = {
-                        'status':'Saving file',
-                        'case_lock':1,
-                    }
-        queue_db.update('process_queue', update=case_meta, where={'case_id': case_id})
-
-        try:
-            update_table(queue_db, case_id, "", changed_fields)
-        except:
-            logging.exception("Skipping exception")
-            pass
-        fields_def_df = queue_db.get_all('field_definition')
-        tabs_def_df = queue_db.get_all('tab_definition')
-
-
-        fields_w_name = {}
-        for unique_name, value in fields.items():
-            unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
-            display_name = list(unique_field_def.display_name)[0]
-            tab_id = list(unique_field_def.tab_id)[0]
-            tab_info = tabs_def_df.ix[tab_id]
-            table_name = tab_info.source
-
-            if table_name not in fields_w_name:
-                fields_w_name[table_name] = {}
-
-            fields_w_name[table_name][display_name] = value
-
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
-
-        for table, fields in fields_w_name.items():
-            if table == 'business_rule':
-                fields['Verify Operator'] = verify_operator if verify_operator else ''
-            extraction_db.update(table, update=fields, where={'case_id': case_id})
-        case_meta = {
-                        'status':'Saved File Successfully',
-                        'case_lock':0,
-                    }
-        queue_db.update('process_queue', update=case_meta, where={'case_id': case_id})
-
-        return jsonify({'flag': True, 'message': 'Saved changes.'})
-    except:
-        logging.exception("Error in saving document")
-        return jsonify({'flag': False, 'message': 'Something went wrong saving changes. Check logs.'})
-
 @app.route('/move_to_verify', methods=['POST', 'GET'])
 def move_to_verify():
     try:
@@ -2534,9 +2245,11 @@ def move_to_verify():
         else:
             template_name = 'Dummy Template'
 
-        update_fields = {'queue': 'Maker', 'template_name': template_name,'stats_stage': 'Maker'}
+        get_queue_name_query = 'SELECT `id`, `name`, `unique_name` FROM `queue_definition` WHERE `id` IN (SELECT `workflow_definition`.`move_to` FROM `queue_definition`, `workflow_definition` WHERE `queue_definition`.`name`=%s AND `workflow_definition`.`queue_id`=`queue_definition`.`id`)'
+        new_queue = list(db.execute(get_queue_name_query, params=[queue]).name)[0]
+        update_fields = {'queue': new_queue, 'template_name': template_name}
 
-        logging.debug(f'Updating queue to `Maker` for case `{case_id}`')
+        logging.debug(f'Updating queue to `{new_queue}` for case `{case_id}`')
         db.update('process_queue', update=update_fields, where={'case_id': case_id})
         audit_data = {
                 "type": "update", "last_modified_by": "Move to Verify", "table_name": "process_queue", "reference_column": "case_id",
@@ -2546,10 +2259,8 @@ def move_to_verify():
 
         # Step 2: Update extraction table
         logging.debug(f'Inserting to OCR')
-        query = "insert into ocr (`case_id`,`Communication_date_time`,`communication_date_bot` ,`Fax_unique_id`,`remote_id`,`Agent`,`highlight`) (select `Fax_unique_id`,`Communication_date`,`History`,`Fax_unique_id`,`Remote_id`,`Agent`,%s from alorica_data.screen_shots where Fax_unique_id=%s limit 1)"
-        #query = "INSERT into ocr (`case_id`, `highlight`) VALUES (%s,%s)"
-        extraction_db.execute(query, params=[ '{}',case_id])
-
+        query = "INSERT into ocr (`case_id`, `highlight`) VALUES (%s,%s)"
+        extraction_db.execute(query, params=[case_id, '{}'])
 
         response = {'flag': True, 'status_type': 'success', 'message': "Successfully sent to Verify"}
         logging.info(f'Response: {response}')

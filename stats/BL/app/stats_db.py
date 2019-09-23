@@ -11,36 +11,23 @@ from time import time
 import pandas as pd
 import os
 
-try:
-    from app.ace_logger import Logging
-except:
-    from ace_logger import Logging
-     
-logging = Logging()
-
 class Stats_db:
-    def __init__(self, database = 'stats', host='172.31.45.112', user='root', password='AlgoTeam123', port='3306'):
+    def __init__(self, database = 'stats', host='3.208.195.34', user='root', password='AlgoTeam123', port='3306',tenant_id = None):
         host = os.environ['HOST_IP']
-        config = f'mysql://{user}:{password}@{host}:{port}/{database}?charset=utf8'
+        if tenant_id is not None and tenant_id:
+            tenant_db = f'{tenant_id}_{database}'
+        else:
+            tenant_db = f'{database}'
+        config = f'mysql://{user}:{password}@{host}:{port}/{tenant_db}?charset=utf8'
         print(config)
-        retry = 1
-        max_retry = 5
         try:
             self.engine = create_engine(config, 
-                                connect_args={'connect_timeout': 2}, pool_recycle=300)
-            while retry <= max_retry:
-                try:
-                    self.connection = self.engine.connect()
-                    logging.info(f'Connection established succesfully to `{self.DATABASE}`! ({round(time() - start, 2)} secs to connect)')
-                    break
-                except Exception as e:
-                    logging.warning(f'Connection failed. Retrying... ({retry}) [{e}]')
-                    retry += 1
-                    self.engine.dispose()
-            # try:
-            #     self.connection = self.engine.connect()
-            # except Exception as e:
-            #     print("Unable to connect to Database", e)                
+                                 pool_size=10, 
+                                 max_overflow=20)
+            try:
+                self.connection = self.engine.connect()
+            except Exception as e:
+                print("Unable to connect to Database", e)                
         except Exception as e:
             print("Unable to create engine", e)
                 

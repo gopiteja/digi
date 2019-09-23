@@ -72,6 +72,7 @@ var highlight_list = {
 
 
 function hovering(highlight_list) {
+    debugger;
     $("body").on("click", ".hovering", function () {
         // console.log(f_crop_clicked);
 
@@ -125,7 +126,7 @@ function hovering(highlight_list) {
 
 
 function hovering2(highlight_list) {
- 
+    debugger;
     var  index=0;
     $.each(highlight_list,function(k,v){
 

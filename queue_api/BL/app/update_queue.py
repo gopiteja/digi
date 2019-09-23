@@ -1,5 +1,6 @@
 import json
 import traceback
+import os
 
 from datetime import datetime, timedelta
 from kafka import KafkaConsumer, TopicPartition
@@ -53,14 +54,14 @@ def update_queue_trace(queue_db, case_id, latest):
 
     return {'flag': True, 'message': 'Updated Queue Trace'}
 
-def update_queue(data):
+def update_queue(data, tenant_id):
     try:
         verify_operator = data['operator']
     except:
         logging.debug("operator key not found")
         verify_operator = None
 
-    # logging.debug(data.keys())
+    logging.debug(f"tenant_id received - {tenant_id}")
 
     if 'case_id' not in data or 'queue' not in data or 'fields' not in data:
         message = f'Invalid JSON recieved. MUST contain `case_id`, `queue` and `fields` keys.'
@@ -69,6 +70,7 @@ def update_queue(data):
 
     case_id = data['case_id']
     queue = data['queue']
+    fields = data['fields']
 
     if data is None or not data:
         message = f'Data not provided/empty dict.'
@@ -89,7 +91,8 @@ def update_queue(data):
         'host': 'queue_db',
         'port': 3306,
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id' : tenant_id
     }
     db = DB('queues', **db_config)
     # db = DB('queues')
@@ -98,7 +101,8 @@ def update_queue(data):
         'host': 'stats_db',
         'user': 'root',
         'password': 'root',
-        'port': '3306'
+        'port': '3306',
+        'tenant_id' : tenant_id
     }
 
     stats_db = DB('stats', **stats_db_config)
@@ -114,13 +118,13 @@ def update_queue(data):
         logging.error(f'ERROR: {message}')
         return {'flag': False, 'message': message}
 
-    query = f'UPDATE `process_queue` SET `queue`=%s, `stats_stage`=%s WHERE `case_id`=%s'
+    query = f'UPDATE `process_queue` SET `queue`=%s, `state`=%s WHERE `case_id`=%s'
     params = [queue,queue,case_id]
     update_status = db.execute(query, params=params)
 
     audit_data = {
             "type": "update", "last_modified_by": verify_operator, "table_name": "process_queue", "reference_column": "case_id",
-            "reference_value": case_id, "changed_data": json.dumps({"queue": queue, "stats_stage": queue})
+            "reference_value": case_id, "changed_data": json.dumps({"queue": queue, "state": queue})
         }
     stats_db.insert_dict(audit_data, 'audit')
 
@@ -133,7 +137,7 @@ def update_queue(data):
         return {'flag': False, 'message': message}
 
     # ! UPDATE TRACE INFO TABLE HERE
-    update_queue_trace(db, case_id, queue)
+    # update_queue_trace(db, case_id, queue)
 
     # # Inserting fields into respective tables
     # field_definition = db.get_all('field_definition')
@@ -213,26 +217,6 @@ def consume(broker_url='broker:9092'):
         route = 'update_queue'
         logging.info(f'Listening to topic: {route}')
 
-        common_db_config = {
-            'host': 'common_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        kafka_db = DB('kafka', **common_db_config)
-        # kafka_db = DB('kafka')
-
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        queue_db = DB('queues', **queue_db_config)
-        # queue_db = DB('queues')
-
-        message_flow = kafka_db.get_all('grouped_message_flow')
-
         consumer = KafkaConsumer(
             bootstrap_servers=broker_url,
             value_deserializer=lambda value: json.loads(value.decode()),
@@ -268,11 +252,6 @@ def consume(broker_url='broker:9092'):
         partitions = [TopicPartition(route, p) for p in parts]
         consumer.assign(partitions)
 
-        query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
-        function_info = queue_db.execute(query, params=[route])
-        in_progress_message = list(function_info['in_progress_message'])[0]
-        failure_message = list(function_info['failure_message'])[0]
-        success_message = list(function_info['success_message'])[0]
 
         for message in consumer:
             data = message.value
@@ -281,11 +260,32 @@ def consume(broker_url='broker:9092'):
             try:
                 case_id = data['case_id']
                 functions = data['functions']
+                tenant_id = data['tenant_id']
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
                 consumer.commit()
                 continue
+            
+            db_config = {
+            'host': os.environ['HOST_IP'],
+            'port': '3306',
+            'user': 'root',
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'tenant_id' : tenant_id
+            }
+            kafka_db = DB('kafka', **db_config)
+            # kafka_db = DB('kafka')
 
+            queue_db = DB('queues', **db_config)
+            # queue_db = DB('queues')
+
+            query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
+            function_info = queue_db.execute(query, params=[route])
+            in_progress_message = list(function_info['in_progress_message'])[0]
+            failure_message = list(function_info['failure_message'])[0]
+            success_message = list(function_info['success_message'])[0]
+            
+            message_flow = kafka_db.get_all('grouped_message_flow')
             # Get which button (group in kafka table) this function was called from
             group = data['group']
 
@@ -314,7 +314,7 @@ def consume(broker_url='broker:9092'):
             # Call the function
             try:
                 logging.debug(f'Calling function `update_queue`')
-                result = update_queue(function_params)
+                result = update_queue(function_params, tenant_id)
             except:
                 # Unlock the case.
                 logging.exception(f'Something went wrong while updating changes. Check trace.')
@@ -354,7 +354,7 @@ def consume(broker_url='broker:9092'):
                 else:
                     # It is the last message. So update file status to completed.
                     logging.debug('Last topic of the group.')
-                    query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                    query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
                     queue_db.execute(query, params=[success_message, case_id])
                     consumer.commit()
             else:

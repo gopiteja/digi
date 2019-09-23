@@ -12,12 +12,12 @@ RUN apt-get update
 RUN apt-get install -y libmagickwand-dev
 # RUN apt-get install libmagickcore5-extra
 
-COPY ./app/ /app/
-
 # Install any needed packages specified in requirements.txt
 COPY ./app/requirements.txt /app/
 RUN cat /app/requirements.txt | xargs -n 1 pip install ; exit 0
 RUN pip install scikit-image
+
+COPY ./app/ /app/
 
 COPY ./app/jinja2ext.py /usr/local/lib/python3.6/dist-packages/flask_cache
 

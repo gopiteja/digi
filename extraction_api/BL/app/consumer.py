@@ -108,49 +108,49 @@ def consume(broker_url='broker:9092'):
             if 'tenant_id' in data:
                 tenant_id = data['tenant_id']
 
-            # if 'zipkin_headers' in data:
-            #     zipkin_headers = data['zipkin_headers']
-            #     zikpkin_atrr = ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
-            # span_id=zipkin_headers['X-B3-SpanId'],
-            # parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
-            # flags=zipkin_headers['X-B3-Flags'],
-            # is_sampled=zipkin_headers['X-B3-Sampled'],)
-            # else:
-            #     logging.error( "no zipkin_headers")
-            #     zipkin_headers = ''
-            #     zikpkin_atrr = ''
+            if 'zipkin_headers' in data:
+                zipkin_headers = data['zipkin_headers']
+                zikpkin_atrr = ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
+            span_id=zipkin_headers['X-B3-SpanId'],
+            parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
+            flags=zipkin_headers['X-B3-Flags'],
+            is_sampled=zipkin_headers['X-B3-Sampled'],)
+            else:
+                logging.error( "no zipkin_headers")
+                zipkin_headers = ''
+                zikpkin_atrr = ''
 
-            # logging.debug(f'Zipkin headers: {zipkin_headers}')
-            # with zipkin_span(
-            #     service_name='extraction_api',
-            #     span_name='consumer',
-            #     zipkin_attrs=ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
-            #                     span_id=zipkin_headers['X-B3-SpanId'],
-            #                     parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
-            #                     flags=zipkin_headers['X-B3-Flags'],
-            #                     is_sampled=zipkin_headers['X-B3-Sampled'],),
-            #     transport_handler=http_transport,
-            #     port=5010,
-            #     sample_rate=0.5,):
-            try:
-                data = message.value
-                case_id = data['case_id']
-                ocr_df = extraction_db.get_all('ocr')
-                case_id_ocr = ocr_df.loc[ocr_df['case_id'] == case_id]
-                if case_id_ocr.empty or overwrite:
-                    logging.debug(f'Extraction message: {data}')
-                    response_data = value_extract(data)
-                    if response_data['flag'] == True:
-                        data = response_data['send_data'] if 'send_data' in response_data else {}
-                        logging.info('Message commited!')
-                        produce(send_to_topic, data)
+            logging.debug(f'Zipkin headers: {zipkin_headers}')
+            with zipkin_span(
+                service_name='extraction_api',
+                span_name='consumer',
+                zipkin_attrs=ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
+                                span_id=zipkin_headers['X-B3-SpanId'],
+                                parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
+                                flags=zipkin_headers['X-B3-Flags'],
+                                is_sampled=zipkin_headers['X-B3-Sampled'],),
+                transport_handler=http_transport,
+                port=5010,
+                sample_rate=0.5,):
+                try:
+                    data = message.value
+                    case_id = data['case_id']
+                    ocr_df = extraction_db.get_all('ocr')
+                    case_id_ocr = ocr_df.loc[ocr_df['case_id'] == case_id]
+                    if case_id_ocr.empty or overwrite:
+                        logging.debug(f'Extraction message:{data}')
+                        response_data = value_extract(data)
+                        if response_data['flag'] == True:
+                            data = response_data['send_data'] if 'send_data' in response_data else {}
+                            logging.info('Message commited!')
+                            produce(send_to_topic, data)
+                        else:
+                            logging.info('Message not consumed. Some error must have occured. Will try again!')
                     else:
-                        logging.info('Message not consumed. Some error must have occured. Will try again!')
-                else:
-                    logging.info('Consuming old message.')
-            except Exception as e:
-                logging.exception('Error. Moving to next message')
-            consumer.commit()
+                        logging.info('Consuming old message.')
+                except Exception as e:
+                    logging.exception('Error. Moving to next message')
+                consumer.commit()
     except:
         logging.exception('Something went wrong in consumer. Check trace.')
     

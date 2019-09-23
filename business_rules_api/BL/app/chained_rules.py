@@ -151,6 +151,16 @@ def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=Fal
     
 
     print (start_rule_id)
+    try:
+        kafka_data['trace_exec']
+    except:
+        kafka_data['trace_exec'] = []
+    
+    try:
+       kafka_data['rule_params']
+    except:
+        kafka_data['rule_params'] = {}
+
     kafka_data['trace_exec'].append(str(start_rule_id))
     db_tables = {
                     "extraction" : ["ocr"],

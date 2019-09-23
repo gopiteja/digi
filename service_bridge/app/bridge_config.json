@@ -23,6 +23,10 @@
     "host": "folder_monitor",
     "port": "5007"
   },
+  "download_report": {
+   "host": "reportsapi",
+   "port": "80"
+  },
   "database_upload": {
     "host": "databaseingestion",
     "port": "80"
@@ -32,6 +36,14 @@
     "port": "5555"
   },
   "move_to_verify": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_recon_table_data": {
+    "host": "queueapi",
+    "port": "80"
+  },
+  "get_recon_secondary_table": {
     "host": "queueapi",
     "port": "80"
   },
@@ -202,5 +214,21 @@
   "text_data":{
     "host" : "stats",
     "port" : "80"
+  },
+  "generate_reports": {
+    "host": "reportsapi",
+    "port": "80"
+  },
+  "karvy_chart_data_amt":{
+    "host" : "karvystats",
+    "port" : "80"
+  },
+  "karvy_chart_data_trans": {
+    "host": "karvystats",
+    "port": "80"
+  },
+  "send_email_karvy": {
+    "host": "karvyemailtrigger",
+    "port": "80"
   }
 }

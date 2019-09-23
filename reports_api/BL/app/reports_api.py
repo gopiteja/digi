@@ -3,17 +3,24 @@ Author: Ashyam
 Created Date: 18-02-2019
 """
 import argparse
+import base64
 import json
+import uuid
 
-from flask import Flask, request, jsonify
+from db_utils import DB
+
+from datetime import datetime
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from pathlib import Path
 
 try:
     from app import app
     from app.ace_logger import Logging
+    from app.producer import produce
 except:
     from ace_logger import Logging
+    from producer import produce
     app = Flask(__name__)
     CORS(app)
 
@@ -40,6 +47,10 @@ def get_reports_queue():
         tenant_id = data.get('tenant_id', None)
         user = data.get('user', None)
 
+        start = data.get('start', 1) - 1
+        end = data.get('end', 20)
+        offset = end - start
+
         # Sanity check
         if user is None:
             message = 'User not provided in request.'
@@ -51,24 +62,36 @@ def get_reports_queue():
             'host': 'reports_db',
             'tenant_id': tenant_id
         }
-        reports_db = DB('reports_queue', **reports_db_config)
+        reports_db = DB('reports', **reports_db_config)
 
         # Fetch reports
         logging.debug(f'Fetching reports for user `{user}`')
-        query = 'SELECT * FROM `reports_queue` WHERE `requested_by`=%s'
+        query = 'SELECT * FROM `reports_queue` WHERE `requested_by`=%s LIMIT %s, %s'
         try:
-            user_reports_data = reports_db.execute(query, params=[user])
+            user_reports_data = reports_db.execute(query, params=[user, start, offset])
             user_reports_data_json = user_reports_data.to_dict('records')
         except:
             message = 'Error fetching data from database'
             logging.exception(message)
             return jsonify({'flag': False, 'message': message})
+        
+        total_reports_query = 'SELECT id, COUNT(*) AS COUNT FROM `reports_queue`'
+        total_count = list(reports_db.execute(total_reports_query)['COUNT'])[0]
+
+        # Get report types
+        query = 'SELECT * FROM `report_types`'
+        report_types_df = reports_db.execute(query)
 
         respose_data = {
             'flag': True,
             'data': {
                 'files': user_reports_data_json,
-                'columns': list(user_reports_data)
+                'columns': list(user_reports_data),
+                'report_types': list(report_types_df['report_type'].unique()),
+                'pagination': {
+                    'start': start + 1,
+                    'end': end if end < len(user_reports_data_json) else len(user_reports_data_json),
+                    'total': total_count}
                 }
             }
         logging.info(f'Response data: {respose_data}')
@@ -78,21 +101,89 @@ def get_reports_queue():
         response = {'flag': False, 'message': 'System error [/get_reports_queue]! Please contact your system administrator.'}
         return jsonify(response)
 
-@app.route('/generate_report', methods=['POST', 'GET'])
-def generate_report():
+@app.route('/generate_reports', methods=['POST', 'GET'])
+def generate_reports():
     # Get data from UI
+    data = request.json
+    requested_by = data.get('user', None)
+    report_type = data.get('report_type', None)
+    tenant_id = data.get('tenant_id', None)
 
-    # Generate a reference ID
+    # Sanity check
+    if requested_by is None:
+        message = 'User not provided in request.'
+        logging.error(message)
+        return jsonify({'flag': False, 'message': message})
+    
+    if report_type is None:
+        message = 'Report type not provided in request.'
+        logging.error(message)
+        return jsonify({'flag': False, 'message': message})
 
-    # Check if reference ID already exists
+    # Generate a reference ID (10 digits)
+    reference_id = uuid.uuid4().hex[:10].upper()
 
     # Generate file name if not given
+    timestamp = datetime.now().strftime(f'%d%m%Y%H%M%S')
+    file_name = f'{reference_id[:3]}-{timestamp}'
 
     # Add file to database
+    reports_db_config = {
+        'host': 'reports_db',
+        'tenant_id': tenant_id
+    }
+    reports_db = DB('reports', **reports_db_config)
+
+    insert_data = {
+        'reference_id': reference_id,
+        'requested_by': requested_by,
+        'filename': file_name,
+        'status': 'Processing'
+    }
+    reports_db.insert_dict(insert_data, 'reports_queue')
 
     # Produce to reports consumer
+    produce('generate_report', {'tenant_id': tenant_id, 'report_type': report_type, **insert_data})
 
-    return ''
+    return jsonify({'flag': True, 'message': f'The report will be available soon to download. (Ref No. {reference_id})'})
+
+@app.route('/download_report', methods=['POST', 'GET'])
+def download_report():
+    # Get data from UI
+    data = request.json
+    logging.info(f'Recieved data: {data}')
+
+    tenant_id = data.get('tenant_id', None)
+    reference_id = data.get('reference_id', None)
+
+    if reference_id is None:
+        message = 'Reference ID is not provided.'
+        logging.error(message)
+        return jsonify({'flag': False, 'message': message})
+
+    # Add file to database
+    reports_db_config = {
+        'host': 'reports_db',
+        'tenant_id': tenant_id
+    }
+    reports_db = DB('reports', **reports_db_config)
+
+    query = 'SELECT * FROM `reports_queue` WHERE `reference_id`=%s'
+    report_info = reports_db.execute(query, params=[reference_id])
+
+    report_file_name = list(report_info['filename'])[0]
+    report_path = Path(f'./reports/{report_file_name}.xlsx')
+
+    with open(report_path, 'rb') as f:
+        report_blob = base64.b64encode(f.read())
+
+    try:
+        return jsonify({'flag': True, 'blob': report_blob.decode('utf-8'), 'filename': f'{report_file_name}.xlsx'})
+    except:
+        message = 'Something went wrong while downloading report.'
+        logging.exception(message)
+        return jsonify({'flag': False, 'message': message})
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

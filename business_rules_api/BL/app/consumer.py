@@ -109,7 +109,7 @@ def consume(broker_url='broker:9092'):
                     case_id_business_rule = DAO.extraction_db_get_data(table='business_rule', case_id=case_id)
 
                     if case_id_business_rule.empty or overwrite:
-                        data["stage"] = "default"
+                        # data["stage"] = "default"
                         send_to_topic = data.pop('send_to_topic', None)
                         # response_data = apply_business_rules(**data)
                         response_data = dostuff(data)

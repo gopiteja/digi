@@ -3,7 +3,7 @@ $(document).ready(function () {
     originUrl = window.location.origin.split(':');
     $('.selectClass').show();
     dynamicUrl = originUrl[0] + ":" + originUrl[1] + ":5002";
-    // dynamicUrl = 'http://3.208.195.34:5019';
+    // dynamicUrl = 'http://192.168.0.156:5019';
     fieldSplits = 0;
     var extracropcount = 0;
     $(".secondary_view").hide();
@@ -68,7 +68,6 @@ $(document).ready(function () {
     var click_crop_area;
     var file_id = getUrlParameter('file_name');
     var case_id = getUrlParameter('case_id');
-
     var retrain = getUrlParameter('retrain');
     var user_name = getUrlParameter('user');
     var template_name_retrain = getUrlParameter('template');
@@ -1299,7 +1298,94 @@ $(document).ready(function () {
             });
         }
     }
+    // $(".forSave").attr("disabled", true);
+    $('body').on("click", '.autoSuggest', function () {
 
+        var dummydata = {
+            "Billed To (DRL Name)": {
+                "width": 74.6269,
+                "height": 20.9403,
+                "y": 100,
+                "x": 100,
+                "page": 0,
+                "keyword": "Invoice is ",
+                "value": "drl",
+                "word": "Invoice is drl"
+            },
+            "Document Heading": {
+                "width": 74.6269,
+                "height": 20.9403,
+                "y": 308,
+                "x": 100,
+                "page": 0,
+                "keyword": "Invoice is ",
+                "value": "drl",
+                "word": "Invoice is drl"
+            },
+            "Invoice Category": {
+                "width": 74.6269,
+                "height": 20.9403,
+                "y": 500,
+                "x": 200,
+                "page": 0,
+                "keyword": "Invoice is ",
+                "value": "drl",
+                "word": "Invoice is drl"
+            },
+            "Invoice Po": {
+                "width": 287,
+                "height": 59,
+                "y": 120,
+                "x": 58,
+                "page": 1,
+                "keyword": "Invoice is ",
+                "value": "drl",
+                "word": "Invoice is drl"
+            }
+        }
+
+
+        var id = 0;
+        var target = "0";
+
+        keywords_dummy = []
+        crops_dummy = {}
+
+        nofiles = $(".imageCount").length;
+        alt_title = 'autosuggest'
+        $.each(dummydata, function (k, v) {
+            keywords_dummy.push(k)
+
+            if (!nullCheck(crops_dummy[v.page])) {
+                crops_dummy[v.page] = []
+            }
+            v.id = crops_dummy[v.page].length;
+            id = crops_dummy[v.page].length;
+            crops_dummy[v.page].push(v)
+
+            addFields(id, v.page, k, "fieldsAutoSuggest");
+            box_id = id + "-" + v.page
+            // get_Ocr(k.word, box_id)
+            text_ = v.word
+            $(".inputLabel-" + box_id).val(text_)
+            $(".parent_input_here-" + box_id).html('');
+            $(".parent_input_here-" + box_id).attr('title', text_)
+            for (var i = 0; i < text_.length; i++) {
+                $(".parent_input_here-" + box_id).append('<span class="span' + i + '">' + text_[i] + '</span>');
+            }
+
+            sliderdrag(box_id, "unlock");
+
+        })
+        autoSuggestFields(crops_dummy)
+        // console.log(crops_dummy)
+        $(".fieldTrain select").formSelect();
+        $(".initial_view").hide();
+        $(".autoSuggestView").show();
+        fieldHistory = crops_dummy
+        mandatoryFields = keywords_dummy;
+
+    });
     $("body").on("click", ".closeAutoSuggest", function () {
         $('.fieldsAutoSuggest').html('')
         $(".initial_view").show()
@@ -1446,7 +1532,6 @@ $(document).ready(function () {
             count = count + 1;
             predicted_obj = predicted_data[predicted_data.findIndex(x => x.field === forFields[i])];
             pg = predicted_obj.coordinates.length > 0 ? predicted_obj.coordinates[0].page : 0
-            pg = 0
             addFields(i, pg, forFields[i], "displayresults", count, predicted_obj)
         }
 

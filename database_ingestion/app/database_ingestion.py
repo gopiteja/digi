@@ -76,7 +76,6 @@ def database_upload():
 
     alorica_db = DB('alorica_data', **db_config)
     queues_db = DB('queues', **db_config)
-    stats_db = DB('stats', **db_config)
 
     query = "Select * from screen_shots where processed = 0 order by Fax_unique_id, Screen_Page_number, Screen_Page_part asc"
     query_dict = alorica_db.execute(query).to_dict(orient='records')
@@ -179,12 +178,6 @@ def database_upload():
                 params = [key, agent, 'database', key, com_date, history]
                 queues_db.execute(insert_query, params=params)
                 print(f' - {key} inserted successfully into the database')
-
-                audit_data = {
-                        "type": "insert", "last_modified_by": 'Bot', "table_name": "process_queue", "reference_column": "case_id",
-                        "reference_value": key, "changed_data": json.dumps({"stats_stage": "OCR Time"})
-                    }
-                stats_db.insert_dict(audit_data, 'audit')
 
             # Produce message to detection
 

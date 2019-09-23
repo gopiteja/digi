@@ -24,5 +24,8 @@ EXPOSE 80
 
 WORKDIR /var/www/reports_api
 
+RUN ln -sf /dev/stdout /var/log/apache2/access.log && \
+    ln -sf /dev/stdout /var/log/apache2/error.log
+
 CMD  /usr/sbin/apache2ctl -D FOREGROUND
 

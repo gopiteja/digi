@@ -394,7 +394,7 @@ var obj_rule_check={};
 
         onMousewheel: function(cellView, evt, x, y, delta) {
             console.log(cellView)
-            if (this.keyboard.isActive('ctrl', evt)) {
+            if (this.keyboard.isActive('alt', evt)) {
                 evt.preventDefault();
                 this.paperScroller.zoom(delta * 0.2, { min: 0.2, max: 5, grid: 0.2, ox: x, oy: y });
             }

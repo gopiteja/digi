@@ -6,6 +6,29 @@ networks:
     driver: overlay
 
 services:
+  # Reports
+  reports_consumer:
+    image: 'reports_consumer'
+    container_name: 'reports_consumer'
+    build:
+      context: ./reports_api/BL/app
+      dockerfile: generate_report.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - reports_output:/app/reports
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
   # Bot Watcher
   bot_watcher:
     image: 'bot_watcher'
@@ -274,25 +297,25 @@ services:
       - business_rules_db:db
   
   # JSON Export
-  # json_export_api:
-  #   image: 'json_export_api'
-  #   container_name: 'json_export_api'
-  #   build: ./json_export_api/BL
-  #   networks:
-  #     service_bridge:
-  #       aliases:
-  #         - jsonexportapi
-  #   volumes:
-  #     - json_output:/app/output
-  #   restart: on-failure:3
-  #   environment:
-  #     - HOST_IP=${HOST_IP}
-  #     - LOG_LEVEL=${LOG_LEVEL}
-  #     - LOG_FORMAT=${LOG_FORMAT}
-  #     - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-  #   depends_on: 
-  #     - json_export_db
-  #     - json_export_php
+  json_export_api:
+    image: 'json_export_api'
+    container_name: 'json_export_api'
+    build: ./json_export_api/BL
+    networks:
+      service_bridge:
+        aliases:
+          - jsonexportapi
+    volumes:
+      - json_output:/app/output
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    depends_on: 
+      - json_export_db
+      - json_export_php
     # logging:
     #   driver: gelf
     #   options:
@@ -444,14 +467,23 @@ services:
     #     tag: "update_pq_tag"
 
 volumes:
+  # Reports
+  reports_output:
+    driver: local
+    name: reports_output
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${REPORT_OUTPUT_PATH}
+
   # JSON Export
-  # json_output:
-  #   driver: local
-  #   name: json_output
-  #   driver_opts:
-  #     type: 'none'
-  #     o: 'bind'
-  #     device: ${JSON_EXPORT_PATH}
+  json_output:
+    driver: local
+    name: json_output
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${JSON_EXPORT_PATH}
       
   # Digital Signature and ACE Template Training
   files:

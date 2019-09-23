@@ -1,9 +1,6 @@
 FROM apache_base
 
 # Copy over the apache configuration file and enable the site
-# RUN apt-get -y remove libapache2-mod-wsgi-py3
-# RUN pip install -v mod_wsgi-httpd
-# RUN pip install mod_wsgi
 COPY ./extraction_api.conf /etc/apache2/sites-available/extraction_api.conf
 COPY ./httpd.conf /etc/apache2/httpd.conf
 RUN echo "Include /etc/apache2/httpd.conf" >> /etc/apache2/apache2.conf

@@ -97,21 +97,48 @@ def evaluate_chained_rules(start=None, fax_unique_id=None):
         
         
 def run_business_rule_consumer_(data, function_params):
+    print ("GOT THE PARAMTERTES", data, function_params)
+    print (f"\n the data got is \n {data} \n")
         # evaluate the field validation
     case_id = data['case_id'] 
     start_rule_id = data.get('next_rule_id', None)
     bot_message = data.get('bot_message', False)
     bot_status = data.get('bot_status', None)
-    default_stage = data.get('stage', None)
-    if default_stage:
+    stage = None
+    try:
+
+        for func in data['functions']:
+            try:
+                if func['route'] == 'run_business_rule':
+                    stage = func['parameters']['stage'][0]
+            except Exception as e:
+                print (f"No stage is got {e}")
+                stage = None
+    except Exception as e:
+        print (e)
+        
+
+    # stage = data.get('stage', None)
+    print (f"\n GOT THE STAGE {stage} \n")
+    if stage == 'default':
         db_tables = {
                 "alorica_data": ['screen_shots'],
                 "extraction" : ["ocr"],
             }
-        apply_field_validations(case_id, default_stage, db_tables)
-        return
+        apply_field_validations(case_id, stage, db_tables)
+        return {'flag': True, 'message': 'Completed runninig default business rules.', 'updates': updates}
+
+    if stage == 'validation':
+        db_tables = {
+                "extraction" : ["ocr"],
+                "queues":["process_queue"]
+
+            }
+        updates = apply_field_validations(case_id, stage, db_tables)
+        return {'flag': True, 'message': 'Completed runninig validation business rules.', 'updates': updates}
     if not bot_message:
-        updates = apply_field_validations(case_id)
+        # updates = apply_field_validations(case_id)
+        updates = None
     else:
         print ("CALLED BY BOT")
         print (case_id, start_rule_id, bot_message)
@@ -292,6 +319,23 @@ def consume(broker_url='broker:9092'):
                 print(f'Recieved unknown data. [{data}] [{e}]')
                 consumer.commit()
                 continue
+            function_params = {}
+
+            # coming from bot_watcher .... not button function
+            print ("CHECKING FOR THE IS BUTTON", data.get('is_button', True))
+            if not data.get('is_button', False):
+                try:
+                    result = run_business_rule_consumer_(data, function_params)
+                except Exception as e:
+                    print (f"Error runnign the business_rules {e}")
+                    print (str(e))
+                    query = 'UPDATE `process_queue` SET `queue`=%s, `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
+                    queue_db.execute(query, params=['GHI678', failure_message, case_id])
+                    consumer.commit()
+                continue
+
+            
+            
             # Get which button (group in kafka table) this function was called from
             group = data['group']
 
@@ -319,6 +363,7 @@ def consume(broker_url='broker:9092'):
 
             # Call save changes function
             try:
+                print (f"\n the data got is \n {data} \n")
                 result = run_business_rule_consumer_(data, function_params)
                 # return {'flag': True, 'message': 'Completed runninig business rules.', 'updates': None}
 
@@ -348,6 +393,8 @@ def consume(broker_url='broker:9092'):
                 # If it is not the last message, then produce to next function else just unlock case.
                 if last_topic.empty:
                     # Get next function name
+                    print ("\n CHECKING FOR THE DATA \n")
+                    print (data)
                     next_topic = list(
                         group_messages.loc[group_messages['listen_to_topic'] == route]['send_to_topic'])[0]
 
