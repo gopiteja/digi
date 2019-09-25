@@ -9,19 +9,14 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pandas import Series, Timedelta, to_timedelta
+from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 from time import time
-from db_utils import DB
 
-try:
-    from app.producer import produce
-    from app.ace_logger import Logging
-except:
-    from producer import produce
-    from ace_logger import Logging
+from db_utils import DB
+from producer import produce
+from ace_logger import Logging
 
 from app import app
-
-from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 
 logging = Logging()
 
