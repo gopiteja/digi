@@ -322,8 +322,9 @@ def consume(broker_url='broker:9092'):
             function_params = {}
 
             # coming from bot_watcher .... not button function
-            print ("CHECKING FOR THE IS BUTTON", data.get('is_button', True))
-            if not data.get('is_button', False):
+            print ("CHECKING FOR THE IS BUTTON", data,data.get('is_button', True))
+            if 'is_button' in data.keys():
+            # if not data.get('is_button', False):
                 try:
                     result = run_business_rule_consumer_(data, function_params)
                 except Exception as e:
@@ -332,6 +333,75 @@ def consume(broker_url='broker:9092'):
                     query = 'UPDATE `process_queue` SET `queue`=%s, `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
                     queue_db.execute(query, params=['GHI678', failure_message, case_id])
                     consumer.commit()
+
+                # # Get which button (group in kafka table) this function was called from
+                # group = data['group']
+
+                # # Get message group functions
+                # group_messages = message_flow.loc[message_flow['message_group'] == group]
+
+                # # If its the first function the update the progress count
+                # first_flow = group_messages.head(1)
+                # first_topic = first_flow.loc[first_flow['listen_to_topic'] == route]
+
+                # query = 'UPDATE `process_queue` SET `status`=%s, `total_processes`=%s WHERE `case_id`=%s'
+                # if not first_topic.empty:
+                #     if list(first_flow['send_to_topic'])[0] is None:
+                #         queue_db.execute(query, params=[in_progress_message, len(group_messages), case_id])
+                #     else:
+                #         queue_db.execute(query, params=[in_progress_message, len(group_messages) + 1, case_id])
+
+                # # Getting the correct data for the functions. This data will be passed through
+                # # rest of the chained functions.
+                # function_params = {}
+                # for function in functions:
+                #     if function['route'] == route:
+                #         function_params = function['parameters']
+                #         break
+                    
+                # if result['flag']:
+                #     # If there is only function for the group, unlock case.
+                #     if not first_topic.empty:
+                #         if list(first_flow['send_to_topic'])[0] is None:
+                #             # It is the last message. So update file status to completed.
+                #             print("\n CASE IS UNLOCKED \n")
+                #             query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                #             queue_db.execute(query, params=[success_message, case_id])
+                #             consumer.commit()
+                #             continue
+
+                #     last_topic = group_messages.tail(
+                #         1).loc[group_messages['send_to_topic'] == route]
+
+                #     # If it is not the last message, then produce to next function else just unlock case.
+                #     if last_topic.empty:
+                #         # Get next function name
+                #         print ("\n CHECKING FOR THE DATA \n")
+                #         print (data)
+                #         next_topic = list(
+                #             group_messages.loc[group_messages['listen_to_topic'] == route]['send_to_topic'])[0]
+
+                #         if next_topic is not None:
+                #             produce(next_topic, data)
+
+                #         # Update the progress count by 1
+                #         query = 'UPDATE `process_queue` SET `status`=%s, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                #         queue_db.execute(query, params=[success_message, case_id])
+                #         consumer.commit()
+                #     else:
+                #         # It is the last message. So update file status to completed.
+                #         query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                #         queue_db.execute(query, params=[success_message, case_id])
+                #         consumer.commit()
+                # else:
+                #     # Unlock the case.
+                #     query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
+                #     queue_db.execute(query, params=[failure_message, case_id])
+                #     consumer.commit()
+
+
+
+
                 continue
 
             
@@ -382,6 +452,7 @@ def consume(broker_url='broker:9092'):
                 if not first_topic.empty:
                     if list(first_flow['send_to_topic'])[0] is None:
                         # It is the last message. So update file status to completed.
+                        print("\n CASE IS UNLOCKED \n")
                         query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
                         queue_db.execute(query, params=[success_message, case_id])
                         consumer.commit()

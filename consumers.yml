@@ -406,6 +406,28 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
 
+  case_creation:
+    image: 'case_creation'
+    container_name: 'case_creation'
+    build:
+      context: ./queue_api/BL/app
+      dockerfile: case_creation.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - case_creation:/app/case_creation
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
   # Run Business Rules
   run_business_rule:
     image: 'run_business_rule'
@@ -466,6 +488,26 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "update_pq_tag"
 
+  update_addon:
+    image: 'update_addon'
+    container_name: 'update_addon'
+    build:
+      context: ./queue_api/BL/app
+      dockerfile: update_addon.Dockerfile
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "update_addon_tag"
+
 volumes:
   # Reports
   reports_output:
@@ -484,6 +526,14 @@ volumes:
       type: 'none'
       o: 'bind'
       device: ${JSON_EXPORT_PATH}
+
+  case_creation:
+    driver: local
+    name: case_creation
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${XAMPP_PATH}/htdocs/
       
   # Digital Signature and ACE Template Training
   files:

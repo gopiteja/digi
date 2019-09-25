@@ -149,15 +149,30 @@ def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=Fal
             kafka_data['rule_params'] = {}
             
     
+    query = "select * from rule_data where case_id=%s"
+    params = [unique_id]
+    config={'host':os.environ['HOST_IP'],
+        'user':'root',
+        'password':os.environ['LOCAL_DB_PASSWORD'],
+        'port':'3306',
+    }
+    business_rule_db = db.DB('business_rules', **config)
+    df = business_rule_db.execute(query, params=params)
+
 
     print (start_rule_id)
     try:
-        kafka_data['trace_exec']
+        trace_exec = json.loads(list(df['trace_data'])[0])
+        print (f"trace exec is {trace_exec}")
+        kafka_data['trace_exec'] = trace_exec
     except:
+
         kafka_data['trace_exec'] = []
     
     try:
-       kafka_data['rule_params']
+        rule_params = json.loads(list(df['rule_params'])[0])
+        print (f"rule_params is {rule_params}")
+        kafka_data['rule_params'] = rule_params
     except:
         kafka_data['rule_params'] = {}
 

@@ -12,12 +12,13 @@ import pandas as pd
 import os
 
 class Stats_db:
-    def __init__(self, database = 'stats', host='3.208.195.34', user='root', password='AlgoTeam123', port='3306',tenant_id = None):
+    def __init__(self, database = 'stats', host='172.31.45.112', user='root', password='AlgoTeam123', port='3306',tenant_id = None):
         host = os.environ['HOST_IP']
-        if tenant_id is not None and tenant_id:
-            tenant_db = f'{tenant_id}_{database}'
-        else:
+        if tenant_id == 'None':
             tenant_db = f'{database}'
+        else:
+            tenant_db = f'{tenant_id}_{database}'
+
         config = f'mysql://{user}:{password}@{host}:{port}/{tenant_db}?charset=utf8'
         print(config)
         try:

@@ -230,5 +230,9 @@
   "send_email_karvy": {
     "host": "karvyemailtrigger",
     "port": "80"
+  },
+  "update_addon_table": {
+    "host": "queueapi",
+    "port": "80"
   }
 }

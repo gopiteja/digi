@@ -17,12 +17,10 @@ from time import time
 from itertools import chain, repeat, islice, combinations
 
 try:
-    # from app.db_utils import DB
     from app.get_fields_info import get_fields_info
     from app.get_fields_info_utils import sort_ocr
     from app.ace_logger import Logging
 except:
-    # from db_utils import DB
     from get_fields_info import get_fields_info
     from get_fields_info_utils import sort_ocr
     from ace_logger import Logging
@@ -80,17 +78,12 @@ def update_queue_trace(queue_db,case_id,latest):
     else:
         last_updated_dates = datetime.now().strftime(r'%d/%m/%Y %H:%M:%S')
 
-    update = {'queue_trace':queue_trace}
-    where = {'case_id':case_id}
     update_q = "UPDATE `trace_info` SET `queue_trace`=%s, `last_updated_dates`=%s WHERE `case_id`=%s"
     queue_db.execute(update_q,params=[queue_trace,last_updated_dates,case_id])
 
     return {'flag':True,'message':'Updated Queue Trace'}
 
-# @app.route('/get_template_exceptions', methods=['POST', 'GET'])
 def get_template_exceptions(db, data):
-    # data = request.json
-
     logging.info('Getting template exceptions')
     logging.info(f'Data: {data}')
     start_point = data['start']
@@ -104,7 +97,6 @@ def get_template_exceptions(db, data):
         'password': 'root'
     }
     template_db = DB('template_db', **template_config)
-    # db = DB('queues')
 
     # TODO: Value of "columns" will come from a database.
     # Columns to display is configured by the user from another screen.
@@ -131,15 +123,12 @@ def get_template_exceptions(db, data):
     total_files = list(db.execute("SELECT id,COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=['Template Exceptions'])['COUNT(DISTINCT `case_id`)'])[0]
 
     logging.debug(f'Loading process queue {time()-all_st}')
-    rest_st = time()
-    # trained_info = template_db.get_all('trained_info')
     
     try:
         queue_files = process_queue_df
         files = queue_files[columns].to_dict(orient='records')
         for document in files:
             document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
-        # trained_templates = sorted(list(trained_info.template_name),key=str.lower)
         trained_templates = []
 
         if end_point > total_files:
@@ -162,9 +151,6 @@ def get_template_exceptions(db, data):
         return {'flag': False, 'message': message}
 
 def get_snapshot(db, data):
-    # data = request.json
-    # db = DB('queues')
-
     start_point = data['start']
     end_point = data['end']
     offset = end_point - start_point
@@ -185,15 +171,10 @@ def get_snapshot(db, data):
 
     column_order = list(column_mapping.keys())
 
-    all_st = time()
     logging.debug(f'Selecting columns: {columns}')
 
     process_queue_df = db.execute("SELECT * from `process_queue` LIMIT %s, %s", params=[start_point, offset])
     total_files = list(db.execute("SELECT id,COUNT(DISTINCT `case_id`) FROM `process_queue`")['COUNT(DISTINCT `case_id`)'])[0]
-
-    logging.debug(f'Loading process queue {time()-all_st}')
-    rest_st = time()
-    # trained_info = template_db.get_all('trained_info')
     
     try:
         queue_files = process_queue_df
@@ -653,7 +634,6 @@ def get_recon_secondary_table():
             rows_arr.append(rows_dict)
         return jsonify({'columns' : columns,'rows' : rows_arr})
     else:
-        sample = {"columns":["case_id","operator"],"rows":[{"case_id":"2000443305","operator":"ab"},{"case_id":"2000443312","operator":"abc"},{"case_id":"2000443320","operator":"a"},{"case_id":"2000443334","operator":"ab"},{"case_id":"2000443344","operator":"123"},{"case_id":"2000443415","operator":"abc"}]}  
         return jsonify("No data to display")
 
 @app.route('/get_recon_table_data', methods = ['GET', 'POST'])
@@ -730,7 +710,6 @@ def get_recon_table_data():
                 rows_arr.append(rows_dict)
             return jsonify({'columns' : columns,'rows' : rows_arr})
     else:
-        sample = {"columns":["case_id","operator"],"rows":[{"case_id":"2000443305","operator":"ab"},{"case_id":"2000443312","operator":"abc"},{"case_id":"2000443320","operator":"a"},{"case_id":"2000443334","operator":"ab"},{"case_id":"2000443344","operator":"123"},{"case_id":"2000443415","operator":"abc"}]}  
         return jsonify("No data to display")
 
 @app.route('/get_queue', methods=['POST', 'GET'])
@@ -784,15 +763,6 @@ def get_queue(queue_id=None):
             }
             db = DB('queues', **db_config)
 
-            # user_db_config = {
-            #     'host': os.environ['HOST_IP'],
-            #     'user': 'root',
-            #     'password': 'AlgoTeam123',
-            #     'port': '3306',
-            #     'tenant_id':tenant_id
-            # }
-            # user_db = DB('authentication', **user_db_config)
-
             extraction_db_config = {
                 'host': 'extraction_db',
                 'port': 3306,
@@ -820,7 +790,6 @@ def get_queue(queue_id=None):
 
                 response = get_template_exceptions(db, {'start': start_point, 'end': end_point})
 
-                # user_db.engine.close()
                 extraction_db.engine.close()
 
                 logging.info(f'Response: {response}')
@@ -958,6 +927,18 @@ def get_queue(queue_id=None):
                                     document[col] = val
                                     continue
 
+                        columns_to_change = [
+                            'created_date', 
+                            'Date Of Notice'
+                        ]
+
+                        for column in columns_to_change:
+                            try:
+                                document[column] = (document[column]).strftime(r'%B %d, %Y %I:%M %p')
+                            except:
+                                logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
+                                pass
+
                 columns = [col for col in columns if col not in util_columns]
                 columns += extraction_columns_list
                 logging.debug(f'New columns: {columns}')
@@ -978,24 +959,6 @@ def get_queue(queue_id=None):
                 logging.debug(f'Column Mapping: {column_mapping}')
             else:
                 column_mapping = {}
-            # * RENAME COLUMNS
-            # logging.debug(f'Before Renaming Columns: {columns}')
-            # temp_columns = columns.copy()
-            # for index, column in enumerate(temp_columns):
-            #     col_info = columns_df.loc[columns_df['column_name'] == column]
-            #     logging.debug(f'Column: {column}')
-            #     logging.debug(f'Column Info: {col_info}')
-            #     if not col_info.empty:
-            #         columns[index] = list(col_info['label_key'])[0]
-            # logging.debug(f'After Renaming Columns: {columns}')
-
-            # logging.debug(f'Before Renaming Files: {files}')
-            # for file_ in files:
-            #     for col in list(columns_df['column_name']):
-            #         if col in file_:
-            #             new_col_name = list(columns_df.loc[columns_df['column_name'] == col]['label_key'])[0]
-            #             file_[new_col_name] = file_.pop(col)
-            # logging.debug(f'After Renaming Files: {files}')
 
             # * BUTTONS
             button_time = time()
@@ -1014,13 +977,7 @@ def get_queue(queue_id=None):
 
             pagination = {"start": start_point + 1, "end": end_point, "total": total_files}
 
-            # query = "SELECT id,username from users where role = 'TL_Prod'"
-            # retrain_access = operator in list(user_db.execute(query).username)
-
-            # if queue_name == 'Verify' and retrain_access:
-            #     retrain = 1
-            # else:
-            #     retrain = 0
+            dropdown, _, _ = get_dropdown(queue_id, tenant_id)
 
             db.engine.close()
             # user_db.engine.close()
@@ -1030,18 +987,20 @@ def get_queue(queue_id=None):
             # user_db.db_.dispose()
             extraction_db.db_.dispose()
             
+            pdf_type = 'folder' if tenant_id else 'blob'
+            
             data = {
                 'files': files,
                 'buttons': button_attributes,
+                'dropdown_values': dropdown,
                 'field': field_attributes,
                 'tabs': tabs,
                 'excel_source_data': excel_display_data,
                 'tab_type_mapping': tab_type_mapping,
                 'pagination': pagination,
-                # 'retrain': retrain,
                 'column_mapping': column_mapping,
                 'column_order': list(column_mapping.keys()),
-                'pdf_type': 'folder' if tenant_id else 'blob'
+                'pdf_type': pdf_type
             }
             logging.debug(f'Total time taken to get `{queue_name}` {time()-rt_time}')
 
@@ -1061,6 +1020,7 @@ def get_display_fields(case_id=None):
         
         logging.info(f'Request data: {data}')
         queue_id = data.pop('queue_id', None)
+        tenant_id = data.pop('tenant_id', None)
 
         if queue_id is None:
             message = f'Queue ID not provided.'
@@ -1136,8 +1096,6 @@ def get_display_fields(case_id=None):
                 function['parameters'] = function['parameters'].split(',') # Send list of parameters instead of string
                 button['functions'].append(function)
 
-        buttons = list(buttons_df['text'])
-
         # * FIELDS
         logging.info(f'Getting field data...')
 
@@ -1171,7 +1129,6 @@ def get_display_fields(case_id=None):
             fields_df.loc[index, 'unique_name'] = unique_name
 
         field_attributes = fields_df.to_dict(orient='records')
-        fields = list(fields_df.display_name.unique())
         tabs = list(fields_df.tab_id.unique())
 
         response_data = {
@@ -1186,6 +1143,36 @@ def get_display_fields(case_id=None):
     except Exception as e:
         logging.exception('Something went wrong while getting display fields. Check trace.')        
         return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})
+
+@cache.memoize(86400)
+def get_dropdown(queue_id, tenant_id=None):
+
+    queue_db_config = {
+            'host': 'queue_db',
+            'port': 3306,
+            'user': 'root',
+            'password': 'root',
+            'tenant_id': tenant_id
+        }
+    queue_db = DB('queues', **queue_db_config)
+
+    query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
+    field_ids = list(queue_db.execute_(query).id)
+
+    dropdown_definition = queue_db.get_all('dropdown_definition')
+    field_dropdown = dropdown_definition.loc[dropdown_definition['field_id'].isin(field_ids)] # Filter using only field IDs from the file
+    unique_field_ids = list(field_dropdown.field_id.unique()) # Get unique field IDs from dropdown definition
+    field_definition = queue_db.get_all('field_definition')
+    dropdown_fields_df = field_definition.ix[unique_field_ids] # Get field names using the unique field IDs
+    dropdown_fields_names = list(dropdown_fields_df.unique_name)
+
+    dropdown = {}
+    for index, f_id in enumerate(unique_field_ids):
+        dropdown_options_df = field_dropdown.loc[field_dropdown['field_id'] == f_id]
+        dropdown_options = list(dropdown_options_df.dropdown_option)
+        dropdown[dropdown_fields_names[index]] = dropdown_options
+
+    return dropdown, field_definition, field_ids
 
 @app.route('/get_fields', methods=['POST', 'GET'])
 @app.route('/get_fields/<case_id>', methods=['POST', 'GET'])
@@ -1295,32 +1282,13 @@ def get_fields(case_id=None):
 
         logging.debug(f'Getting queue field mapping info for case `{case_id}`')
         # Get field related to case ID from queue_field_mapping
-        fields_ids_time = time()
-        query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
-        field_ids = list(queue_db.execute_(query).id)
-        print("field list ids", field_ids)
-        logging.debug(f'Time taken for getting fields ids {time()-fields_ids_time}')
 
-        # Get dropdown values using field IDs which have dropdown values dropdown_definition
-        dropdown_time = time()
-        dropdown_definition = queue_db.get_all('dropdown_definition')
-        field_dropdown = dropdown_definition.loc[dropdown_definition['field_id'].isin(field_ids)] # Filter using only field IDs from the file
-        unique_field_ids = list(field_dropdown.field_id.unique()) # Get unique field IDs from dropdown definition
-        field_definition = queue_db.get_all('field_definition')
-        dropdown_fields_df = field_definition.ix[unique_field_ids] # Get field names using the unique field IDs
-        dropdown_fields_names = list(dropdown_fields_df.unique_name)
-
-        dropdown = {}
-        for index, f_id in enumerate(unique_field_ids):
-            dropdown_options_df = field_dropdown.loc[field_dropdown['field_id'] == f_id]
-            dropdown_options = list(dropdown_options_df.dropdown_option)
-            dropdown[dropdown_fields_names[index]] = dropdown_options
+        dropdown, field_definition, field_ids = get_dropdown(queue_id, tenant_id)
 
         fields_df = field_definition.ix[field_ids] # Get field names using the unique field IDs
         print("Get field names",fields_df)
         logging.debug(f'Getting highlights for case `{case_id}`')
         # Get higlights
-        highlight_time = time()
         query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date limit 1"
         case_id_ocr = extraction_db.execute(query, params=[case_id])
         try:
@@ -1336,7 +1304,6 @@ def get_fields(case_id=None):
             table = '[]'
 
         # Renaming of fields
-        rename_time = time()
         renamed_fields = {}
         renamed_higlight = {}
 
@@ -1345,7 +1312,6 @@ def get_fields(case_id=None):
         logging.debug(f'Renaming fields for case `{case_id}`')
         logging.debug(f'Fields DF: {fields_df}')
         for index, row in fields_df.to_dict('index').items():
-            for_time = time()
             tab_id = row['tab_id']
             tab_name = tab_definition.loc[tab_id]['text']
             table_name = tab_definition.loc[tab_id]['source']
@@ -1356,10 +1322,6 @@ def get_fields(case_id=None):
 
             if unique_name == 'addon_table':
                 continue
-
-            # Get data related to the case from table for the corresponding tab
-            get_all_time = time()
-            query_time = time()
 
             # Check if such table exists. If not then skip tab
             try:
@@ -1483,7 +1445,6 @@ def get_fields(case_id=None):
         where = {
             'case_id': case_id
         }
-        oper_time = time()
         queue_db.update('process_queue', update=update, where=where)
 
         # if len(json.dumps(response_data)) > 200:
@@ -1545,7 +1506,6 @@ def refresh_fields(case_id=None):
         logging.debug('Fetching queue info')
         queue_name = list(case_files['queue'])[0]
         queue_definition = queue_db.get_all('queue_definition')
-        queue_info = queue_definition.loc[queue_definition['unique_name'] == queue_name]
         queue_id = queue_definition.index[queue_definition['unique_name'] == queue_name].tolist()[0]
 
         query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
@@ -1596,7 +1556,10 @@ def refresh_fields(case_id=None):
 
 def get_addon_table(table_pattern, case_id_ocr):
     try:
-        addon_table = json.loads(list(case_id_ocr['Add_on_Table'])[0])
+        try:
+            addon_table = json.loads(list(case_id_ocr['Add_on_Table'])[0])
+        except:
+            addon_table = json.loads(list(case_id_ocr['Add On Table'])[0])
     except:
         addon_table = []
         
@@ -1618,6 +1581,7 @@ def unlock_case():
         logging.info(f'Request data: {data}')
         # case_id = data.pop('case_id', None)
         operator = data.pop('username', None)
+        tenant_id = data.pop('tenant_id', None)
 
         if operator is None:
             message = f'Username not provided.'
@@ -1628,18 +1592,10 @@ def unlock_case():
             'host': 'queue_db',
             'port': 3306,
             'user': 'root',
-            'password': 'root'
+            'password': 'root',
+            'tenant_id': tenant_id
         }
         queue_db = DB('queues', **queue_db_config)
-        # queue_db = DB('queues')
-
-        # logging.debug('Fetching process queue data')
-        # # Get queue ID using exception type from case files in process_queue table
-        # files_df = queue_db.get_all('process_queue', discard=['ocr_data','ocr_text','xml_data'])
-        # latest_case_file = files_df
-        # case_files = latest_case_file.loc[latest_case_file['case_id'] == case_id]
-        # operator = list(case_files.operator)[0]
-
 
         # logging.debug('Unlock case and update time spent')
         # Update the time spent on the particular file
@@ -1675,6 +1631,8 @@ def get_ocr_data():
 
         logging.info(f'Request data: {data}')
         case_id = data['case_id']
+        tenant_id = data.pop('tenant_id', None)
+
         try:
             retrain = data['retrain']
         except:
@@ -1684,7 +1642,8 @@ def get_ocr_data():
             'host': 'queue_db',
             'port': 3306,
             'user': 'root',
-            'password': 'root'
+            'password': 'root',
+            'tenant_id': tenant_id
         }
         db = DB('queues', **db_config)
         # db = DB('queues')
@@ -1693,7 +1652,8 @@ def get_ocr_data():
             'host': 'template_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         trained_db = DB('template_db', **trained_db_config)
 
@@ -1701,7 +1661,8 @@ def get_ocr_data():
             'host': 'extraction_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extarction_db_config)
 
@@ -1709,7 +1670,8 @@ def get_ocr_data():
             'host': 'table_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         table_db = DB('table_db', **table_db_config)
 
@@ -1789,189 +1751,6 @@ def get_ocr_data():
         return jsonify({'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields,'fields': fields_list, 'type': 'blob'})
     except Exception as e:
         logging.exception('Something went wrong when getting ocr data. Check trace.')
-        return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
-
-@app.route('/update_queue', methods=['POST', 'GET'])
-def update_queue():
-    try:
-        data = request.json
-
-        logging.info(f'Request data: {data}')
-        try:
-            verify_operator = data['operator']
-        except:
-            logging.warning('Setting verify operator to None.')
-            verify_operator = None
-
-        if 'case_id' not in data or 'queue' not in data or 'fields' not in data:
-            message = f'Invalid JSON recieved. MUST contain `case_id`, `queue` and `fields` keys.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        case_id = data['case_id']
-        queue = data['queue']
-        fields = data['fields']
-
-        if data is None or not data:
-            message = f'Data not provided/empty dict.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        if case_id is None or not case_id:
-            message = f'Case ID not provided/empty string.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        if queue is None or not queue:
-            message = f'Queue not provided/empty string.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        db = DB('queues', **db_config)
-        # db = DB('queues')
-
-        # Get latest data related to the case from invoice table
-        invoice_files_df = db.get_all('process_queue')
-        latest_case_file = invoice_files_df
-        case_files = latest_case_file.loc[latest_case_file['case_id'] == case_id]
-
-        if case_files.empty:
-            message = f'No case ID `{case_id}` found in process queue.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        logging.debug(f'Setting queue to `{queue}` for case `{case_id}`')
-        query = f'UPDATE `process_queue` SET `queue`=%s WHERE `case_id`=%s'
-        params = [queue, case_id]
-        update_status = db.execute(query, params=params)
-
-        if update_status:
-            message = f'Updated queue for case ID `{case_id}` successfully.'
-            logging.debug('Set successfully.')
-        else:
-            message = f'Something went wrong updating queue. Check logs.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        # ! UPDATE TRACE INFO TABLE HERE
-        update_queue_trace(db,case_id,queue)
-
-        # Inserting fields into respective tables
-        field_definition = db.get_all('field_definition')
-        tab_definition = db.get_all('tab_definition')
-
-        # Change tab ID to its actual names
-        for index, row in field_definition.iterrows():
-            tab_id = row['tab_id']
-            tab_name = tab_definition.loc[tab_id]['text']
-            field_definition.loc[index, 'tab_id'] = tab_name
-
-        # Create a new dictionary with key as table, and value as fields dict (column name: value)
-        table_fields = {}
-        for unique_name, value in fields.items():
-            unique_field_name = field_definition.loc[field_definition['unique_name'] == unique_name]
-
-            if unique_field_name.empty:
-                logging.warning(f'No unique field name for {unique_name}. Check `field_defintion` database.')
-                continue
-
-            table = list(unique_field_name.tab_id)[0].lower().replace(' ', '_')
-            display_name = list(unique_field_name.display_name)[0]
-
-            if table not in table_fields:
-                table_fields[table] = {}
-
-            table_fields[table][display_name] = value
-
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root'
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
-        # extraction_db = DB('extraction')
-
-        # ! GET HIGHLIGHT FROM PREVIOUS RECORD BECAUSE UI IS NOT SENDING
-        ocr_files_df = extraction_db.get_all('ocr')
-        latest_ocr_files = extraction_db.get_latest(ocr_files_df, 'case_id', 'created_date')
-        ocr_case_files = latest_ocr_files.loc[latest_ocr_files['case_id'] == case_id]
-        highlight = list(ocr_case_files.highlight)[0]
-
-        for table_name, fields_dict in table_fields.items():
-            # Only in OCR table add the highlight
-            if table_name == 'ocr':
-                column_names = ['`case_id`', '`highlight`']
-                params = [case_id, highlight]
-            else:
-                column_names = ['`case_id`']
-                params = [case_id]
-
-            for column, value in fields_dict.items():
-                if column == 'Verify Operator':
-                    column_names.append(f'`{column}`')
-                    params.append(verify_operator)
-                else:
-                    column_names.append(f'`{column}`')
-                    params.append(value)
-            query_column_names = ', '.join(column_names)
-            query_values_placeholder = ', '.join(['%s'] * len(params))
-
-            query = f'INSERT INTO `{table_name}` ({query_column_names}) VALUES ({query_values_placeholder})'
-
-            extraction_db.execute(query, params=params)
-
-        return jsonify({'flag': True, 'message': 'Changing queue completed.'})
-    except Exception as e:
-        return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
-
-@app.route('/execute_button_function', methods=['POST', 'GET'])
-def execute_button_function():
-    try:
-        functions = request.json
-        message = None
-        updated_fields_dict = None
-        status_type = None
-
-        if functions is None or not functions:
-            message = f'Data recieved is none/empty. No function to execute.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        for function in functions:
-            host = 'servicebridge'
-            port = 80
-            data = function['parameters']
-            route = function['route']
-            response = requests.post(f'http://{host}:{port}/{route}', json=data)
-            response_data = response.json()
-
-            if not response_data['flag']:
-                try:
-                    message = response_data['message']
-                except:
-                    message = f'Failed during execute of route `{route}`. Check logs.'
-                logging.error(message)
-                return jsonify({'flag': False, 'message': message})
-            else:
-                if 'message' in response_data:
-                    message = response_data['message']
-                if 'updated_fields_dict' in response_data:
-                    updated_fields_dict = response_data['updated_fields_dict']
-                if 'status_type' in response_data:
-                    status_type = response_data['status_type']
-
-        if message is not None:
-            return jsonify({'flag': True, 'message': message, 'updated_fields_dict': updated_fields_dict, 'status_type': status_type})
-        else:
-            return jsonify({'flag': True, 'message': f'Succesfully executed functions', 'updated_fields_dict': updated_fields_dict, 'status_type': status_type})
-    except Exception as e:
         return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
 
 def create_children(queue, queue_definition_record,list_):
@@ -2209,12 +1988,14 @@ def move_to_verify():
         logging.info(f'Request data: {data}')
         case_id = data['case_id']
         queue = data['queue']
+        tenant_id = data.pop('tenant_id', None)
 
         db_config = {
             'host': 'queue_db',
             'port': 3306,
             'user': 'root',
-            'password': 'root'
+            'password': 'root',
+            'tenant_id': tenant_id
         }
         db = DB('queues', **db_config)
 
@@ -2222,7 +2003,8 @@ def move_to_verify():
             'host': 'extraction_db',
             'port': 3306,
             'user': 'root',
-            'password': 'root'
+            'password': 'root',
+            'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extraction_db_config)
 
@@ -2230,7 +2012,8 @@ def move_to_verify():
             'host': 'stats_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
 
         stats_db = DB('stats', **stats_db_config)

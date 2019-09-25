@@ -1,7 +1,8 @@
 import json
-import os
 import traceback
+import os
 
+from datetime import datetime, timedelta
 from kafka import KafkaConsumer, TopicPartition
 from random import randint
 from time import sleep
@@ -17,167 +18,79 @@ except:
 
 logging = Logging()
 
-def update_table(db, case_id, file_name, changed_fields):
-    logging.info('Updating table...')
+def get_details(customer_id):
+    """very hsbc specific ...lot of hard codings"""
+    db_config = {
+    'host': '3.208.195.34',
+    'port': 3306,
+    'user': 'root',
+    'password': 'AlgoTeam123'
+    }
 
-    query = f"SELECT `fields_changed` from `field_accuracy` WHERE case_id='{case_id}'"
-    fields_json_string_df = db.execute_(query)
-    if not fields_json_string_df.empty:
-        fields_json_string = fields_json_string_df['fields_changed'][0]
-        fields_json = json.loads(fields_json_string)
-        total_fields = changed_fields.pop('total_fields', 1)
-        logging.debug(f"Fields JSON before: {fields_json}")
-        fields_json.update(changed_fields)
-        logging.debug(f"Fields JSON after: {fields_json}")
-        percentage = len(fields_json.keys())/total_fields
-        query = f"UPDATE `field_accuracy` SET `fields_changed` = '{json.dumps(fields_json)}', `percentage`= '{percentage}'  WHERE case_id='{case_id}'"
-        db.execute(query)
-        logging.info(f"Updated field accuracy table for case `{case_id}`")
-    else:
-        # new case_id that means insert record into the database
-        total_fields = changed_fields.pop('total_fields', 1)
-        percentage = len(changed_fields.keys())/total_fields
-        logging.debug(f"Changed fields are {changed_fields}")
-        query = f"INSERT INTO `field_accuracy` (`id`, `case_id`, `file_name`, `fields_changed`, `percentage`) VALUES (NULL,'{case_id}','{file_name}','{json.dumps(changed_fields)}','{percentage}')"
-        db.execute(query)
-        logging.info(f"Inserted into field accuracy for case `{case_id}`")
+    stats_db = DB('hsbc_stats', **db_config)
+    params = [customer_id]
+    query = "SELECT `Global Business` from `UCIC_Details_Source` where `Customer Id` = %s"
+    lob = list(stats_db.execute_default_index(query, params=params)['Global Business'])[0]
 
-    return "UPDATED TABLE"
+    
+    query = "SELECT `Account Number`, `GHO` from `Closed_Accounts_Source` where `Customer Id` = %s"
+    df = stats_db.execute_default_index(query, params=params)
+    accn_num, gho = (list(df['Account Number'])[0], list(df['GHO'])[0])
+    
+    return accn_num, gho, lob
 
-def prepare_trained_info(coordinates, field, value, width):
-    trained_info = {}
-    trained_info['coordinates'] = [coordinates]
-    trained_info['field'] = field
-    trained_info['keyCheck'] = False
-    trained_info['keyword'] = ''
-    trained_info['validations'] = ''
-    trained_info['value'] = value
-    trained_info['width'] = width
-    trained_info['page'] = coordinates['page']
-
-    return trained_info
-
-
-def save_changes(case_id, data, tenant_id):
+def update_addon(data, tenant_id):
     try:
-        logging.info('Saving changes...')
-        logging.info(f'Data recieved: {data}')
+        case_id = data['case_id']
 
-        fields = data['fields']
-        changed_fields = data['field_changes']
-
-        try:
-            verify_operator = data['operator']
-        except:
-            logging.warning('Operator not in data. Setting as None')
-            verify_operator = None
-
-        db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': '3306',
-                'user': 'root',
-                'password': os.environ['LOCAL_DB_PASSWORD'],
-                'tenant_id': tenant_id
-            }
-        queue_db = DB('queues', **db_config)
-
-        stats_db = DB('stats', **db_config)
-
-        try:
-            update_table(queue_db, case_id, "", changed_fields)
-        except:
-            pass
-        fields_def_df = queue_db.get_all('field_definition')
-        tabs_def_df = queue_db.get_all('tab_definition')
-
-        fields_w_name = {}
-
-        value_changes = {}
-
-        for unique_name, value in fields.items():
-            logging.debug(f'Unique name: {unique_name}')
-            unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
-            print(f'heeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrrrrrrreeeeeeeeeeeeeeeeeeeeeeee{unique_field_def.display_name}')
-            display_name = list(unique_field_def.display_name)[0]
-            tab_id = list(unique_field_def.tab_id)[0]
-            tab_info = tabs_def_df.ix[tab_id]
-            table_name = tab_info.source
-
-            if table_name not in fields_w_name:
-                fields_w_name[table_name] = {}
-
-            fields_w_name[table_name][display_name] = value
-
-        changed_fields_w_name = {}
-        for unique_name, value in changed_fields.items():
-            logging.debug(f'Unique name: {unique_name}')
-            unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
-            display_name = list(unique_field_def.display_name)[0]
-            tab_id = list(unique_field_def.tab_id)[0]
-            tab_info = tabs_def_df.ix[tab_id]
-            table_name = tab_info.source
-
-            if table_name not in changed_fields_w_name:
-                changed_fields_w_name[table_name] = {}
-
-            changed_fields_w_name[table_name][display_name] = fields_w_name[table_name][display_name]
-
-        extraction_db = DB('extraction', **db_config)
-
-        try:
-            trained_info = {}
-            index = 0
-            print(data['cropped_ui_fields'])
-            for unique_name, cropped_ui_fields in data['cropped_ui_fields'].items():
-                unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
-                display_name = list(unique_field_def.display_name)[0]
-                coordinates = cropped_ui_fields['area']
-
-                width = cropped_ui_fields['width']
-
-                value = value_changes[display_name]
-
-                trained_info[index] = prepare_trained_info(coordinates, display_name, value, width)
-                index += 1
-
-
-            value_extract_params = {    
-                                        "case_id":case_id,
-                                        "field_data":trained_info,
-                                        'width' : width,
-                                        'force_check' : 'no'
-                                    }
-        except:
-            traceback.print_exc()
-            print('not able to train')
-
-        for table, fields in fields_w_name.items():
-            fields.pop('Case ID', None)
-            extraction_db.update(table, update=fields, where={'case_id': case_id})
-
-        for table, fields in changed_fields_w_name.items():
-            audit_data = {
-                    "type": "update", "last_modified_by": verify_operator, "table_name": table, "reference_column": "case_id",
-                    "reference_value": case_id, "changed_data": json.dumps(fields)
-                }
-            stats_db.insert_dict(audit_data, 'audit')
-
-        return {'flag': True, 'message': 'Saved changes.'}
-    except:
-        logging.exception('Something went wrong saving changes. Check trace.')
-        return {'flag': False, 'message': 'Something went wrong saving changes. Check logs.'}
+        extraction_db_config = {
+            'host': 'extraction_db',
+            'port': 3306,
+            'user': 'root',
+            'password': 'root',
+            'tenant_id': tenant_id
+        }
+        extraction_db = DB('extraction', **extraction_db_config)
+        # get the data from the ocr table
+        query = "SELECT `id`,`Add On Table` from `ocr` where case_id = %s"
+        params = [case_id]
+        df = extraction_db.execute(query, params=params)
+        new_addon_tables = []
+        new_addon_table = {}
+        
+        addon_table_string = list(df['Add On Table'])[0]
+        addon_table = json.loads(addon_table_string)
+        # print (addon_table)
+        header = addon_table[0]['header'] # hard coded part
+        new_addon_table['header'] = header
+        # print (new_addon_table)
+        customer_ids = [val['Customer ID'] for val in addon_table[0]['rowData']] # hard coded part
+        row_data = []
+        for customer_id in customer_ids:
+            cust_acc_num, gho_code, lob = get_details(customer_id)
+            row_data.append({'Customer ID': customer_id, 'Customer Account Number': cust_acc_num, 'GHO Code':gho_code,  'LOB':lob})
+        new_addon_table['rowData'] = row_data
+        new_addon_tables.append(new_addon_table)
+        # update in the data base
+        extraction_db.update('ocr', {'Add On Table':json.dumps(new_addon_tables)}, where={'case_id':case_id})
+        # return success
+        return {'flag':True, 'message': "Addon_Table updated successfully"}
+    except Exception as e:
+        print ('error updating addon table')
+        print (str(e))
+        return {'flag':False, 'error':str(e), 'message':"Error in updating addon_table"}
 
 
 def consume(broker_url='broker:9092'):
     try:
-        route = 'save_changes'
+        route = 'update_addon'
         logging.info(f'Listening to topic: {route}')
 
         consumer = KafkaConsumer(
             bootstrap_servers=broker_url,
             value_deserializer=lambda value: json.loads(value.decode()),
             auto_offset_reset='earliest',
-            group_id='save_changes',
+            group_id='update_addon',
             api_version=(0,10,1),
             enable_auto_commit=False,
             session_timeout_ms=800001,
@@ -190,7 +103,7 @@ def consume(broker_url='broker:9092'):
             logging.warning(f'No partitions for topic `{route}`')
             logging.debug(f'Creating Topic: {route}')
             produce(route, {})
-            print(f'Listening to topic `{route}`...')
+            logging.info(f'Listening to topic `{route}`...')
             while parts is None:
                 consumer = KafkaConsumer(
                     bootstrap_servers=broker_url,
@@ -207,6 +120,7 @@ def consume(broker_url='broker:9092'):
 
         partitions = [TopicPartition(route, p) for p in parts]
         consumer.assign(partitions)
+
 
         for message in consumer:
             data = message.value
@@ -226,20 +140,21 @@ def consume(broker_url='broker:9092'):
                 'port': '3306',
                 'user': 'root',
                 'password': os.environ['LOCAL_DB_PASSWORD'],
-                'tenant_id': tenant_id
+                'tenant_id' : tenant_id
             }
+            kafka_db = DB('kafka', **db_config)
+            # kafka_db = DB('kafka')
 
             queue_db = DB('queues', **db_config)
-            kafka_db = DB('kafka', **db_config)
+            # queue_db = DB('queues')
 
             query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
             function_info = queue_db.execute(query, params=[route])
             in_progress_message = list(function_info['in_progress_message'])[0]
             failure_message = list(function_info['failure_message'])[0]
             success_message = list(function_info['success_message'])[0]
-
+            
             message_flow = kafka_db.get_all('grouped_message_flow')
-
             # Get which button (group in kafka table) this function was called from
             group = data['group']
 
@@ -249,12 +164,9 @@ def consume(broker_url='broker:9092'):
             # If its the first function the update the progress count
             first_flow = group_messages.head(1)
             first_topic = first_flow.loc[first_flow['listen_to_topic'] == route]
-            
+
             query = 'UPDATE `process_queue` SET `status`=%s, `total_processes`=%s, `case_lock`=1 WHERE `case_id`=%s'
-            
             if not first_topic.empty:
-                logging.debug(f'`{route}` is the first topic in the group `{group}`.')
-                logging.debug(f'Number of topics in group `{group}` is {len(group_messages)}')
                 if list(first_flow['send_to_topic'])[0] is None:
                     queue_db.execute(query, params=[in_progress_message, len(group_messages), case_id])
                 else:
@@ -270,11 +182,11 @@ def consume(broker_url='broker:9092'):
 
             # Call the function
             try:
-                logging.debug(f'Calling function `save_changes`')
-                result = save_changes(case_id, function_params, tenant_id)
+                logging.debug(f'Calling function `update_addon`')
+                result = update_addon(function_params, tenant_id)
             except:
                 # Unlock the case.
-                logging.exception(f'Something went wrong while saving changes. Check trace.')
+                logging.exception(f'Something went wrong while updating changes. Check trace.')
                 query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
                 queue_db.execute(query, params=[failure_message, case_id])
                 consumer.commit()

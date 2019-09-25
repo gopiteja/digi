@@ -32,7 +32,8 @@ def produce(topic, data, broker_url='broker:9092'):
             producer = KafkaProducer(
                 bootstrap_servers=broker_url,
                 value_serializer=lambda value: json.dumps(value).encode(),
-                api_version=(0,10,1)
+                api_version=(0,10,1),
+                max_request_size= 9201912
             )
 
             producer.send(topic, value=data)

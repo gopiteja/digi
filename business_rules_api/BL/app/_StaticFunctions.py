@@ -490,16 +490,19 @@ def doDeleteRow(self,parameters):
         delete_row_rule = {'function': 'DeleteRow',
         'parameters': { 
                        'database':'alorica_data',
-                       'tables': ['demographics','eligibility','insurance','history','member','provider']
+                       'tables': ['demographics','eligibility','insurance','history','member','provider','rule_data']
                       }
         }
     """
     logging.info(f"parameters got are {parameters}")
-    database = parameters['database']
     tables = parameters['tables']
     query = ""
     try:
         for table in tables:
+            if table == 'rule_data':
+                database = 'business_rules'
+            else:
+                database = parameters['database']
             query = f"DELETE FROM `{table}` WHERE `Fax_unique_id`='{self.case_id}'"
 
             logging.info(f"Deleting the data in table {table}")

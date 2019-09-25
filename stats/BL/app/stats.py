@@ -410,22 +410,26 @@ def chart_data():
             if not dummy:
                 query = "SELECT id, queue as name, COUNT(*) as value FROM process_queue GROUP BY queue"
                 real_time = queue_db.execute(query).to_dict(orient='records')
+                
+                query = 'SELECT `id`, `name`, `unique_name` FROM `queue_definition`'
+                queue_def = queue_db.execute(query)
 
-                legend_data = []
-                for i in real_time:
-                    if not i['name']:
-                        i['name'] = 'Unassigned'
-                    legend_data.append(i['name'])
-                    
+                legend_data = []                    
                 values = []
-                for i in real_time:
-                    values.append(i['value'])  
-
                 stacked_cols = {}
+
                 for ele in real_time:
-                    if not ele['name']:
-                        ele['name'] = 'Unassigned'
-                    stacked_cols[ele['name']] = ele['value']
+                    unique_name = ele['name']
+                    value = ele['value']
+                    
+                    try:
+                        display_name = list(queue_def.loc[queue_def['unique_name'] == unique_name]['name'])[0]
+                    except IndexError:
+                        display_name = 'Unassigned'
+
+                    stacked_cols[display_name] = value
+                    legend_data.append(display_name)
+                    values.append(value)
             else:
                 stacked_cols = {'Completed': 63, 'Fax Data': 25, 'Enhance Decision': 36, 'Decision Review': 13, 'Processing': 17}
                 legend_data = list(stacked_cols.keys())
@@ -441,7 +445,7 @@ def chart_data():
             "chart_type": "column"
             }
 
-            data = {"axiscolumns":["Unassigned","Completed","Decision Review","DEF345","Enhance Decision","Fax Data","GHI678","Manual","Processing","QRS234","Review Cases","Template Exceptions"],"axisvalues":[1,2,2,3,1,7,1,2,1,1,4,14],"barname":"Cases","chart_type":"stacked_column","heading":"In progress cases 38","stackedcolumns":{"Completed":2,"DEF345":3,"Decision Review":2,"Enhance Decision":1,"Fax Data":7,"GHI678":1,"Manual":2,"Processing":1,"QRS234":1,"Review Cases":4,"Template Exceptions":14,"Unassigned":1},"subheading":""}
+            # data = {"axiscolumns":["Unassigned","Completed","Decision Review","DEF345","Enhance Decision","Fax Data","GHI678","Manual","Processing","QRS234","Review Cases","Template Exceptions"],"axisvalues":[1,2,2,3,1,7,1,2,1,1,4,14],"barname":"Cases","chart_type":"stacked_column","heading":"In progress cases 38","stackedcolumns":{"Completed":2,"DEF345":3,"Decision Review":2,"Enhance Decision":1,"Fax Data":7,"GHI678":1,"Manual":2,"Processing":1,"QRS234":1,"Review Cases":4,"Template Exceptions":14,"Unassigned":1},"subheading":""}
 
 
     except Exception as e:
