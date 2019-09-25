@@ -1,3 +1,4 @@
+import os
 import argparse
 import datetime
 import json
@@ -12,16 +13,19 @@ from hashlib import sha256
 
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 from db_utils import DB
+from ace_logger import Logging
 
-try:
-    from app.ace_logger import Logging
-    from app import app
-except:
-    from ace_logger import Logging
-    app = Flask(__name__)
-    CORS(app)
+from app import app
 
 logging = Logging()
+
+# Database configuration
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT'],
+}
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
@@ -66,14 +70,8 @@ def login():
 
         logging.debug(f'Tenant ID: {tenant_id}')
 
-        # Database configuration
-        db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
-            'tenant_id': tenant_id
-        }
+        db_config['tenant_id'] = tenant_id
+
         db = DB('group_access', **db_config)
         # db = DB('authentication') # Development purpose
 
@@ -158,13 +156,8 @@ def logout():
     with zipkin_span(service_name='user_auth_api', span_name='logout',
             transport_handler=http_transport, port=5003, sample_rate=0.05,):
 
-        db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
-            'tenant_id': tenant_id
-        }
+        db_config['tenant_id'] = tenant_id
+
         db = DB('group_access', **db_config)
     
 
@@ -189,19 +182,15 @@ def verify_session():
         data = request.json
 
         session_id = data.pop('session_id', None)
+        tenant_id = data.pop('session_id', None)
 
         if session_id is None:
             message = f'No session ID provided. Cannot proceed.'
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        # Database configuration
-        db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306'
-        }
+        db_config['tenant_id'] = tenant_id
+
         db = DB('group_access', **db_config)
         # db = DB('authentication')
 
