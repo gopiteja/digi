@@ -15,15 +15,14 @@ from flask_cors import CORS
 from pandas import Series, Timedelta, to_timedelta
 from time import time
 from itertools import chain, repeat, islice, combinations
+from ace_logger import Logging
 
 try:
     from app.get_fields_info import get_fields_info
     from app.get_fields_info_utils import sort_ocr
-    from app.ace_logger import Logging
 except:
     from get_fields_info import get_fields_info
     from get_fields_info_utils import sort_ocr
-    from ace_logger import Logging
     
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
     
@@ -31,6 +30,14 @@ from app import app
 from app import cache 
 
 logging = Logging()
+
+# Database configuration
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT'],
+}
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
@@ -83,20 +90,16 @@ def update_queue_trace(queue_db,case_id,latest):
 
     return {'flag':True,'message':'Updated Queue Trace'}
 
-def get_template_exceptions(db, data):
+def get_template_exceptions(db, data, tenant_id=None):
     logging.info('Getting template exceptions')
     logging.info(f'Data: {data}')
     start_point = data['start']
     end_point = data['end']
     offset = end_point - start_point
 
-    template_config = {
-        'host': 'template_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root'
-    }
-    template_db = DB('template_db', **template_config)
+    db_config['tenant_id'] = tenant_id
+
+    template_db = DB('template_db', **db_config)
 
     # TODO: Value of "columns" will come from a database.
     # Columns to display is configured by the user from another screen.
@@ -196,13 +199,8 @@ def get_snapshot(db, data):
 
 @cache.memoize(86400)
 def get_blob(case_id, tenant_id):
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id': tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
+
     db = DB('queues', **db_config)
 
     query = "SELECT id, TO_BASE64(merged_blob) as merged_blob FROM merged_blob WHERE case_id=%s"
@@ -240,13 +238,8 @@ def clear_cache():
 
 @cache.memoize(86400)
 def get_button_attributes(queue_id, queue_definition, tenant_id):
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id': tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
+
     db = DB('queues', **db_config)
 
     query = "SELECT * FROM workflow_definition WHERE queue_id=%s"
@@ -303,13 +296,8 @@ def get_button_attributes(queue_id, queue_definition, tenant_id):
 
 @cache.memoize(86400)
 def queue_name_type(queue_id, tenant_id):
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id': tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
+
     db = DB('queues', **db_config)
 
     # Get queue name using queue ID
@@ -333,13 +321,7 @@ def get_columns(queue_id, queue_name, tenant_id):
     logging.debug(f'Queue Name: {queue_name}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id': tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
 
     # * COLUMNS
@@ -378,23 +360,9 @@ def get_columns(queue_id, queue_name, tenant_id):
 @cache.memoize(86400)
 def get_fields_tab_queue(queue_id, tenant_id):
 
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id': tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
-
-    extraction_db_config = {
-        'host': 'extraction_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id': tenant_id
-    }
-    extraction_db = DB('extraction', **extraction_db_config)
+    extraction_db = DB('extraction', **db_config)
     query = f"SELECT * FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
     fields_df = db.execute(query)
     tab_definition = db.get_all('tab_definition')
@@ -441,13 +409,7 @@ def get_fields_tab_queue(queue_id, tenant_id):
 
 def recon_get_columns(table_unique_id, tenant_id):
 
-    db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': 3306,
-                'user': 'root',
-                'password': 'AlgoTeam123',
-                'tenant_id': tenant_id
-            }
+    db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
 
     # * COLUMNS
@@ -485,13 +447,7 @@ def recon_get_columns(table_unique_id, tenant_id):
     return return_data
 
 def get_recon_data(queue_id, queue_name, tenant_id):
-    db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': 3306,
-                'user': 'root',
-                'password': 'AlgoTeam123',
-                'tenant_id': tenant_id
-                }
+    db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
     
     # queue_id = '49'
@@ -559,13 +515,8 @@ def get_recon_data(queue_id, queue_name, tenant_id):
 def get_recon_secondary_table():
     data = request.json
     tenant_id = data['tenant_id']
-    db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': 3306,
-                'user': 'root',
-                'password': 'AlgoTeam123',
-                'tenant_id': tenant_id
-                }
+    db_config['tenant_id'] = tenant_id
+
     unique_key = data['unique_key']
     primary_unique_key_value = data['primary_unique_key_value']
     primary_table_unique_key = data['primary_table_unique_key']
@@ -640,13 +591,8 @@ def get_recon_secondary_table():
 def get_recon_table_data():
     data = request.json
     tenant_id = data['tenant_id']
-    db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': 3306,
-                'user': 'root',
-                'password': 'AlgoTeam123',
-                'tenant_id': tenant_id
-                }
+    db_config['tenant_id'] = tenant_id
+
     unique_key = data['unique_key']
     queue_table_name = data['queue_table_name']
     columns_df = data['columns_df']
@@ -754,23 +700,11 @@ def get_queue(queue_id=None):
                 logging.exception(message)
                 return jsonify({'flag': False, 'message': message})
 
-            db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': 3306,
-                'user': 'root',
-                'password': 'AlgoTeam123',
-                'tenant_id': tenant_id
-            }
+            db_config['tenant_id'] = tenant_id
+
             db = DB('queues', **db_config)
 
-            extraction_db_config = {
-                'host': 'extraction_db',
-                'port': 3306,
-                'user': 'root',
-                'password': 'AlgoTeam123',
-                'tenant_id': tenant_id
-            }
-            extraction_db = DB('extraction', **extraction_db_config)
+            extraction_db = DB('extraction', **db_config)
 
             if operator is not None:
                 oper_st = time()
@@ -788,7 +722,7 @@ def get_queue(queue_id=None):
             if queue_type == 'train':
                 logging.info(f' > Redirecting to `get_template_exception` route.')
 
-                response = get_template_exceptions(db, {'start': start_point, 'end': end_point})
+                response = get_template_exceptions(db, {'start': start_point, 'end': end_point}, tenant_id)
 
                 extraction_db.engine.close()
 
@@ -1032,13 +966,8 @@ def get_display_fields(case_id=None):
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
+        db_config['tenant_id'] = tenant_id
+
         db = DB('queues', **db_config)
         # db = DB('queues')
 
@@ -1147,14 +1076,8 @@ def get_display_fields(case_id=None):
 @cache.memoize(86400)
 def get_dropdown(queue_id, tenant_id=None):
 
-    queue_db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-    queue_db = DB('queues', **queue_db_config)
+    db_config['tenant_id'] = tenant_id
+    queue_db = DB('queues', **db_config)
 
     query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
     field_ids = list(queue_db.execute_(query).id)
@@ -1196,14 +1119,8 @@ def get_fields(case_id=None):
             return jsonify({'flag': False, 'message': message})
 
 
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        queue_db = DB('queues', **queue_db_config)
+        db_config['tenant_id'] = tenant_id
+        queue_db = DB('queues', **db_config)
         # queue_db = DB('queues')
 
         logging.debug(f'Getting ID and operator from process queue for case `{case_id}`')
@@ -1216,24 +1133,9 @@ def get_fields(case_id=None):
             logging.info(f'Case `{case_id}` is in use by another user')
             return jsonify({'flag': False, 'message': 'File in use by another user'})
 
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
-        # extraction_db = DB('extraction')
+        extraction_db = DB('extraction', **db_config)
 
-        template_db_config = {
-            'host': 'template_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        template_db = DB('template_db', **template_db_config)
+        template_db = DB('template_db', **db_config)
 
         template_list = sorted(list(template_db.get_all('trained_info').template_name))
 
@@ -1472,24 +1374,10 @@ def refresh_fields(case_id=None):
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        queue_db = DB('queues', **queue_db_config)
-        # queue_db = DB('queues')
+        db_config['tenant_id'] = tenant_id
+        queue_db = DB('queues', **db_config)
 
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
+        extraction_db = DB('extraction', **db_config)
 
         # Get tab definition
         tab_definition = queue_db.get_all('tab_definition')
@@ -1588,14 +1476,8 @@ def unlock_case():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        queue_db = DB('queues', **queue_db_config)
+        db_config['tenant_id'] = tenant_id
+        queue_db = DB('queues', **db_config)
 
         # logging.debug('Unlock case and update time spent')
         # Update the time spent on the particular file
@@ -1638,42 +1520,15 @@ def get_ocr_data():
         except:
             retrain = ''
 
-        db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
+        db_config['tenant_id'] = tenant_id
+
         db = DB('queues', **db_config)
-        # db = DB('queues')
+ 
+        trained_db = DB('template_db', **db_config)
 
-        trained_db_config = {
-            'host': 'template_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
-            'tenant_id': tenant_id
-        }
-        trained_db = DB('template_db', **trained_db_config)
+        extraction_db = DB('extraction', **db_config)
 
-        extarction_db_config = {
-            'host': 'extraction_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
-            'tenant_id': tenant_id
-        }
-        extraction_db = DB('extraction', **extarction_db_config)
-
-        table_db_config = {
-            'host': 'table_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
-            'tenant_id': tenant_id
-        }
-        table_db = DB('table_db', **table_db_config)
+        table_db = DB('table_db', **db_config)
 
         logging.debug('Getting mandatory fields')
         # Get all OCR mandatory fields
@@ -1902,10 +1757,6 @@ def get_queues():
         tenant_id = data.pop('tenant_id', None)
 
         logging.debug('Getting queues')
-        # r = redis.StrictRedis(host='3.208.195.34', port=6379, db=0)
-        # user_queues_get = json.loads(r.get("user_queues"))
-
-        # queues = user_queues_get[username]
 
         queues = get_queues_cache(username, tenant_id)
 
@@ -1990,33 +1841,10 @@ def move_to_verify():
         queue = data['queue']
         tenant_id = data.pop('tenant_id', None)
 
-        db_config = {
-            'host': 'queue_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
+        db_config['tenant_id'] = tenant_id
         db = DB('queues', **db_config)
-
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
-
-        stats_db_config = {
-            'host': 'stats_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
-            'tenant_id': tenant_id
-        }
-
-        stats_db = DB('stats', **stats_db_config)
+        extraction_db = DB('extraction', **db_config)
+        stats_db = DB('stats', **db_config)
 
         # Step 1: Change queue to Verify, Update Source of Invoice, Reference Number
         query = "SELECT id, created_date FROM process_queue WHERE case_id = %s"
