@@ -12,11 +12,8 @@ from MySQLdb._exceptions import OperationalError
 from sqlalchemy import create_engine, exc
 from time import time
 
-try:
-    from app.ace_logger import Logging
-except:
-    from ace_logger import Logging
-     
+from ace_logger import Logging
+
 logging = Logging()
 
 class DB(object):

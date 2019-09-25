@@ -22,4 +22,7 @@ COPY ./app/ /app/
 COPY ./app/jinja2ext.py /usr/local/lib/python3.6/dist-packages/flask_cache
 
 COPY ./app/db_utils.py /usr/lib/python3.6
+COPY ./app/ace_logger.py /usr/lib/python3.6
+COPY ./app/producer.py /usr/lib/python3.6
+
 COPY policy.xml /etc/ImageMagick-6
