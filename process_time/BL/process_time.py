@@ -1,7 +1,7 @@
 import argparse
 import json
 import requests
-
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from kafka import KafkaConsumer, TopicPartition
@@ -23,6 +23,14 @@ from db_utils import DB
 from ace_logger import Logging
 from producer import produce
 
+# Database configuration
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT'],
+}
+
 logging = Logging()
 
 @zipkin_span(service_name='process_time_consumer', span_name='process_time')
@@ -30,14 +38,8 @@ def process_time(data, tenant_id=None):
     logging.info(f'Data recieved: {data}')
 
     case_id = data['case_id']
-    
-    db_config = {
-        'host': '3.208.195.34',
-        'port': 3306,
-        'user': 'root',
-        'password': 'AlgoTeam123',
-        'tenant_id': tenant_id
-    }
+
+    db_config['tenant_id'] = tenant_id
     
     audit_db = DB('stats', **db_config)
     query = f"SELECT * from audit where table_name = 'process_queue' and reference_value = '{case_id}' and changed_data LIKE '%%state%%'" 
@@ -87,26 +89,6 @@ def consume(broker_url='broker:9092'):
     try:
         route = 'process_time'
 
-        common_db_config = {
-            'host': 'common_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        kafka_db = DB('kafka', **common_db_config)
-        # kafka_db = DB('kafka')
-
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        queue_db = DB('queues', **queue_db_config)
-        # queue_db = DB('queues')
-
-        message_flow = kafka_db.get_all('grouped_message_flow')
-
         logging.debug(f'Listening to topic `{route}`...')
         consumer = KafkaConsumer(
             bootstrap_servers=broker_url,
@@ -142,12 +124,6 @@ def consume(broker_url='broker:9092'):
         partitions = [TopicPartition(route, p) for p in parts]
         consumer.assign(partitions)
 
-        query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
-        function_info = queue_db.execute(query, params=[route])
-        in_progress_message = list(function_info['in_progress_message'])[0]
-        failure_message = list(function_info['failure_message'])[0]
-        success_message = list(function_info['success_message'])[0]
-
         for message in consumer:
             data = message.value
             try:
@@ -163,6 +139,18 @@ def consume(broker_url='broker:9092'):
                     transport_handler=http_transport, port=5007, sample_rate=0.5,) as  zipkin_context:
                 zipkin_context.update_binary_annotations({'Tenant':tenant_id})
 
+                db_config['tenant_id'] = tenant_id
+
+                kafka_db = DB('kafka', **db_config)
+                queue_db = DB('queues', **db_config)
+
+                message_flow = kafka_db.get_all('grouped_message_flow')
+                
+                query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
+                function_info = queue_db.execute(query, params=[route])
+                in_progress_message = list(function_info['in_progress_message'])[0]
+                failure_message = list(function_info['failure_message'])[0]
+                success_message = list(function_info['success_message'])[0]
                 # Get which button (group in kafka table) this function was called from
                 try:
                     group = data['group']
