@@ -32,18 +32,11 @@ class DB(object):
                 is mapped in the compose file. (default = '3306')
         """
 
-        if host in ["common_db","extraction_db", "queue_db", "template_db", "table_db", "stats_db", "business_rules_db", "reports_db"]:
-            self.HOST = os.environ['HOST_IP']
-            self.USER = 'root'
-            self.PASSWORD = os.environ['LOCAL_DB_PASSWORD']
-            self.PORT = '3306'
-            self.DATABASE = f'{tenant_id}_{database}' if tenant_id is not None and tenant_id else database
-        else:
-            self.HOST = host
-            self.USER = user
-            self.PASSWORD = password
-            self.PORT = port
-            self.DATABASE = f'{tenant_id}_{database}' if tenant_id is not None and tenant_id else database
+        self.HOST = host
+        self.USER = user
+        self.PASSWORD = password
+        self.PORT = port
+        self.DATABASE = f'{tenant_id}_{database}' if tenant_id is not None and tenant_id else database
         
         logging.info(f'Host: {self.HOST}')
         logging.info(f'User: {self.USER}')
