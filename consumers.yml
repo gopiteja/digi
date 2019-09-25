@@ -215,7 +215,7 @@ services:
     image: 'save_changes'
     container_name: 'save_changes'
     build:
-      context: ./queue_api/BL/app
+      context: ./button_functions/app/save_changes
       dockerfile: save_changes.Dockerfile
     networks:
       - service_bridge
@@ -236,7 +236,7 @@ services:
     image: 'update_queue'
     container_name: 'update_queue'
     build:
-      context: ./queue_api/BL/app
+      context: ./button_functions/app/update_queue
       dockerfile: update_queue.Dockerfile
     networks:
       - service_bridge
@@ -320,7 +320,7 @@ services:
     image: 'update_addon'
     container_name: 'update_addon'
     build:
-      context: ./queue_api/BL/app
+      context: ./button_functions/app/update_addon
       dockerfile: update_addon.Dockerfile
     networks:
       - service_bridge
