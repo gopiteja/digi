@@ -11,52 +11,32 @@ from random import randint
 from time import sleep
 
 from db_utils import DB
-
-try:
-    from app.producer import produce
-    from app.ace_logger import Logging
-except:
-    from producer import produce
-    from ace_logger import Logging
+from producer import produce
+from ace_logger import Logging
 
 logging = Logging()
 
-def create_case(case_id, blob_data, tenant_id):
-    verify_operator = None
+# Database configuration
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT'],
+}
 
+def create_case(case_id, blob_data, tenant_id):
     logging.debug(f"tenant_id received - {tenant_id}")
 
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id' : tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
+
     db = DB('queues', **db_config)
-    # db = DB('queues')
+    stats_db = DB('stats', **db_config)
+    extraction_db = DB('extraction', **db_config)
 
-    stats_db_config = {
-        'host': 'stats_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
-        'tenant_id' : tenant_id
-    }
+    first_queue = 'case_creation'
 
-    stats_db = DB('stats', **stats_db_config)
-
-    extraction_db_config = {
-        'host': 'extraction_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
-        'tenant_id' : tenant_id
-    }
-
-    extraction_db = DB('extraction', **extraction_db_config)
-
-    queue = 'Populating_Data_Fields_Introducer'
+    get_queue_name_query = 'SELECT `id`, `name`, `unique_name` FROM `queue_definition` WHERE `id` IN (SELECT `workflow_definition`.`move_to` FROM `queue_definition`, `workflow_definition` WHERE `queue_definition`.`name`=%s AND `workflow_definition`.`queue_id`=`queue_definition`.`id`)'
+    queue = list(db.execute(get_queue_name_query, params=[first_queue]).name)[0]
 
     process_queue_data = {
             "file_name": case_id+".pdf", "case_id": case_id, "queue": queue
@@ -72,7 +52,7 @@ def create_case(case_id, blob_data, tenant_id):
     extraction_db.execute(query, params=[case_id, '{}'])
 
     audit_data = {
-            "type": "update", "last_modified_by": verify_operator, "table_name": "process_queue", "reference_column": "case_id",
+            "type": "update", "table_name": "process_queue", "reference_column": "case_id",
             "reference_value": case_id, "changed_data": json.dumps({"queue": queue, "state": queue})
         }
     stats_db.insert_dict(audit_data, 'audit')
@@ -140,18 +120,10 @@ def consume(broker_url='broker:9092'):
                 consumer.commit()
                 continue
             
-            db_config = {
-            'host': os.environ['HOST_IP'],
-            'port': '3306',
-            'user': 'root',
-            'password': os.environ['LOCAL_DB_PASSWORD'],
-            'tenant_id' : tenant_id
-            }
+            db_config['tenant_id'] = tenant_id
+            
             kafka_db = DB('kafka', **db_config)
-            # kafka_db = DB('kafka')
-
             queue_db = DB('queues', **db_config)
-            # queue_db = DB('queues')
 
             query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
             function_info = queue_db.execute(query, params=[route])
