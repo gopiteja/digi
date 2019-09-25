@@ -28,25 +28,6 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
-
-  # Bot Watcher
-  bot_watcher:
-    image: 'bot_watcher'
-    container_name: 'bot_watcher'
-    build: ./bot_watcher/BL
-    networks:
-      - service_bridge
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
         
   # Digital Signature
   digital_signature:
@@ -92,27 +73,6 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
 
-  template_db:
-    image: mysql:5.7
-    container_name: 'template_db'
-    volumes:
-      - ./template_detection/DL:/docker-entrypoint-initdb.d/:ro
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
-    networks:
-      - service_bridge
-    restart: on-failure:3
-
-  template_php:
-    image: 'phpmyadmin/phpmyadmin'
-    container_name: 'template_php'
-    ports:
-      - '8086:80'
-    networks:
-      - service_bridge
-    links:
-      - template_db:db
-
   # Extraction
   extraction:
     image: 'extraction'
@@ -130,30 +90,6 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
       - invoice_files:/app/invoice_files
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
-
-  extraction_api:
-    image: 'extraction_api'
-    container_name: 'extraction_api'
-    build:
-      context: ./extraction_api/BL
-      dockerfile: api.Dockerfile
-    networks:
-      service_bridge:
-        aliases:
-          - extractionapi
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    volumes:
-      - invoice_files:/var/www/table_api/app/invoice_files
     # logging:
     #   driver: gelf
     #   options:
@@ -207,52 +143,6 @@ services:
         gelf-address: udp://127.0.0.1:12201
         tag: "table_merger_tag"
 
-  table_db:
-    image: mysql:5.7
-    container_name: 'table_db'
-    volumes:
-      - ./table_api/DL:/docker-entrypoint-initdb.d/:ro
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
-    networks:
-      - service_bridge
-    restart: on-failure:3
-
-  table_php:
-    image: 'phpmyadmin/phpmyadmin'
-    container_name: 'table_php'
-    ports:
-      - '8087:80'
-    networks:
-      - service_bridge
-    links:
-      - table_db:db
-    depends_on:
-      - table_db
-
-  # Business Rules
-  business_rules_api:
-    image: 'business_rules_api'
-    container_name: 'business_rules_api'
-    build:
-      context: ./business_rules_api/BL
-      dockerfile: api.Dockerfile
-    networks:
-      service_bridge:
-        aliases:
-          - businessrulesapi
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
-
   business_rules_consumer:
     image: 'business_rules_consumer'
     container_name: 'business_rules_consumer'
@@ -272,29 +162,6 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
-
-  business_rules_db:
-    image: mysql:5.7
-    container_name: 'business_rules_db'
-    volumes:
-      - ./business_rules_api/DL:/docker-entrypoint-initdb.d/:ro
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
-    networks:
-      - service_bridge
-    restart: on-failure:3
-    depends_on:
-      - business_rules_consumer
-
-  business_rules_php:
-    image: 'phpmyadmin/phpmyadmin'
-    container_name: 'business_rules_php'
-    ports:
-      - '8085:80'
-    networks:
-      - service_bridge
-    links:
-      - business_rules_db:db
   
   # JSON Export
   json_export_api:
@@ -321,27 +188,6 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
-
-  json_export_db:
-    image: mysql:5.7
-    container_name: 'json_export_db'
-    volumes:
-      - ./json_export_api/DL:/docker-entrypoint-initdb.d/:ro
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
-    networks:
-      - service_bridge
-    restart: on-failure:3
-
-  json_export_php:
-    image: 'phpmyadmin/phpmyadmin'
-    container_name: 'json_export_php'
-    ports:
-      - '8091:80'
-    networks:
-      - service_bridge
-    links:
-      - json_export_db:db
 
   # Table Merger
   table_merger_consumer:
@@ -406,6 +252,7 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
 
+  # Case Creation
   case_creation:
     image: 'case_creation'
     container_name: 'case_creation'
@@ -449,7 +296,7 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
   
-
+  # Process Time
   process_time:
     image: 'process_time'
     container_name: 'process_time'
@@ -468,26 +315,7 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "process_time_tag"
 
-  update_pq:
-    image: 'update_pq'
-    container_name: 'update_pq'
-    build:
-      context: ./queue_api/BL/app
-      dockerfile: update_pq.Dockerfile
-    networks:
-      - service_bridge
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "update_pq_tag"
-
+  # Update Addon Table
   update_addon:
     image: 'update_addon'
     container_name: 'update_addon'
@@ -527,6 +355,7 @@ volumes:
       o: 'bind'
       device: ${JSON_EXPORT_PATH}
 
+  # Case Creation
   case_creation:
     driver: local
     name: case_creation

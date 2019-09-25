@@ -30,45 +30,55 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "service_bridge_tag"
-    
-  # Apache Base
-  apache_base:
-    image: apache_base
-    container_name: apache_base
-    build: ./dummy
-    restart: on-failure:3
+  
+  extraction_api:
+    image: 'extraction_api'
+    container_name: 'extraction_api'
+    build:
+      context: ./extraction_api/BL
+      dockerfile: api.Dockerfile
     networks:
-      - service_bridge
-
-  # Kafka
-  zookeeper:
-    image: 'bitnami/zookeeper:latest'
-    container_name: 'zookeeper'
-    networks:
-      - service_bridge
-    ports:
-      - '2181:2181'
+      service_bridge:
+        aliases:
+          - extractionapi
     restart: on-failure:3
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - file_output:/var/www/table_api/app/invoice_files
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
 
-  broker:
-    image: 'broker'
-    container_name: 'broker'
-    build: ./kafka
+  # Business Rules
+  business_rules_api:
+    image: 'business_rules_api'
+    container_name: 'business_rules_api'
+    build:
+      context: ./business_rules_api/BL
+      dockerfile: api.Dockerfile
     networks:
-      - service_bridge
+      service_bridge:
+        aliases:
+          - businessrulesapi
     restart: on-failure:3
-    ports:
-      - '9092:9092'
-    depends_on:
-      - zookeeper
     environment:
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:9092
-      - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_BROKER_ID=1
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
 
+  # To test kafka
   producer:
     image: 'producer'
     container_name: 'producer'
@@ -87,6 +97,7 @@ services:
       - apache_base
       - broker
 
+  # To test kafka
   consumer:
     image: 'consumer'
     container_name: 'consumer'
@@ -104,30 +115,6 @@ services:
     depends_on:
       - apache_base
       - broker
-
-  # Common DB
-  common_db:
-    image: mysql:5.7
-    container_name: 'common_db'
-    volumes:
-      - ./common_db:/docker-entrypoint-initdb.d/:ro
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
-    networks:
-      - service_bridge
-    restart: on-failure:3
-
-  common_php:
-    image: 'phpmyadmin/phpmyadmin'
-    container_name: 'common_php'
-    ports:
-      - '8082:80'
-    networks:
-      - service_bridge
-    links:
-      - common_db:db
-    depends_on: 
-      - common_db
 
   # Reports
   reports_api:
@@ -294,24 +281,6 @@ services:
       - common_db
       - apache_base
 
-  # scheduler:
-  #   image: 'scheduler'
-  #   container_name: 'scheduler'
-  #   build: ./scheduler/BL
-  #   networks:
-  #     service_bridge:
-  #       aliases:
-  #         - scheduler
-  #   restart: on-failure:3
-  #   environment:
-  #     - HOST_IP=${HOST_IP}
-  #     - LOG_LEVEL=${LOG_LEVEL}
-  #     - LOG_FORMAT=${LOG_FORMAT}
-  #     - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-  #   depends_on: 
-  #     - common_db
-  #     - apache_base
-
   abbyy_database:
     image: 'abbyy_database'
     container_name: 'abbyy_database'
@@ -343,7 +312,7 @@ services:
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
-      - files:/var/www/training_api/app/files
+      - file_output:/var/www/training_api/app/files
     depends_on: 
       - common_db
       - apache_base
@@ -400,27 +369,6 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "user_auth_tag"
 
-  login_db:
-    image: mysql:5.7
-    container_name: 'login_db'
-    volumes:
-      - ./user_auth_api/DL:/docker-entrypoint-initdb.d/:ro
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWROD}
-    networks:
-      - service_bridge
-    restart: on-failure:3
-
-  login_php:
-    image: 'phpmyadmin/phpmyadmin'
-    container_name: 'login_php'
-    ports:
-      - '8090:80'
-    networks:
-      - service_bridge
-    links:
-      - login_db:db
-
   # PDF Plumber
   pdf_plumber_api:
     image: 'pdf_plumber_api'
@@ -437,7 +385,7 @@ services:
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
-      - invoice_files:/app/invoice_files
+      - file_output:/app/invoice_files
     depends_on:
       - apache_base
     # logging:
@@ -463,6 +411,44 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "training_ui_tag"
+
+  # Apache Base
+  apache_base:
+    image: apache_base
+    container_name: apache_base
+    build: ./dummy
+    restart: on-failure:3
+    networks:
+      - service_bridge
+
+  # Kafka
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    container_name: 'zookeeper'
+    networks:
+      - service_bridge
+    ports:
+      - '2181:2181'
+    restart: on-failure:3
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  broker:
+    image: 'broker'
+    container_name: 'broker'
+    build: ./kafka
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    ports:
+      - '9092:9092'
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_BROKER_ID=1
 
   # ELK Stack
   elasticsearch:
@@ -506,7 +492,7 @@ services:
       - service_bridge
     restart: on-failure:3
 
-  # Zipkin containers start here
+  # Zipkin related
   storage:
     image: openzipkin/zipkin-mysql
     container_name: mysql
@@ -515,27 +501,18 @@ services:
 
   # The zipkin process services the UI, and also exposes a POST endpoint that
   # instrumentation can send trace data to. Scribe is enabled by default.
+  # Environment settings are defined here https://github.com/openzipkin/zipkin/tree/1.19.0/zipkin-server#environment-variables
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
     networks:
       - service_bridge
-    # Environment settings are defined here https://github.com/openzipkin/zipkin/tree/1.19.0/zipkin-server#environment-variables
     environment:
       - STORAGE_TYPE=mysql
-      # Point the zipkin at the storage backend
       - MYSQL_HOST=mysql
       - KAFKA_BOOTSTRAP_SERVERS=broker:9092
-      # Uncomment to disable scribe
-      # - SCRIBE_ENABLED=false
-      # Uncomment to enable self-tracing
-      # - SELF_TRACING_ENABLED=true
-      # Uncomment to enable debug logging
-      # - JAVA_OPTS=-Dlogging.level.zipkin=DEBUG
     ports:
-      # Listen port for the Scribe transport
       - 9410:9410
-      # Port used for the Zipkin UI and HTTP Api
       - 9411:9411
     depends_on:
       - storage
@@ -544,7 +521,6 @@ services:
 
   # Adds a cron to process spans since midnight every hour, and all spans each day
   # This data is served by http://192.168.99.100:8080/dependency
-  #
   # For more details, see https://github.com/openzipkin/docker-zipkin-dependencies
   dependencies:
     image: openzipkin/zipkin-dependencies
@@ -555,14 +531,10 @@ services:
     environment:
       - STORAGE_TYPE=mysql
       - MYSQL_HOST=mysql
-      # Add the baked-in username and password for the zipkin-mysql image
       - MYSQL_USER=zipkin
       - MYSQL_PASS=zipkin
-      # Uncomment to adjust memory used by the dependencies job
-      # - JAVA_OPTS=-verbose:gc -Xms1G -Xmx1G
     depends_on:
       - storage
-
 
 volumes:
   # Folder Monitor
@@ -617,14 +589,7 @@ volumes:
       o: 'bind'
       device: ${XAMPP_PATH}/htdocs/ace/assets/pdf
 
-  files:
-    external: true
-    name: file_output
-
-  invoice_files:
-    external: true
-    name: file_output
-
+  # Reports API
   reports_folder:
     driver: local
     name: reports_folder
