@@ -31,7 +31,7 @@ except:
 from app import app
 
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def get_field_dict(tenant_id):
     """

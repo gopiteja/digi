@@ -14,7 +14,7 @@ except:
 
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of

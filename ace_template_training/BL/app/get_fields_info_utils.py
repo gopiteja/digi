@@ -5,7 +5,7 @@ import itertools
 from pprint import pprint
 
 from ace_logger import Logging
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def toggle_print(key=None):
     if key:

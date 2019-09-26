@@ -35,7 +35,7 @@ def http_transport(encoded_span):
 #global parameters
 app = Flask(__name__)
 cors = CORS(app)
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 global parameters
 with open('./parameters.json') as f:

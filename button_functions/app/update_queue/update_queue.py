@@ -16,7 +16,7 @@ except:
     from producer import produce
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 db_config = {
     'host': os.environ['HOST_IP'],

@@ -17,7 +17,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 class EngineHolder:
     engineLoader = None

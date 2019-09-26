@@ -17,7 +17,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 def club(word1, word2):
     '''
         calculate average word space in the document

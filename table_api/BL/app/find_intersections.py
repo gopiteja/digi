@@ -5,7 +5,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def find_intersections(horizontal_lines,vertical_lines):
 	intersections = []

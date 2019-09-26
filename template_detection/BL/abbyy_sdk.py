@@ -15,7 +15,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 if sys.platform.startswith('win'):
     import comtypes

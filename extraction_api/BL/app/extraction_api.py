@@ -66,7 +66,7 @@ except:
     app = Flask(__name__)
     CORS(app)
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 #the multiplier for the distance between the keyword threshold
 DISTANCE_THRESHOLD = 2

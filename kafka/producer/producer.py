@@ -9,7 +9,7 @@ from ace_logger import Logging
 
 app = Flask(__name__)
 CORS(app)
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 KAFKA_BROKER_URL = 'broker:9092'
 TRANSACTIONS_TOPIC = 'test.topic'

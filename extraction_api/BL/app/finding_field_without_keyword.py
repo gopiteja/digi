@@ -15,7 +15,7 @@ except:
 
 thres = 0.7
 word_space_mul = 1.5
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 exclude = {'left':'right', 'right':'left', 'top':'bottom', 'bottom':'top'}
 

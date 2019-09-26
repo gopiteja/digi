@@ -14,7 +14,7 @@ from db_utils import DB
 from producer import produce
 from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 # Database configuration
 db_config = {

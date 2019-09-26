@@ -24,7 +24,7 @@ except:
     app = Flask(__name__)
     CORS(app)
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 

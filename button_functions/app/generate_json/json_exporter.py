@@ -19,7 +19,7 @@ def http_transport(encoded_span):
         headers={'Content-Type': 'application/x-thrift'},
     )
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 class JSONExport(object):
     def __init__(self, export_type='Case ID', excluded_fields=[], field_mapping=None):

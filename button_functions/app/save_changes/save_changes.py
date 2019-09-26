@@ -7,15 +7,10 @@ from random import randint
 from time import sleep
 
 from db_utils import DB
+from producer import produce
+from ace_logger import Logging
 
-try:
-    from app.producer import produce
-    from app.ace_logger import Logging
-except:
-    from producer import produce
-    from ace_logger import Logging
-
-logging = Logging()
+logging = Logging().getLogger('ace').getLogger('ace')
 
 db_config = {
     'host': os.environ['HOST_IP'],

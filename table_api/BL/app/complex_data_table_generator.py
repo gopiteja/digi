@@ -9,7 +9,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def pre_process_centroids(centroids):
 

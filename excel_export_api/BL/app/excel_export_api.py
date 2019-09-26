@@ -22,7 +22,7 @@ except:
     app = Flask(__name__)
     CORS(app)
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 db_config = {
     'host': os.environ['HOST_IP'],

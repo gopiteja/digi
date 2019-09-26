@@ -20,7 +20,7 @@ except:
     from ace_logger import Logging
 
 DAO = DABizRulFactory.get_dao_bizRul()
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 
 

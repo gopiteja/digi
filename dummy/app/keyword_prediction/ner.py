@@ -15,7 +15,7 @@ from ace_logger import Logging
 app = Flask(__name__)
 CORS(app)
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 class KeywordTrainer():
     def __init__(self, model_path=None):

@@ -21,20 +21,6 @@ class Logging(logging.Logger):
         
         logging.basicConfig(**logging_config)
 
-        logging.getLogger('kafka').disabled = True
-        logging.getLogger('kafka.client').disabled = True
-        logging.getLogger('kafka.cluster').disabled = True
-        logging.getLogger('kafka.conn').disabled = True
-        logging.getLogger('kafka.consumer.fetcher').disabled = True
-        logging.getLogger('kafka.consumer.group').disabled = True
-        logging.getLogger('kafka.consumer.subscription_state').disabled = True
-        logging.getLogger('kafka.coordinator').disabled = True
-        logging.getLogger('kafka.coordinator.consumer').disabled = True
-        logging.getLogger('kafka.metrics.metrics').disabled = True
-        logging.getLogger('requests').disabled = True
-        logging.getLogger('urllib3.connectionpool').disabled = True
-        logging.getLogger('werkzeug').disabled = True
-
         self.extra = {
             'tenantID': None,
             'traceID': None

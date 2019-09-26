@@ -11,7 +11,7 @@ except:
 
 thres = 0.7
 word_space_mul = 1.5
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def get_distance(value1, value2):
     v1_x = value1['left'] + (value1['right']-value1['left'])/2

@@ -19,7 +19,7 @@ from ace_logger import Logging
 
 from app import app
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 db_config = {
     'host': os.environ['HOST_IP'],

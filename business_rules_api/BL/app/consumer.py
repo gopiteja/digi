@@ -18,7 +18,7 @@ except:
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 
 DAO = DABizRulFactory.get_dao_bizRul()
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def http_transport(encoded_span):
     body = encoded_span

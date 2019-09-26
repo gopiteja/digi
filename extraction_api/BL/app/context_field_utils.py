@@ -6,7 +6,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def get_context_box(ocr_data, keyword_boxes, context):
     context_box_dict = None

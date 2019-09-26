@@ -36,7 +36,7 @@ def http_transport(encoded_span):
         data=body,
         headers={'Content-Type': 'application/x-thrift'},)
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 @zipkin_span(service_name='table_api', span_name='apply_business_rules')
 def predict_with_template(case_id, template_name):

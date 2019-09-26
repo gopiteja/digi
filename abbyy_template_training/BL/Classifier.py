@@ -3,7 +3,7 @@ import os
 from ClassifierTypeEnum import ClassifierTypeEnum
 from ClassifiedImage import ClassifiedImage
 from ace_logger import Logging
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 
 class ClassificationOptions:

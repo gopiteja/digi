@@ -48,7 +48,7 @@ except:
     from smart_training.utils import get_rel_info as get_rel_info_smart
     from smart_training.utils import percentage_inside
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 
 from app import app

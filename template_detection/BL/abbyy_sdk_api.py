@@ -13,7 +13,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 app = Flask(__name__)
 CORS(app)

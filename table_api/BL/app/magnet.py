@@ -9,7 +9,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def get_histogram(img,type):
     histogram = np.sum(img[:,:], axis=type)

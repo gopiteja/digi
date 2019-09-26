@@ -8,7 +8,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging()
+logging = Logging().getLogger('ace')
 
 def ocrDataLocal(T,L,R,B,ocrData):
     '''
