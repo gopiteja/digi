@@ -7,9 +7,9 @@ networks:
 
 services:
   # Reports
-  reports_consumer:
-    image: 'reports_consumer'
-    container_name: 'reports_consumer'
+  generate_report:
+    image: 'generate_report'
+    container_name: 'generate_report'
     build:
       context: ./reports_api/BL/app
       dockerfile: generate_report.Dockerfile
@@ -27,7 +27,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "generate_report_tag"
         
   # Digital Signature
   digital_signature:
@@ -48,7 +48,7 @@ services:
       driver: gelf
       options:
         gelf-address: udp://127.0.0.1:12201
-        tag: "table_merger_tag"
+        tag: "digital_signature_tag"
 
   # Template Detection
   detection_app:
@@ -71,7 +71,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "detection_app_tag"
 
   # Extraction
   extraction:
@@ -94,32 +94,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
-
-  # Table Extraction
-  table_api:
-    image: 'table_api'
-    container_name: 'table_api'
-    build:
-      context: ./table_api/BL
-      dockerfile: api.Dockerfile
-    networks:
-      service_bridge:
-        aliases:
-          - tableapi
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    volumes:
-      - invoice_files:/var/www/table_api/app/invoice_files
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "extraction_tag"
 
   table_consumer:
     image: 'table_consumer'
@@ -141,7 +116,7 @@ services:
       driver: gelf
       options:
         gelf-address: udp://127.0.0.1:12201
-        tag: "table_merger_tag"
+        tag: "table_consumer_tag"
 
   business_rules_consumer:
     image: 'business_rules_consumer'
@@ -161,13 +136,15 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "business_rules_consumer_tag"
   
-  # JSON Export
-  json_export_api:
-    image: 'json_export_api'
-    container_name: 'json_export_api'
-    build: ./json_export_api/BL
+  # Generate JSON
+  generate_json:
+    image: 'generate_json'
+    container_name: 'generate_json'
+    build:
+      context: ./button_functions/app/generate_json
+      dockerfile: generate_json.Dockerfile
     networks:
       service_bridge:
         aliases:
@@ -180,9 +157,6 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - json_export_db
-      - json_export_php
     # logging:
     #   driver: gelf
     #   options:
@@ -190,12 +164,12 @@ services:
     #     tag: "table_merger_tag"
 
   # Table Merger
-  table_merger_consumer:
-    image: 'table_merger_consumer'
-    container_name: 'table_merger_consumer'
+  merge_table:
+    image: 'merge_table'
+    container_name: 'merge_table'
     build:
-      context: ./table_merger_api/BL/app
-      dockerfile: consumer.Dockerfile
+      context: ./button_functions/app/merge_table
+      dockerfile: merge_table.Dockerfile
     networks:
       - service_bridge
     restart: on-failure:3
@@ -208,7 +182,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "merge_table_tag"
 
   # Save Changes
   save_changes:
@@ -229,7 +203,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "save_changes_tag"
 
   # Update Queue
   update_queue:
@@ -250,7 +224,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "update_queue_tag"
 
   # Case Creation
   case_creation:
@@ -273,7 +247,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "case_creation_tag"
 
   # Run Business Rules
   run_business_rule:
@@ -294,7 +268,7 @@ services:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "run_business_rule_tag"
   
   # Process Time
   process_time:

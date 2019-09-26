@@ -115,6 +115,31 @@ services:
     depends_on:
       - apache_base
       - broker
+  
+  # Table Extraction
+  table_api:
+    image: 'table_api'
+    container_name: 'table_api'
+    build:
+      context: ./table_api/BL
+      dockerfile: api.Dockerfile
+    networks:
+      service_bridge:
+        aliases:
+          - tableapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    volumes:
+      - invoice_files:/var/www/table_api/app/invoice_files
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "taple_api_tag"
 
   # Reports
   reports_api:
@@ -179,8 +204,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - common_db
+    depends_on:
       - apache_base
     # logging:
     #   driver: gelf
@@ -203,8 +227,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - common_db
+    depends_on:
       - apache_base
     # logging:
     #   driver: gelf
@@ -227,8 +250,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - common_db
+    depends_on:
       - apache_base
     # logging:
     #   driver: gelf
@@ -277,8 +299,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - common_db
+    depends_on:
       - apache_base
 
   abbyy_database:
@@ -313,37 +334,13 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
       - file_output:/var/www/training_api/app/files
-    depends_on: 
-      - common_db
-      - apache_base
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "training_api_tag"
-
-  # Table Merger
-  table_merger_api:
-    image: 'table_merger_api'
-    container_name: 'table_merger_api'
-    build: ./table_merger_api/BL
-    networks:
-      service_bridge:
-        aliases:
-          - tablemergerapi
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     depends_on:
       - apache_base
     # logging:
     #   driver: gelf
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
+    #     tag: "training_api_tag"
 
   # User Auth
   user_auth_api:
@@ -360,8 +357,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-    depends_on: 
-      - login_db
+    depends_on:
       - apache_base
     # logging:
     #   driver: gelf
