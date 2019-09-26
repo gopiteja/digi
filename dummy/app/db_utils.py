@@ -68,14 +68,12 @@ class DB(object):
             logging.exception(f'Something went wrong while connecting. Check trace.')
             return
 
-    def execute(self, query, database=None, **kwargs):
+    def execute(self, query, **kwargs):
         """
         Executes an SQL query.
 
         Args:
             query (str): The query that needs to be executed.
-            database (str): Name of the database to execute the query in. Leave
-                it none if you want use database during object creation.
             params (list/tuple/dict): List of parameters to pass to in the query.
 
         Returns:
@@ -84,20 +82,9 @@ class DB(object):
         """
         data = None
 
-        # Use new database if a new databse is given
-        if database is not None:
-            try:
-                config = f'mysql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{database}?charset=utf8'
-                engine = create_engine(config, pool_recycle=300)
-            except:
-                logging.exception(f'Something went wrong while connecting. Check trace.')
-                return False
-        else:
-            engine = self.engine
-
         try:
             logging.debug(f'Query: {query}')
-            data = pd.read_sql(query, engine, index_col='id', **kwargs)
+            data = pd.read_sql(query, self.engine, index_col='id', **kwargs)
         except exc.ResourceClosedError:
             logging.warning('Query does not have any value to return.')
             return True
@@ -112,14 +99,12 @@ class DB(object):
 
         return data.where((pd.notnull(data)), None)
 
-    def execute_(self, query, database=None, **kwargs):
+    def execute_(self, query, **kwargs):
         """
         Executes an SQL query.
 
         Args:
             query (str): The query that needs to be executed.
-            database (str): Name of the database to execute the query in. Leave
-                it none if you want use database during object creation.
             params (list/tuple/dict): List of parameters to pass to in the query.
 
         Returns:
@@ -128,19 +113,8 @@ class DB(object):
         """
         data = None
 
-        # Use new database if a new databse is given
-        if database is not None:
-            try:
-                config = f'mysql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{database}?charset=utf8'
-                engine = create_engine(config, pool_recycle=300)
-            except:
-                logging.exception(f'Something went wrong while connecting. Check trace.')
-                return False
-        else:
-            engine = self.engine
-
         try:
-            data = pd.read_sql(query, engine, **kwargs)
+            data = pd.read_sql(query, self.engine, **kwargs)
         except exc.ResourceClosedError:
             return True
         except:
@@ -151,15 +125,13 @@ class DB(object):
         return data.replace({pd.np.nan: None})
 
 
-    def insert(self, data, table, database=None, **kwargs):
+    def insert(self, data, table, **kwargs):
         """
         Write records stored in a DataFrame to a SQL database.
 
         Args:
             data (DataFrame): The DataFrame that needs to be write to SQL database.
             table (str): The table in which the rcords should be written to.
-            database (str): The database the table lies in. Leave it none if you
-                want use database during object creation.
             kwargs: Keyword arguments for pandas to_sql function.
                 See https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_sql.html
                 to know the arguments that can be passed.
@@ -169,19 +141,8 @@ class DB(object):
         """
         logging.info(f'Inserting into `{table}`')
 
-        # Use new database if a new databse is given
-        if database is not None:
-            try:
-                config = f'mysql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{database}?charset=utf8'
-                engine = create_engine(config, pool_recycle=300)
-            except:
-                logging.exception(f'Something went wrong while connecting. Check trace.')
-                return False
-        else:
-            engine = self.engine
-
         try:
-            data.to_sql(table, engine, **kwargs)
+            data.to_sql(table, self.engine, **kwargs)
             try:
                 self.execute(f'ALTER TABLE `{table}` ADD PRIMARY KEY (`id`);')
             except:
@@ -226,16 +187,7 @@ class DB(object):
             logging.exception('Error inserting data.')
             return False
 
-    def update(self, table, update=None, where=None, database=None, force_update=False):
-        # Use new database if a new databse is given
-        if database is not None:
-            try:
-                config = f'mysql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{database}?charset=utf8'
-                self.engine = create_engine(config, pool_recycle=300)
-            except:
-                logging.exception(f'Something went wrong while connecting. Check trace.')
-                return False
-
+    def update(self, table, update=None, where=None, force_update=False):
         logging.info(f'Updating table: `{table}`')
         logging.info(f'Update data: `{update}`')
         logging.info(f'Where clause data: `{where}`')
@@ -277,7 +229,7 @@ class DB(object):
             logging.exception('Something went wrong updating. Check trace.')
             return False
 
-    def get_column_names(self, table, database=None):
+    def get_column_names(self, table):
         """
         Get all column names from an SQL table.
 
@@ -291,12 +243,12 @@ class DB(object):
         """
         try:
             logging.info(f'Getting column names of table `{table}`')
-            return list(self.execute(f'SELECT * FROM `{table}`', database))
+            return list(self.execute(f'SELECT * FROM `{table}`'))
         except:
             logging.exception('Something went wrong getting column names. Check trace.')
             return
 
-    def execute_default_index(self, query, database=None, **kwargs):
+    def execute_default_index(self, query, **kwargs):
         """
         Executes an SQL query.
 
@@ -312,19 +264,8 @@ class DB(object):
         """
         data = None
 
-        # Use new database if a new databse is given
-        if database is not None:
-            try:
-                config = f'mysql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{database}?charset=utf8'
-                engine = create_engine(config, pool_recycle=300)
-            except:
-                logging.exception(f'Something went wrong while connecting. Check trace.')
-                return False
-        else:
-            engine = self.engine
-
         try:
-            data = pd.read_sql(query, engine, **kwargs)
+            data = pd.read_sql(query, self.engine, **kwargs)
         except exc.ResourceClosedError:
             return True
         except:
@@ -335,28 +276,37 @@ class DB(object):
         return data.where((pd.notnull(data)), None)
 
 
-    def get_all(self, table, database=None, discard=None):
+    def get_all(self, table, discard=None, condition=None):
         """
         Get all data from an SQL table.
 
         Args:
             table (str): Name of the table from which data should be extracted.
-            database (str): Name of the database in which the table lies. Leave
-                it none if you want use database during object creation.
             discard (list): columns to be excluded while selecting all
         Returns:
             (DataFrame) A pandas dataframe containing the data. (None if an error
             occurs)
         """
         logging.info(f'Getting all data from `{table}`')
-        if discard:
+        
+        if discard is not None:
             logging.info(f'Discarding columns `{discard}`')
-            columns = list(self.execute_default_index(f'SHOW COLUMNS FROM `{table}`',database).Field)
+            columns = list(self.execute_default_index(f'SHOW COLUMNS FROM `{table}`',).Field)
             columns = [col for col in columns if col not in discard]
             columns_str = json.dumps(columns).replace("'",'`').replace('"','`')[1:-1]
-            return self.execute(f'SELECT {columns_str} FROM `{table}`', database)
+            return self.execute(f'SELECT {columns_str} FROM `{table}`')
 
-        return self.execute(f'SELECT * FROM `{table}`', database)
+        if condition is not None:
+            where_clause = []
+            where_value_list = []
+            if condition is not None and condition:
+                for where_column, where_value in condition.items():
+                    where_clause.append(f'{where_column}=%s')
+                    where_value_list.append(where_value)
+                where_clause_string = ' AND '.join(where_clause)
+            return self.execute(f'SELECT * FROM `{table}` WHERE `{where_clause_string}`')
+
+        return self.execute(f'SELECT * FROM `{table}`')
 
     def get_latest(self, data, group_by_col, sort_col):
         """
