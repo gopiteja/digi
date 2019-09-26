@@ -936,7 +936,7 @@ def get_dropdown(queue_id, tenant_id=None):
     db_config['tenant_id'] = tenant_id
     queue_db = DB('queues', **db_config)
 
-    query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
+    query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0 and type != 'Table'"
     field_ids = list(queue_db.execute_(query).id)
 
     dropdown_definition = queue_db.get_all('dropdown_definition')
@@ -1005,7 +1005,7 @@ def get_fields(case_id=None):
             query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
             ocr_data = queue_db.execute(query, params=[case_id])
             ocr_data = list(ocr_data['ocr_data'])[0]
-        except Exception as e:
+        except:
             ocr_data = '[[]]'
             logging.exception('Error in extracting ocr from db')
             pass
@@ -1078,9 +1078,6 @@ def get_fields(case_id=None):
             display_name = row['display_name']
             unique_name = row['unique_name']
 
-            if unique_name == 'addon_table':
-                continue
-
             # Check if such table exists. If not then skip tab
             try:
                 if table_name not in field_source_data:
@@ -1141,16 +1138,17 @@ def get_fields(case_id=None):
             error_logs_list = error_logs_str.split('|')
 
         response_data = {}
-        query = "SELECT id, tab_id, pattern FROM field_definition WHERE unique_name = 'addon_table'"
+        query = "SELECT id, display_name, tab_id, pattern FROM field_definition WHERE unique_name = 'addon_table'"
         try:
             result = queue_db.execute(query)
             pattern = list(result.pattern)
             tab_id = list(result.tab_id)[0]
+            ocr_name = list(result.display_name)[0]
             query = f"Select id, text from tab_definition where id = {tab_id}"
             addon_column = list(queue_db.execute(query).text)[0]
             if pattern:
                 table_pattern = json.loads(pattern[0])
-                addon_table = get_addon_table(table_pattern,case_id_ocr)
+                addon_table = get_addon_table(table_pattern,ocr_name,case_id_ocr)
             else:
                 addon_table = {}
         except:
@@ -1169,7 +1167,6 @@ def get_fields(case_id=None):
             'highlight': renamed_higlight,
             'file_name': list(case_files.file_name)[0],
             'table': table,
-            'addon_table' : addon_table,
             'time_spent': 0,
             'timer': list(queue_info.timer)[0],
             'ocr_data': ocr_data,
@@ -1276,12 +1273,9 @@ def refresh_fields(case_id=None):
         logging.exception('Something went wrong refreshin fields. Check trace.')
         return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})
 
-def get_addon_table(table_pattern, case_id_ocr):
+def get_addon_table(table_pattern, ocr_name, case_id_ocr):
     try:
-        try:
-            addon_table = json.loads(list(case_id_ocr['Add_on_Table'])[0])
-        except:
-            addon_table = json.loads(list(case_id_ocr['Add On Table'])[0])
+        addon_table = json.loads(list(case_id_ocr[ocr_name])[0])
     except:
         addon_table = []
         
