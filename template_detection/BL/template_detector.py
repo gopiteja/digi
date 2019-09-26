@@ -4,7 +4,9 @@ import pymysql
 import re
 import json
 import os
+from db_utils import DB
 from sklearn.feature_extraction import text
+
 try:
     from app.ace_logger import Logging
     from app.opencV_and import match_box
@@ -14,41 +16,29 @@ except:
 
 logging = Logging()
 
+
 def get_parameters():
     with open('configs/template_detection_params.json') as f:
         return json.loads(f.read())
 
+
 parameters = get_parameters()
 ANALYST_DATABASE = parameters['database_name']
 machines = parameters['platform']
-db_config = {
-    'host': os.environ['HOST_IP'],
-    'port': 3306,
-    'user': 'root',
-    'password': 'AlgoTeam123'
-}
 
 
-
-def execute_query(sql, db=ANALYST_DATABASE):
-    data = None
-    conn = pymysql.connect(**db_config, db=db,use_unicode=True, charset="utf8")
-    try:
-        a = conn.cursor()
-        a.execute(sql)
-        data = a.fetchall()
-        conn.commit()
-    except Exception as e:
-        logging.exception(f'{e}')
-        with open('sql.txt', 'w') as f:
-            f.write(sql)
-        conn.rollback()
-    conn.close()
-    return data
-
-def load_trained_info():
+def load_trained_info(tenant_id):
     query = "SELECT * from trained_info"
-    trained_info_data = execute_query(query)
+    db_config = {
+        'host': os.environ['HOST_IP'],
+        'user': 'root',
+        'password': 'root',
+        'port': '3306',
+        'tenant_id': tenant_id
+    }
+    queue_db = DB('queues', **db_config)
+    trained_info_data = queue_db.execute(query)
+
     trained_info = {}
     for i in trained_info_data:
         trained_info[i[1]] = {
@@ -57,13 +47,23 @@ def load_trained_info():
             'address_ocr': i[5],
             'unique_fields': i[6],
             'condition': i[7],
-            'ad_trained_info' : i[12]
+            'ad_trained_info': i[12]
         }
     return trained_info
 
-def get_trained_templates(lower=False):
+
+def get_trained_templates(tenant_id, lower=False):
     query = "SELECT `template_name` FROM trained_info"
-    query_result = execute_query(query)
+    db_config = {
+        'host': os.environ['HOST_IP'],
+        'user': 'root',
+        'password': 'root',
+        'port': '3306',
+        'tenant_id': tenant_id
+    }
+    queue_db = DB('queues', **db_config)
+
+    query_result = queue_db.execute(query)
 
     if query_result:
         if lower:
@@ -72,15 +72,17 @@ def get_trained_templates(lower=False):
     else:
         return []
 
+
 def remove_all_except_al_num(text):
     return re.sub('[^A-Za-z0-9]', '', text.lower())
 
+
 class TemplateDetector():
-    def __init__(self, threshold=0.7, address_threshold=0.7):
+    def __init__(self, tenant_id, threshold=0.7, address_threshold=0.7):
         self.max_match_score = -1
         self.threshold = threshold
         self.address_threshold = address_threshold
-        self.trained_info = load_trained_info()
+        self.trained_info = load_trained_info(tenant_id)
 
     def ngrams(self, input, n):
         '''
@@ -97,17 +99,17 @@ class TemplateDetector():
             output.setdefault(g, 0)
             output[g] += 1
         return output
-    
+
     def ngram_2(self, sample):
         sample_ng = []
         if len(sample) > 2:
-            for i,j in enumerate(sample):
+            for i, j in enumerate(sample):
                 try:
-                    temp = j + sample[i+1]
+                    temp = j + sample[i + 1]
                     sample_ng.append(temp)
                 except:
                     break
-                
+
             return sample_ng
         else:
             return sample
@@ -179,7 +181,7 @@ class TemplateDetector():
             if i not in matching_indices_actual:
                 missing_indices_actual.append(i)
 
-        return (matching_indices_input, matching_indices_actual,missing_indices_input, missing_indices_actual)
+        return (matching_indices_input, matching_indices_actual, missing_indices_input, missing_indices_actual)
 
     def get_proccessed_matrices(self, input_matrix, actual_matrix, input_fields, actual_fields):
         """
@@ -190,12 +192,14 @@ class TemplateDetector():
         """
         input_matrix_rows = []
         actual_matrix_rows = []
-        matching_indices_input, matching_indices_actual,missing_indices_input, missing_indices_actual = self.get_matching_missing_indices(input_fields, actual_fields)
-        for a,b in zip(matching_indices_input, matching_indices_actual):
+        matching_indices_input, matching_indices_actual, missing_indices_input, missing_indices_actual = self.get_matching_missing_indices(
+            input_fields, actual_fields)
+        for a, b in zip(matching_indices_input, matching_indices_actual):
             input_matrix_rows.append(input_matrix[a])
             actual_matrix_rows.append(actual_matrix[b])
 
-        return (self.get_final_matrix(input_matrix_rows, missing_indices_input), self.get_final_matrix(actual_matrix_rows, missing_indices_actual))
+        return (self.get_final_matrix(input_matrix_rows, missing_indices_input),
+                self.get_final_matrix(actual_matrix_rows, missing_indices_actual))
 
     def get_final_matrix(self, matrix_rows, missing_indices):
         final_matrix = []
@@ -207,8 +211,8 @@ class TemplateDetector():
             final_matrix.append(a)
         return final_matrix
 
-    def predict_with_vname(self, ocr_data):
-        trained_templates = get_trained_templates(lower=True)
+    def predict_with_vname(self, ocr_data, tenant_id):
+        trained_templates = get_trained_templates(lower=True, tenant_id=tenant_id)
 
         # If nothing is trained then return no template
         if not trained_templates:
@@ -233,7 +237,7 @@ class TemplateDetector():
 
         return ''
 
-    def predict_with_ngram(self, ocr_data, filter=None , n = 2):
+    def predict_with_ngram(self, ocr_data, filter=None, n=2):
         '''
         Author : Akshat Goyal
 
@@ -266,14 +270,10 @@ class TemplateDetector():
             template_footer_ocr = template_data['footer_ocr'].lower()
             template_address_ocr = template_data['address_ocr'].lower()
 
-
-
-            
             header_match_list = template_header_ocr.lower().split()
             footer_match_list = template_footer_ocr.lower().split()
 
             # for f_W in filter_words:
-
 
             try:
                 footer_ngram = self.ngrams(template_footer_ocr, n)
@@ -293,7 +293,6 @@ class TemplateDetector():
                 for i in page:
                     first_text.append(re.sub('[^A-Za-z0-9 ]', '', i['word'].lower()))
                     # first_text.append(i['word'].lower())
-
 
             try:
                 first_text_ngram = self.ngrams(' '.join(first_text), n)
@@ -372,7 +371,7 @@ class TemplateDetector():
                     address_match_list = template_address.lower().split(' ')
 
                     try:
-                        address_ngram = self.ngrams(template_address.lower() , n)
+                        address_ngram = self.ngrams(template_address.lower(), n)
                     except:
                         address_ngram = {}
 
@@ -381,7 +380,9 @@ class TemplateDetector():
                         full_address_count += address_ngram[i]
                         if i in first_text_ngram:
                             address_count += address_ngram[i]
-                    if ((full_address_count_final == 0 or  full_address_count == 0) or ((float(address_count)/float(full_address_count)) > (float(max_address_count)/float(full_address_count_final)))):
+                    if ((full_address_count_final == 0 or full_address_count == 0) or (
+                            (float(address_count) / float(full_address_count)) > (
+                            float(max_address_count) / float(full_address_count_final)))):
                         max_address_list = address_match_list
                         max_address_count = address_count
                         full_address_count_final = full_address_count
@@ -407,19 +408,18 @@ class TemplateDetector():
         else:
             return ''
 
-
-    def predict_with_wv(self, ocr_data, filter = None):
+    def predict_with_wv(self, ocr_data, filter=None):
         detected_template = ''
         sorted_ocr_data = []
         for data in ocr_data:
-            sorted_ocr_data.append(sorted(data,key=lambda k:k['top']))
+            sorted_ocr_data.append(sorted(data, key=lambda k: k['top']))
 
         # by_3_top = int(len(sorted_ocr_data[0])/3)
         # ocr_data_top = sorted_ocr_data[0][:by_3_top]
 
         # stopwords = list(text.ENGLISH_STOP_WORDS)
 
-        #self.trained_info = {k.lower(): v for k, v in self.trained_info.items()}
+        # self.trained_info = {k.lower(): v for k, v in self.trained_info.items()}
 
         if filter:
             trained_templates = dict(zip(filter, [self.trained_info[k] for k in filter]))
@@ -434,26 +434,23 @@ class TemplateDetector():
                 template_data['address_ocr'] = json.dumps([template_data['address_ocr']])
 
             template_header_ocr = template_data['header_ocr']
-            template_footer_ocr = template_data['footer_ocr'] 
+            template_footer_ocr = template_data['footer_ocr']
             template_address_ocr = json.loads(template_data['address_ocr'])
             header_match_list_ = template_header_ocr.lower().split()
             footer_match_list_ = template_footer_ocr.lower().split()
-#            address_match_list = template_address_ocr.lower().split()
-            
+            #            address_match_list = template_address_ocr.lower().split()
+
             header_match_list = []
             for word in header_match_list_:
                 header_match_list.append(''.join(e for e in word if e.isalnum()))
-                
+
             header_match_list = self.ngram_2(header_match_list)
-                
+
             footer_match_list = []
             for word in footer_match_list_:
                 footer_match_list.append(''.join(e for e in word if e.isalnum()))
-                
+
             footer_match_list = self.ngram_2(footer_match_list)
-
-
-
 
             # first_page = sorted_ocr_data[0]
             # last_page = sorted_ocr_data[-1]
@@ -482,7 +479,7 @@ class TemplateDetector():
             first_text = ''.join(first_text)
             first_text = remove_all_except_al_num(first_text)
             # first_text = ''.join(e for e in first_text if e.isalnum()).lower()
-            
+
             footer_count = 0
             for i in footer_match_list:
                 if i in first_text:
@@ -493,7 +490,6 @@ class TemplateDetector():
 
             footer_count = max_footer_count
 
-
             header_count = 0
             max_address_count = 0
 
@@ -503,22 +499,21 @@ class TemplateDetector():
 
             # print(template_address_ocr, first_text)
 
-
             divisor = 0
             if not header_match_list[0]:
                 match_top = 0
             else:
-                match_top = header_count/len(header_match_list)
+                match_top = header_count / len(header_match_list)
                 divisor += 1
 
             if not footer_match_list[0]:
                 match_bottom = 0
             else:
-                match_bottom = footer_count/len(footer_match_list)
+                match_bottom = footer_count / len(footer_match_list)
                 divisor += 1
 
-            if divisor !=0 :
-                match_score = (match_top + match_bottom)/divisor
+            if divisor != 0:
+                match_score = (match_top + match_bottom) / divisor
             else:
                 match_score = 0
 
@@ -533,19 +528,20 @@ class TemplateDetector():
                     address_match_list = []
                     for word in address_match_list_:
                         address_match_list.append(''.join(e for e in word if e.isalnum()))
-                        
+
                     address_match_list = self.ngram_2(address_match_list)
                     for i in address_match_list:
                         if i in first_text:
                             address_count += 1
-                    if(max_address_count < address_count):
+                    if max_address_count < address_count:
                         max_address_list = address_match_list
                         max_address_count = address_count
 
-                if (template_address_ocr) and (template_address_ocr[0]) and( (not template_address_ocr[0][0]) or ( not len(max_address_list))):
+                if (template_address_ocr) and (template_address_ocr[0]) and (
+                        (not template_address_ocr[0][0]) or (not len(max_address_list))):
                     match_address = 0
                 else:
-                    match_address = max_address_count/len(max_address_list)
+                    match_address = max_address_count / len(max_address_list)
                     divisor += 1
 
                 if match_address >= self.max_match_score:
@@ -554,7 +550,7 @@ class TemplateDetector():
                     # print("Detected template is : ", detected_template)
 
                 # print(max_match_score, self.threshold)
-                self.max_match_score = (2*match_score + match_address)/3
+                self.max_match_score = (2 * match_score + match_address) / 3
             else:
                 self.max_match_score = match_score
             # print('Template', template, 'SCORE', self.max_match_score)
@@ -563,13 +559,12 @@ class TemplateDetector():
             if self.max_match_score >= self.address_threshold:
                 return detected_template
             else:
-                return detected_template # + ".doubtful"
+                return detected_template  # + ".doubtful"
         else:
             return ''
 
-
-    def predict_with_vname_(self, ocr_data):
-        trained_templates = get_trained_templates()
+    def predict_with_vname_(self, ocr_data, tenant_id):
+        trained_templates = get_trained_templates(tenant_id=tenant_id)
 
         # If nothing is trained then return no template
         if not trained_templates:
@@ -590,8 +585,8 @@ class TemplateDetector():
 
         return matched_templates
 
-    def predict_combo(self, ocr_data):
-        filter = self.predict_with_vname_(ocr_data)
+    def predict_combo(self, ocr_data, tenant_id):
+        filter = self.predict_with_vname_(ocr_data, tenant_id=tenant_id)
 
         # print(filter)
 
@@ -604,15 +599,15 @@ class TemplateDetector():
 
     def predict_combo_ngram(self, ocr_data, n=2):
         self.threshold = 0.8
-        
-        ngram_result = self.predict_with_ngram(ocr_data, n=2)
+
+        ngram_result = self.predict_with_ngram(ocr_data, n=parameters['n_ngram'])
 
         if ngram_result == '':
             return self.predict_with_wv(ocr_data)
         else:
             return ngram_result
 
-    def aankho_dekhi_method(self, ocr_data, template_detected = ''):
+    def aankho_dekhi_method(self, ocr_data, template_detected=''):
         max_match_score = 0
         max_match_template = ''
         trained_templates = self.trained_info
@@ -624,7 +619,6 @@ class TemplateDetector():
                 use_aankho_dekho = True
         else:
             use_aankho_dekho = True
-
 
         if use_aankho_dekho:
             for template, template_data in trained_templates.items():
@@ -644,7 +638,7 @@ class TemplateDetector():
     def unique_fields(self, ocr_data):
         sorted_ocr_data = []
         for data in ocr_data:
-            sorted_ocr_data.append(sorted(data,key=lambda k:k['top']))
+            sorted_ocr_data.append(sorted(data, key=lambda k: k['top']))
 
         trained_templates = self.trained_info
 
@@ -653,12 +647,12 @@ class TemplateDetector():
 
             unique_fields = template_data['unique_fields'].lower().split(',')
             condition = template_data['condition']
-            
+
             unique_fields_list = []
             for word in unique_fields:
                 unique_fields_list.append(remove_all_except_al_num(word))
 
-    #        for page in sorted_ocr_data:
+            #        for page in sorted_ocr_data:
             for i in sorted_ocr_data[0]:
                 # first_text.append(re.sub('[^A-Za-z0-9 ]', '', i['word'].lower()))
                 first_text.append(i['word'].lower())
@@ -666,7 +660,7 @@ class TemplateDetector():
             first_text = ''.join(first_text)
             first_text = remove_all_except_al_num(first_text)
             # first_text = ''.join(e for e in first_text if e.isalnum()).lower()
-            
+
             found_template = False
             if condition == 'or':
                 for unique in unique_fields_list:
@@ -681,4 +675,3 @@ class TemplateDetector():
                 if found_template:
                     return template
         return ''
-

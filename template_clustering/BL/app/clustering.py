@@ -24,16 +24,20 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 try:
     from app.db_utils import DB
     from app.ace_logger import Logging
+    with open('app/parameters.json') as f:
+        parameters = json.loads(f.read())
 except:
     from db_utils import DB
     from ace_logger import Logging
+    with open('parameters.json') as f:
+        parameters = json.loads(f.read())
 
 from app import app
 
-
 logging = Logging()
 
-def get_field_dict(tenant_id):
+
+def get_field_dict(tenant_id=None):
     """
     :return field_dict from db
     """
@@ -54,6 +58,7 @@ def get_field_dict(tenant_id):
         variations = ast.literal_eval(row['variation'])
         fields[field_type] = variations
     return fields
+
 
 @app.route('/cluster', methods=['POST', 'GET'])
 # @zipkin_span(service_name='clustering_app', span_name='cluster')
@@ -88,7 +93,7 @@ def cluster():
             ocr_info = db.execute(query, params=params)
             ocr_data.append(list(ocr_info.ocr_data)[0])
 
-        files =  [(x[0], x[1]) for x in zip(case_ids, ocr_data)]
+        files = [(x[0], x[1]) for x in zip(case_ids, ocr_data)]
 
         # No clustering to be done
         if len(files) == 1:
@@ -127,7 +132,7 @@ def cluster():
                 min_ = min(height)
                 max_ = max(height)
 
-                by_3 = (max_ - min_)/3
+                by_3 = (max_ - min_) / 3
 
                 ocr_data_top = []
                 ocr_data_middle = []
@@ -135,7 +140,7 @@ def cluster():
                 for word in ocr_data:
                     if word['top'] < (by_3 + min_):
                         ocr_data_top.append(word)
-                    elif word['top'] > (2*by_3 + min_):
+                    elif word['top'] > (2 * by_3 + min_):
                         ocr_data_bottom.append(word)
                     else:
                         ocr_data_middle.append(word)
@@ -155,22 +160,21 @@ def cluster():
                 text_bottom = [word for word in text_bottom if word not in db_text]
                 plain_text_bottom.append(' '.join(text_bottom))
 
-            vect = TfidfVectorizer(stop_words = 'english')
+            vect = TfidfVectorizer(stop_words='english')
             tfidf = vect.fit_transform(plain_text_top)
             match_top = (tfidf * tfidf.T).A.tolist()
 
-            vect = TfidfVectorizer(stop_words = 'english')
+            vect = TfidfVectorizer(stop_words='english')
             tfidf = vect.fit_transform(plain_text_middle)
             match_middle = (tfidf * tfidf.T).A.tolist()
 
-            vect = TfidfVectorizer(stop_words = 'english')
+            vect = TfidfVectorizer(stop_words='english')
             tfidf = vect.fit_transform(plain_text_bottom)
             match_bottom = (tfidf * tfidf.T).A.tolist()
 
-
             no_files = len(invoices)
 
-            match = (np.array(match_top)*3+np.array(match_middle)+np.array(match_bottom)*2)/6
+            match = (np.array(match_top) * 3 + np.array(match_middle) + np.array(match_bottom) * 2) / 6
             match = match.tolist()
 
             final_dict = {}
@@ -179,23 +183,22 @@ def cluster():
             for k in range(len(match)):
                 cluster = []
                 for i in range(len(invoices)):
-                    if no_files > 0 and i == k or match[k][i] >= 0.6:
-                    	cluster.append(invoices[i])
-                    	if invoices[i] not in cluster:
-                    		match.pop(i)
-                    		no_files -= 1
+                    if no_files > 0 and i == k or match[k][i] >= parameters['clustering_threshold']:
+                        cluster.append(invoices[i])
+                        if invoices[i] not in cluster:
+                            match.pop(i)
+                            no_files -= 1
                 if cluster not in clusters:
                     clusters.append(cluster)
-
 
             query = 'UPDATE `process_queue` SET `cluster`=%s WHERE `case_id`=%s'
             for k in range(len(clusters)):
                 for case in clusters[k]:
-                    params = [k+1, case]
+                    params = [k + 1, case]
                     db.execute(query, params=params)
-                    logging.info(f'Updated cluster to `{k+1}` for case ID `{case}`')
+                    logging.info(f'Updated cluster to `{k + 1}` for case ID `{case}`')
 
-                final_dict[str(k+1)] = clusters[k]
+                final_dict[str(k + 1)] = clusters[k]
             return final_dict
     except Exception as e:
-        return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})
+        return jsonify({'flag': False, 'message': 'System error! Please contact your system administrator.'})
