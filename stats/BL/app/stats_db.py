@@ -12,8 +12,11 @@ import pandas as pd
 import os
 
 class Stats_db:
-    def __init__(self, database = 'stats', host='172.31.45.112', user='root', password='AlgoTeam123', port='3306',tenant_id = None):
+    def __init__(self, database = 'stats', host=None, user=None, password=None, port='3306',tenant_id = None):
         host = os.environ['HOST_IP']
+        user = os.environ['LOCAL_DB_USER']
+        password = os.environ['LOCAL_DB_PASSWORD']
+        port = os.environ['LOCAL_DB_PORT']
         if tenant_id == 'None':
             tenant_db = f'{database}'
         else:
