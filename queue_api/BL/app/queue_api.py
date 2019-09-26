@@ -35,9 +35,6 @@ db_config = {
 }
 
 def http_transport(encoded_span):
-    # The collector expects a thrift-encoded list of spans. Instead of
-    # decoding and re-encoding the already thrift-encoded message, we can just
-    # add header bytes that specify that what follows is a list of length 1.
     body =encoded_span
     requests.post(
             'http://servicebridge:5002/zipkin',
@@ -178,13 +175,10 @@ def get_button_attributes(queue_id, queue_definition, tenant_id):
     final_dict = {}
     final_button_list = []
     for ele in button_attributes:
-        # ele.pop('button_id')
-        # ele.pop('function_id')
         route = ele.pop('route')
         parameters = ele.pop('parameters')
 
         if ele['text'] in final_dict:
-            # final_dict.update(ele)
             final_dict[ele['text']]['functions'].append({
                 'route': route,
                 'parameters': parameters.split(',')
@@ -202,7 +196,6 @@ def get_button_attributes(queue_id, queue_definition, tenant_id):
     button_attributes = final_button_list
 
     for button in button_attributes:
-        # button['parameters'] = button['parameters'].split(',')
         workflow_button = queue_workflow.loc[queue_workflow['button_id'] == button['button_id']]
         button_rule_group = list(workflow_button['rule_group'])[0]
         button_move_to = list(workflow_button['move_to'])[0]
@@ -220,7 +213,6 @@ def queue_name_type(queue_id, tenant_id):
 
     db = DB('queues', **db_config)
 
-    # Get queue name using queue ID
     qid_st = time()
     queue_definition = db.get_all('queue_definition')
     queue_df = queue_definition.loc[queue_id]
@@ -243,20 +235,17 @@ def get_columns(queue_uid, tenant_id, template_exceptions=None):
     db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
 
-    # * COLUMNS
     query = "SELECT id, column_id from queue_column_mapping where unique_name = %s ORDER BY column_order ASC"
     queue_column_ids = list(db.execute(query, params=[queue_uid]).column_id) 
 
-    # Get columns using column ID and above result from column configuration table
     columns_time = time()
     columns_definition = db.get_all('column_definition')
     columns_df = columns_definition.ix[queue_column_ids]
 
     dd = columns_df.to_dict(orient='list')
-    final ={}
     to_map = []
 
-    for key, value in dd.items():
+    for _, value in dd.items():
         to_map.append(value)
 
     column_mapping = {}
@@ -295,16 +284,12 @@ def get_columns(queue_uid, tenant_id, template_exceptions=None):
 
 @cache.memoize(86400)
 def get_fields_tab_queue(queue_id, tenant_id):
-
     db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
     extraction_db = DB('extraction', **db_config)
     query = f"SELECT * FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
     fields_df = db.execute(query)
     tab_definition = db.get_all('tab_definition')
-    # Replace tab_id in fields with the actual tab names
-    # Also create unique name for the buttons by combining display name
-    # and tab name
     datasrc_time = time()
     excel_display_data = {}
     tab_type_mapping = {}
@@ -372,9 +357,7 @@ def get_recon_data(queue_id, queue_name, tenant_id):
     recon_table_mapping_df = db.execute(query)
     
     table_unique_ids_mapped = list(recon_table_mapping_df['table_unique_id'])
-    table_unique_ids_mapped = ["'" +x+ "'" for x in table_unique_ids_mapped]
-    in_clause = ','.join(table_unique_ids_mapped)
-    
+    table_unique_ids_mapped = ["'" +x+ "'" for x in table_unique_ids_mapped]    
 
     query_1 = f"SELECT * FROM `recon_definition` where `table_unique_id` in (SELECT `table_unique_id` FROM `recon_table_mapping` where `queue_id` = '{queue_id}')"
     recon_definition_df = db.execute(query_1)
@@ -395,16 +378,14 @@ def get_recon_data(queue_id, queue_name, tenant_id):
             keys_['primary_table'] = row['table_unique_id']
             
         dd = table_column_mapping['columns_df'].to_dict(orient='list')
-        final ={}
         to_map = []
         logging.debug(f'DD: {dd}')
 
-        for key, value in dd.items():
+        for _, value in dd.items():
             to_map.append(value)
 
         logging.debug(f'To Map: {to_map}')
         column_mapping = {}
-        print("********************to_map" , to_map)
         for i in range(len(to_map[0])):
             column_mapping[to_map[2][i]] = to_map[1][i] 
         logging.debug(f'Column Mapping: {column_mapping}') 
@@ -434,31 +415,17 @@ def get_recon_secondary_table():
     tenant_id = data['tenant_id']
     db_config['tenant_id'] = tenant_id
 
-    unique_key = data['unique_key']
     primary_unique_key_value = data['primary_unique_key_value']
     primary_table_unique_key = data['primary_table_unique_key']
     primary_queue_table_name = data['primary_queue_table_name']
     columns_df = data['columns_df']
     columns = data['columns']
-    queue_id = data['queue_id'] #Need UI to send this 
-    queue_db = DB('queues', **db_config)
     extraction_db = DB('extraction', **db_config)
-    # query = f"SELECT `unique_name` FROM `queue_definition` where `id` = '{queue_id}'"
-    # print(query)
-    # queue_unique_name = queue_db.execute_(query)
-    # print(queue_unique_name)
-    # queue_unique_name  = list(queue_unique_name['unique_name'])[0]
-    # invoice_files_df = extraction_db.execute_(f"SELECT * from `{queue_table_name}` where `queue`= '{queue_unique_name}'")
-    # # files = invoice_files_df[columns].to_dict(orient='records')
-    # case_ids = list(invoice_files_df[unique_key].unique())
     extraction_columns_df = pd.DataFrame(columns_df)
-    # extraction_columns_df = columns_df[columns_df['source'] != 'process_queue']
-    # print("case_id ",case_ids)
-    # if case_ids:    
-    #     placeholders = ','.join(['%s'] * len(case_ids))
+
     if not extraction_columns_df.empty:
         select_columns_list = []
-        for index, row in extraction_columns_df.iterrows():
+        for _, row in extraction_columns_df.iterrows():
             col_name = row['column_name']                   
             table = row['source']
         
@@ -477,13 +444,11 @@ def get_recon_secondary_table():
         for combo in combinations(tables_list_, 2):
             where_conditions_list.append(f'`{combo[0]}`.`{primary_table_unique_key}` = `{combo[1]}`.`{primary_table_unique_key}`')
 
-        # select_columns_list += ['`ocr`.`id`', '`ocr`.`case_id`']
         where_conditions_list += [f"`{tables_list[0]}`.`{primary_table_unique_key}` IN ('{primary_unique_key_value}')"]
 
         select_part = ', '.join(select_columns_list)
         from_part = ', '.join([f'`{table}`' for table in tables_list_])
         where_part = ' AND '.join(where_conditions_list)
-        
         
         query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
         print('query is ',query)
@@ -495,7 +460,7 @@ def get_recon_secondary_table():
         print(f'Extraction data: {query_result_list}')
         
         rows_arr = []
-        for idx, row in query_result_df.iterrows():
+        for _, row in query_result_df.iterrows():
             rows_dict = {}
             for col in columns:
                 rows_dict = {**rows_dict, **{col : row[col]}}
@@ -523,16 +488,13 @@ def get_recon_table_data():
     print(queue_unique_name)
     queue_unique_name  = list(queue_unique_name['unique_name'])[0]
     invoice_files_df = extraction_db.execute_(f"SELECT * from `{queue_table_name}` where `queue`= '{queue_unique_name}'")
-    # files = invoice_files_df[columns].to_dict(orient='records')
     case_ids = list(invoice_files_df[unique_key].unique())
     extraction_columns_df = pd.DataFrame(columns_df)
-    # extraction_columns_df = columns_df[columns_df['source'] != 'process_queue']
-    print("case_id ",case_ids)
     if case_ids:    
         placeholders = ','.join(['%s'] * len(case_ids))
         if not extraction_columns_df.empty:
             select_columns_list = []
-            for index, row in extraction_columns_df.iterrows():
+            for _, row in extraction_columns_df.iterrows():
                 col_name = row['column_name']                   
                 table = row['source']
             
@@ -551,7 +513,6 @@ def get_recon_table_data():
             for combo in combinations(tables_list_, 2):
                 where_conditions_list.append(f'`{combo[0]}`.`{unique_key}` = `{combo[1]}`.`{unique_key}`')
 
-            # select_columns_list += ['`ocr`.`id`', '`ocr`.`case_id`']
             where_conditions_list += [f'`{queue_table_name}`.`{unique_key}` IN ({placeholders})']
         
             select_part = ', '.join(select_columns_list)
@@ -566,7 +527,7 @@ def get_recon_table_data():
             print(f'Extraction data: {query_result_list}')
             
             rows_arr = []
-            for idx, row in query_result_df.iterrows():
+            for _, row in query_result_df.iterrows():
                 rows_dict = {}
                 for col in columns:
                     rows_dict = {**rows_dict, **{col : row[col]}}
@@ -680,7 +641,6 @@ def get_queue(queue_id=None):
             logging.debug(f'Loading process queue {time()-all_st}')
             case_ids = list(invoice_files_df['case_id'].unique())
             logging.debug(f'Case IDs: {case_ids}')
-
             
             try:
                 columns_data = get_columns(queue_uid, tenant_id)
@@ -706,7 +666,7 @@ def get_queue(queue_id=None):
                     placeholders = ','.join(['%s'] * len(case_ids))
 
                     select_columns_list = []
-                    for index, row in extraction_columns_df.iterrows():
+                    for _, row in extraction_columns_df.iterrows():
                         col_name = row['column_name']                   
                         table = row['source']
 
@@ -731,15 +691,12 @@ def get_queue(queue_id=None):
                     logging.debug(f'From part: {from_part}')
                     logging.debug(f'Where part: {where_part}')
 
-                    
-                    # query = f'SELECT `business_rule`.`id`, `business_rule`.`case_id`, `business_rule`.`Verify Operator`, `ocr`.`Vendor Name` FROM `business_rule`, `ocr` WHERE `business_rule`.`case_id`=`ocr`.`case_id` AND `business_rule`.`case_id` in ({placeholders})'
                     query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
                     
                     query_result = extraction_db.execute(query, params=case_ids)
                     query_result_list = query_result.to_dict('records')
                     logging.debug(f'Extraction data: {query_result_list}')
                 
-
                     for document in files:
                         try:
                             document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
