@@ -27,9 +27,11 @@ try:
     from app.ace_logger import Logging
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
-    from app.smart_training.key_value_method_key_prediction import kv_values_prediction
-    from app.get_keywords import get_keywords, sort_ocr, get_coords, get_field_dict, get_keywords_for_value, get_keywords_in_quadrant
-    from app.get_keywords import caculate_dis, get_quadrant_dict, get_page_dimension, which_quadrant, keywords_lying_in_exact_quadrant
+    from app.smart_training.key_value_method_key_prediction aimport kv_values_prediction
+    from app.get_keywords import get_keywords, sort_ocr, get_coords, get_field_dict, get_keywords_for_value, \
+        get_keywords_in_quadrant
+    from app.get_keywords import caculate_dis, get_quadrant_dict, get_page_dimension, which_quadrant, \
+        keywords_lying_in_exact_quadrant
     from app.get_keywords import get_keywords_max_length, keywords_lying_in_exact_quadrant_value
     from app.smart_training.string_matching import convert_ocrs_to_char_dict_only_al_num, merge_coord
     from app.smart_training.utils import get_rel_info as get_rel_info_smart
@@ -41,33 +43,45 @@ except:
     from automatic_training import cluster_similar_words
     from smart_training.predict_keywords import predict_keywords
     from smart_training.key_value_method_key_prediction import kv_values_prediction
-    from get_keywords import get_keywords, sort_ocr, get_coords, get_field_dict, get_keywords_for_value, get_keywords_in_quadrant
-    from get_keywords import caculate_dis, get_quadrant_dict, get_page_dimension, which_quadrant, keywords_lying_in_exact_quadrant
+    from get_keywords import get_keywords, sort_ocr, get_coords, get_field_dict, get_keywords_for_value, \
+        get_keywords_in_quadrant
+    from get_keywords import caculate_dis, get_quadrant_dict, get_page_dimension, which_quadrant, \
+        keywords_lying_in_exact_quadrant
     from get_keywords import get_keywords_max_length, keywords_lying_in_exact_quadrant_value
     from smart_training.string_matching import convert_ocrs_to_char_dict_only_al_num, merge_coord
     from smart_training.utils import get_rel_info as get_rel_info_smart
     from smart_training.utils import percentage_inside
 
+try:
+    with open('app/parameters.json') as f:
+        parameters = json.loads(f.read())
+except:
+    with open('parameters.json') as f:
+        parameters = json.loads(f.read())
+
 logging = Logging()
-from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 
 from app import app
 
-#neighours to take for ring fencing
-NEIGHBOURS = 4
+# neighours to take for ring fencing
+NEIGHBOURS = parameters['neighbours_use']
+
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
     # decoding and re-encoding the already thrift-encoded message, we can just
     # add header bytes that specify that what follows is a list of length 1.
-    body =encoded_span
+    body = encoded_span
     requests.post(
-            'http://servicebridge:5002/zipkin',
+        'http://servicebridge:5002/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'},
     )
+
+
 @zipkin_span(service_name='ace_template_training', span_name='merge_highlights')
-def merge_highlights(box_list,page_number=0):
+def merge_highlights(box_list, page_number=0):
     '''
     Merge 2 or more words and get combined coordinates
     '''
@@ -77,7 +91,6 @@ def merge_highlights(box_list,page_number=0):
     total_width = 0
     word = ''
     top = -1
-
 
     if box_list and type(box_list[0]) is dict:
         for box in box_list:
@@ -91,73 +104,78 @@ def merge_highlights(box_list,page_number=0):
             except:
                 continue
 
-        return {'height': max_height, 'width': total_width, 'y': top, 'x': min_left, 'right':max_right, 'word': word.strip(), 'page':page_number}
+        return {'height': max_height, 'width': total_width, 'y': top, 'x': min_left, 'right': max_right,
+                'word': word.strip(), 'page': page_number}
     else:
         return {}
 
+
 @zipkin_span(service_name='ace_template_training', span_name='get_highlights')
-def get_highlights(value, ocr_data,scope,page_no):
+def get_highlights(value, ocr_data, scope, page_no):
     try:
         value = [val.lower() for val in value.split()]
     except:
         value = ''
-    ocr_data_box = ocrDataLocal(int(scope['y']),int(scope['x']),int(scope['x']+scope['width']),int(scope['y']+scope['height']),ocr_data[page_no])
+    ocr_data_box = ocrDataLocal(int(scope['y']), int(scope['x']), int(scope['x'] + scope['width']),
+                                int(scope['y'] + scope['height']), ocr_data[page_no])
     value_ocr = []
     for word in ocr_data_box:
         if word['word'].lower() in value:
             value_ocr.append(word)
-    return merge_highlights(value_ocr,page_no)
+    return merge_highlights(value_ocr, page_no)
 
 
 @zipkin_span(service_name='ace_template_training', span_name='get_area_intersection')
 def get_area_intersection(box, word, area_of_word):
-    box_l,box_r,box_b,box_t = box
-    word_l,word_r,word_b,word_t = word
+    box_l, box_r, box_b, box_t = box
+    word_l, word_r, word_b, word_t = word
 
-    mid_x = box_l+(box_r - box_l)/2
-    mid_y = box_t+(box_b - box_t)/2
+    mid_x = box_l + (box_r - box_l) / 2
+    mid_y = box_t + (box_b - box_t) / 2
 
     width = box_r - box_l
     height = box_b - box_t
 
-    margin_wid = (width*5)/100
-    margin_hig = (height*5)/100
+    margin_wid = (width * 5) / 100
+    margin_hig = (height * 5) / 100
 
-    #this means that word is can be too big for the box
+    # this means that word is can be too big for the box
     if (word_l >= box_l and word_l <= mid_x + margin_wid):
         dx = word_r - word_l
     else:
         dx = min(word_r, box_r) - max(word_l, box_l)
 
-    if(word_t >= box_t and word_t <= mid_y + margin_hig):
+    if (word_t >= box_t and word_t <= mid_y + margin_hig):
         dy = word_b - word_t
     else:
         dy = min(word_b, box_b) - max(word_t, box_t)
 
-    if (dx>=0) and (dy>=0):
-        return dx*dy
+    if (dx >= 0) and (dy >= 0):
+        return dx * dy
 
     return 0
+
 
 @zipkin_span(service_name='ace_template_training', span_name='percentage_inside')
 def percentage_inside(box, word):
     '''
     Get how much part of the word is inside the box
     '''
-    box_l,box_r,box_b,box_t = box
-    word_l,word_r,word_b,word_t = word
+    box_l, box_r, box_b, box_t = box
+    word_l, word_r, word_b, word_t = word
     area_of_word = (word_r - word_l) * (word_b - word_t)
     area_of_intersection = get_area_intersection(box, word, area_of_word)
     try:
-        return area_of_intersection/area_of_word
+        return area_of_intersection / area_of_word
     except:
         return 0
+
 
 @zipkin_span(service_name='ace_template_training', span_name='standardize_date')
 def standardize_date(all_data, input_format=[r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%Y'], standard_format=r'%Y-%m-%d'):
     # Find date related fields and change the format of the value to a standard one
     print(f'Changing date formats in extracted fields...')
-    #date_formats = [r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%Y']
+    # date_formats = [r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%Y']
 
     standard_format = r'%Y-%m-%d'
     for field_name, field_value in all_data.items():
@@ -180,60 +198,62 @@ def standardize_date(all_data, input_format=[r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%
         if "invoice number" in field_name.lower():
             if field_value is not None or field_value:
                 try:
-                    all_data[field_name] = field_value.replace(' ','')
+                    all_data[field_name] = field_value.replace(' ', '')
                 except:
-                    all_data[field_name] = field_value + 'suspicious'        
+                    all_data[field_name] = field_value + 'suspicious'
         if "gstin" in field_name.lower():
             if field_value is not None or field_value:
                 pattern = r"\d{2}[a-zA-Z]{5}\d{4}[a-zA-Z]{1}\d{1}[a-zA-Z]{1}\w"
                 try:
-                    valid_gstin = re.findall(pattern,field_value.replace('suspicious',''))[-1]
+                    valid_gstin = re.findall(pattern, field_value.replace('suspicious', ''))[-1]
                     all_data[field_name] = valid_gstin
                 except:
                     all_data[field_name] = field_value + 'suspicious'
         if "po number" in field_name.lower():
             if field_value is not None or field_value:
                 try:
-                    all_data[field_name] = field_value.replace('.','').replace(':','')[:10]
+                    all_data[field_name] = field_value.replace('.', '').replace(':', '')[:10]
                 except:
                     all_data[field_name] = field_value + 'suspicious'
         if field_name.lower() in ['invoice base amount', 'invoice total']:
             try:
-                all_data[field_name] = float(''.join(re.findall(r'[0-9\.]', field_value.replace('suspicious',''))))
+                all_data[field_name] = float(''.join(re.findall(r'[0-9\.]', field_value.replace('suspicious', ''))))
             except:
                 all_data[field_name] = field_value + 'suspicious'
     return all_data
 
+
 @zipkin_span(service_name='ace_template_training', span_name='correct_keyword')
-def correct_keyword(ocr_data, keyword_sentence, scope,value):
+def correct_keyword(ocr_data, keyword_sentence, scope, value):
     # Correct the last word of the keyword sentence
     # If ocr has "Invoice No:.", and keyword was trained as "Invoice No", this will make sure ocr word is saved as keyword
 
-    junk=''
-    val_to_check=''
+    junk = ''
+    val_to_check = ''
     if value:
-        val_to_check=value.split()[0]
+        val_to_check = value.split()[0]
 
-    kwList=keyword_sentence.split()
+    kwList = keyword_sentence.split()
     box_t = scope['y']
     box_r = scope['x'] + scope['width']
     box_b = scope['y'] + scope['height']
     box_l = scope['x']
 
-    if len(kwList)>1:
+    if len(kwList) > 1:
         for val in ocr_data:
-            if val['top']>=box_t and val['bottom']<=box_b and val['right']<=box_r and val['left']>=box_l:
+            if val['top'] >= box_t and val['bottom'] <= box_b and val['right'] <= box_r and val['left'] >= box_l:
                 if kwList[-1] in val['word'] and val['word'] not in kwList:
-                    if edit_distance(val['word'],kwList[-1]) <=3:
-                        kwList[-1]=val['word']
+                    if edit_distance(val['word'], kwList[-1]) <= 3:
+                        kwList[-1] = val['word']
                     elif val_to_check:
                         if val_to_check in val['word']:
-                            junk=kwList[-1]
+                            junk = kwList[-1]
                             kwList.pop(-1)
                     else:
                         kwList.pop(-1)
 
-    return ' '.join(kwList),junk
+    return ' '.join(kwList), junk
+
 
 @zipkin_span(service_name='ace_template_training', span_name='keyword_extract')
 def keyword_extract(ocr_data, keyword, scope):
@@ -241,112 +261,115 @@ def keyword_extract(ocr_data, keyword, scope):
     Get closest keyword to the trained keyword.
     '''
     regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:;]')
-    keyList=keyword.split()
-    keyLength=len(keyList)
-    keyCords=[]
-    counter=0
+    keyList = keyword.split()
+    keyLength = len(keyList)
+    keyCords = []
+    counter = 0
 
     # Search OCR for the key pattern
     for i, data in enumerate(ocr_data):
-        ocr_length=len(ocr_data)
-        check=False
+        ocr_length = len(ocr_data)
+        check = False
         data['word'] = data['word'].strip()
-        if(data['word']==keyList[0] or (regex.search(data['word'])!=None and keyList[0] in data['word'] )):
-            if(keyLength>1):
-                for x in range(0,keyLength):
-                    if (i+x) >= ocr_length:
-                        check=False
+        if (data['word'] == keyList[0] or (regex.search(data['word']) != None and keyList[0] in data['word'])):
+            if (keyLength > 1):
+                for x in range(0, keyLength):
+                    if (i + x) >= ocr_length:
+                        check = False
                         break
                     else:
-                        if(ocr_data[i+x]['word']==keyList[x] or (regex.search(ocr_data[i+x]['word'])!=None and  keyList[x] in ocr_data[i+x]['word'])):
-                            check=True
+                        if (ocr_data[i + x]['word'] == keyList[x] or (
+                                regex.search(ocr_data[i + x]['word']) != None and keyList[x] in ocr_data[i + x][
+                            'word'])):
+                            check = True
                         else:
-                            check=False
+                            check = False
                             break
             else:
-                check=True
+                check = True
 
-        tempCords=[{}]*1
-        if(check):
-            counter=counter+1
-            top=10000
-            bottom=0
+        tempCords = [{}] * 1
+        if (check):
+            counter = counter + 1
+            top = 10000
+            bottom = 0
             # Left is of the first word
-            if(data['word']==keyList[0] or (regex.search(data['word'])!=None and keyList[0] in  data['word'] )):
-                tempCords[0]['left']=data['left']
-                for x in range(0,keyLength):
+            if (data['word'] == keyList[0] or (regex.search(data['word']) != None and keyList[0] in data['word'])):
+                tempCords[0]['left'] = data['left']
+                for x in range(0, keyLength):
                     # Right is of the last word
-                    if(x==(keyLength-1)):
-                        tempCords[0]['right']=ocr_data[i+x]['right']
+                    if (x == (keyLength - 1)):
+                        tempCords[0]['right'] = ocr_data[i + x]['right']
 
                     # If multi word key
-                    if(keyLength>1):
-                        if(ocr_data[i+x]['word']==keyList[x]):
-                            if(ocr_data[i+x]['top']<top):
-                                top=ocr_data[i+x]['top']
-                            if(ocr_data[i+x]['bottom']>bottom):
-                                bottom=ocr_data[i+x]['bottom']
+                    if (keyLength > 1):
+                        if (ocr_data[i + x]['word'] == keyList[x]):
+                            if (ocr_data[i + x]['top'] < top):
+                                top = ocr_data[i + x]['top']
+                            if (ocr_data[i + x]['bottom'] > bottom):
+                                bottom = ocr_data[i + x]['bottom']
                     else:
-                        top=data['top']
-                        bottom=data['bottom']
+                        top = data['top']
+                        bottom = data['bottom']
 
-                tempCords[0]['top']=top
-                tempCords[0]['bottom']=bottom
+                tempCords[0]['top'] = top
+                tempCords[0]['bottom'] = bottom
                 keyCords.append(tempCords[0])
-    print('keyCords ',keyCords)
-    if(counter>0):
-        keysDict=keyCords
-        proceed=True
-        #First try to find keyword inside the trained box
-        pi=[]
-        for i,values in enumerate(keysDict):
-            trained_box=[scope['x'],scope['x']+scope['width'],scope['y']+scope['height'],scope['y']]
-            keysDict_box=[keysDict[i]['left'],keysDict[i]['right'],keysDict[i]['bottom'],keysDict[i]['top']]
-            pi.append(percentage_inside(trained_box,keysDict_box))
-        maxpi=max(pi)
+    print('keyCords ', keyCords)
+    if (counter > 0):
+        keysDict = keyCords
+        proceed = True
+        # First try to find keyword inside the trained box
+        pi = []
+        for i, values in enumerate(keysDict):
+            trained_box = [scope['x'], scope['x'] + scope['width'], scope['y'] + scope['height'], scope['y']]
+            keysDict_box = [keysDict[i]['left'], keysDict[i]['right'], keysDict[i]['bottom'], keysDict[i]['top']]
+            pi.append(percentage_inside(trained_box, keysDict_box))
+        maxpi = max(pi)
         if maxpi > 0.9:
-            minIndex=pi.index(maxpi)
-            proceed=False
+            minIndex = pi.index(maxpi)
+            proceed = False
 
         if proceed:
             print("Finding nearest to trained..")
-            #Find keyword nearest to trained box
-            inpX=(scope['y']+scope['y']+scope['height'])/2
-            inpY=(scope['x']+scope['x']+scope['width'])/2
-            DistList=[]
-            pi=[]
-            for i,values in enumerate(keysDict):
-                    # Store all keywords,distances in a Dict
-                    # Get midpoint of the input
-                    midheight=((keysDict[i]['top']+keysDict[i]['bottom'])/2)
-                    midwidth=((keysDict[i]['left']+keysDict[i]['right'])/2)
-                    x=abs(midheight-inpX)
-                    y=abs(midwidth-inpY)
-                    dist=math.sqrt((x*x)+(y*y))
-                    DistList.append(round(dist, 2))
-            closestKey=min(DistList)
-            minIndex=DistList.index(closestKey)
+            # Find keyword nearest to trained box
+            inpX = (scope['y'] + scope['y'] + scope['height']) / 2
+            inpY = (scope['x'] + scope['x'] + scope['width']) / 2
+            DistList = []
+            pi = []
+            for i, values in enumerate(keysDict):
+                # Store all keywords,distances in a Dict
+                # Get midpoint of the input
+                midheight = ((keysDict[i]['top'] + keysDict[i]['bottom']) / 2)
+                midwidth = ((keysDict[i]['left'] + keysDict[i]['right']) / 2)
+                x = abs(midheight - inpX)
+                y = abs(midwidth - inpY)
+                dist = math.sqrt((x * x) + (y * y))
+                DistList.append(round(dist, 2))
+            closestKey = min(DistList)
+            minIndex = DistList.index(closestKey)
 
-        key_top=keyCords[minIndex]['top']
-        key_bottom=keyCords[minIndex]['bottom']
-        key_left=keyCords[minIndex]['left']
-        key_right=keyCords[minIndex]['right']
+        key_top = keyCords[minIndex]['top']
+        key_bottom = keyCords[minIndex]['bottom']
+        key_left = keyCords[minIndex]['left']
+        key_right = keyCords[minIndex]['right']
 
-        return  {'height': key_bottom-key_top, 'width': key_right-key_left, 'y': key_top, 'x': key_left }
+        return {'height': key_bottom - key_top, 'width': key_right - key_left, 'y': key_top, 'x': key_left}
 
     else:
         print('keyword not found in OCR')
         return {}
 
+
 @zipkin_span(service_name='ace_template_training', span_name='get_cell_data')
-def get_cell_data(scope_,multi_way_field_info,resize_factor,ocr_data):
+def get_cell_data(scope_, multi_way_field_info, resize_factor, ocr_data):
     scope = scope_.copy()
     cell_data = {}
     for each_additional_key in multi_way_field_info['coordinates']:
         value_box = {}
 
         '''Resizing keywords coordinates'''
-        each_additional_key = resize_coordinates(each_additional_key,resize_factor)
+        each_additional_key = resize_coordinates(each_additional_key, resize_factor)
 
         each_additional_key['top'] = each_additional_key['y']
         each_additional_key['left'] = each_additional_key['x']
@@ -354,23 +377,25 @@ def get_cell_data(scope_,multi_way_field_info,resize_factor,ocr_data):
         each_additional_key['bottom'] = each_additional_key['y'] + each_additional_key['height']
         value_box['top'] = scope['y']
         value_box['left'] = scope['x']
-        value_box['bottom'] = scope['y']+scope['height']
-        value_box['right'] = scope['x']+scope['width']
+        value_box['bottom'] = scope['y'] + scope['height']
+        value_box['right'] = scope['x'] + scope['width']
 
-        context_ocr_data = ocrDataLocal(each_additional_key['y'],each_additional_key['x'],each_additional_key['x']+each_additional_key['width'],each_additional_key['y']+each_additional_key['height'],ocr_data)
+        context_ocr_data = ocrDataLocal(each_additional_key['y'], each_additional_key['x'],
+                                        each_additional_key['x'] + each_additional_key['width'],
+                                        each_additional_key['y'] + each_additional_key['height'], ocr_data)
         context_text = ' '.join([word['word'] for word in context_ocr_data])
         each_additional_key['keyword'] = context_text
-        direction = get_rel_info(each_additional_key,value_box,'direction')
+        direction = get_rel_info(each_additional_key, value_box, 'direction')
         try:
             cell_data[direction] = each_additional_key
         except Exception as e:
-            print('Error in making cell-data for multi key fields',e)
+            print('Error in making cell-data for multi key fields', e)
 
     return cell_data
 
-@zipkin_span(service_name='ace_template_training', span_name='resize_coordinates')
-def resize_coordinates(box,resize_factor):
 
+@zipkin_span(service_name='ace_template_training', span_name='resize_coordinates')
+def resize_coordinates(box, resize_factor):
     box["width"] = int(box["width"] / resize_factor)
     box["height"] = int(box["height"] / resize_factor)
     box["y"] = int(box["y"] / resize_factor)
@@ -390,7 +415,7 @@ def resize_coordinates(box,resize_factor):
 @zipkin_span(service_name='ace_template_training', span_name='get_requied_field_data')
 def get_requied_field_data(field):
     additional_splits = field['additional_splits']
-    fields = {'Left': '', 'Right':'', 'Top': '', 'Bottom': ''}
+    fields = {'Left': '', 'Right': '', 'Top': '', 'Bottom': ''}
     # dream scenario
     '''
     fields = {'top' : {}, 'left': {}, 'right': {}, 'bottom': {}
@@ -400,19 +425,19 @@ def get_requied_field_data(field):
 
     training_data_field = {}
     coord_counter = 0
-    for key,val in keyword_and_align.items():
+    for key, val in keyword_and_align.items():
         training_data_field[val] = {
-            'field' : val,
-            'keyword' : key,
-            'value' : '',
+            'field': val,
+            'keyword': key,
+            'value': '',
             'validation': {
                 'pattern': 'NONE',
                 'globalCheck': 'false'
-              },
-              'split' : 'no',
-              'coordinates' : coords[coord_counter],
-              'width' : field['width'],
-              'page' : coords[coord_counter]['page']
+            },
+            'split': 'no',
+            'coordinates': coords[coord_counter],
+            'width': field['width'],
+            'page': coords[coord_counter]['page']
         }
         coord_counter += 1
 
@@ -445,7 +470,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
     if checkb:
         print('enterred here')
         pattern = validation
-        print('checkbox_keys',checkboxes.keys())
+        print('checkbox_keys', checkboxes.keys())
 
         for keyword_ch, ch_field_box in checkboxes.items():
             if keyword_ch == 'id':
@@ -455,7 +480,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
 
             field_box = ch_field_box
             # print(field_box)
-            print('keyyyy',keyword_ch)
+            print('keyyyy', keyword_ch)
 
             # Resize field box
             field_box["width"] = int(field_box["width"] / resize_factor)
@@ -470,39 +495,42 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 'y': field_box['y'],
                 'width': field_box['width'],
                 'height': field_box['height']
-                }
+            }
             multi_key_field_info = {}
             context_key_field_info = {}
 
             try:
                 additional_field_info = field['additional_splits']
                 if additional_field_info['type'].lower() == '2d':
-                    cell_data = get_cell_data(scope,additional_field_info,resize_factor,ocr_data[int(page_no)])
+                    cell_data = get_cell_data(scope, additional_field_info, resize_factor, ocr_data[int(page_no)])
                     multi_key_field_info['cell_data'] = cell_data
                 elif additional_field_info['type'].lower() == 'context':
-                    context_coords = resize_coordinates(additional_field_info['coordinates'][0],resize_factor)
+                    context_coords = resize_coordinates(additional_field_info['coordinates'][0], resize_factor)
                     context_scope = {
-                                        'x':context_coords['x'],
-                                        'y':context_coords['y'],
-                                        'width':context_coords['width'],
-                                        'height':context_coords['height']
-                                    }
+                        'x': context_coords['x'],
+                        'y': context_coords['y'],
+                        'width': context_coords['width'],
+                        'height': context_coords['height']
+                    }
                     box = {}
                     box['width'] = context_coords['width']
                     box['height'] = context_coords['height']
                     relative = {
-                                'left': scope['x'] - context_scope['x'],
-                                'top': scope['y'] - context_scope['y']
-                                }
+                        'left': scope['x'] - context_scope['x'],
+                        'top': scope['y'] - context_scope['y']
+                    }
                     # print('context_coords',context_coords)
                     # print('ocr_data type',type(ocr_data))
-                    context_ocr_data = ocrDataLocal(context_coords['y'],context_coords['x'],context_coords['x']+context_coords['width'],context_coords['y']+context_coords['height'],ocr_data[int(page_no)])
+                    context_ocr_data = ocrDataLocal(context_coords['y'], context_coords['x'],
+                                                    context_coords['x'] + context_coords['width'],
+                                                    context_coords['y'] + context_coords['height'],
+                                                    ocr_data[int(page_no)])
                     context_text = ' '.join([word['word'] for word in context_ocr_data])
                     context_key_field_info = {
-                                                'text': context_text,
-                                                'box': box,
-                                                'relative':relative
-                                            }
+                        'text': context_text,
+                        'box': box,
+                        'relative': relative
+                    }
                 # print('multi_key_field_info',multi_key_field_info)
                 # print('context_key_field_info',context_key_field_info)
             except:
@@ -511,22 +539,22 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 Finding keyword using different method
                 bcoz I don't trust old method.Hence keyword_box_new
             '''
-            print('scope of checkbox ',scope)
-            haystack = ocrDataLocal(scope['y'],scope['x'],scope['x']+scope['width'],scope['y']+scope['height'],ocr_data[int(page_no)])
+            print('scope of checkbox ', scope)
+            haystack = ocrDataLocal(scope['y'], scope['x'], scope['x'] + scope['width'], scope['y'] + scope['height'],
+                                    ocr_data[int(page_no)])
             try:
-                print('haystach ',keyword_ch)
-                keyword_box_new = needle_in_a_haystack(keyword_ch,haystack)
-                print('keybox new ',keyword_box_new)
+                print('haystach ', keyword_ch)
+                keyword_box_new = needle_in_a_haystack(keyword_ch, haystack)
+                print('keybox new ', keyword_box_new)
             except Exception as e:
                 keyword_box_new = {}
-                print('Exception in finding keyword:',keyword_ch,'\nError:',e)
+                print('Exception in finding keyword:', keyword_ch, '\nError:', e)
 
             try:
-                value_meta = needle_in_a_haystack(field_value,haystack)
+                value_meta = needle_in_a_haystack(field_value, haystack)
             except Exception as e:
                 value_meta = {}
-                print('Exception in finding keyword',e)
-
+                print('Exception in finding keyword', e)
 
             # Box's Top, Right, Bottom, Left
             box_t = field_box['y']
@@ -538,24 +566,24 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
             # relative distance from keyword to box's edges
             # else save the box coordinates directly
             if keyword_ch:
-                print('key_ch ',keyword_ch)
+                print('key_ch ', keyword_ch)
                 regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:;]')
                 alphareg = re.compile(r'[a-zA-Z]')
-                keyList=keyword_ch.split()
-                print('key ist',keyList)
-                if len(keyList)>1:
+                keyList = keyword_ch.split()
+                print('key ist', keyList)
+                if len(keyList) > 1:
                     print('hereeeeee')
-                    if regex.search(keyList[-1])!=None and alphareg.search(keyList[-1])==None:
-                        #if the last word of keyword sentence containes only special characters
-                        junk=keyList[-1]
+                    if regex.search(keyList[-1]) != None and alphareg.search(keyList[-1]) == None:
+                        # if the last word of keyword sentence containes only special characters
+                        junk = keyList[-1]
                         del keyList[-1]
-                keyword_ch=' '.join(keyList)
+                keyword_ch = ' '.join(keyList)
                 # Get keyword's box coordinates
                 keyword_box = keyword_extract(ocr_data[int(page_no)], keyword_ch, scope)
 
-                print('keywooooorddd',keyword_box)
+                print('keywooooorddd', keyword_box)
                 if not keyword_box:
-                    keyword_2, junk = correct_keyword(ocr_data[int(page_no)], keyword_ch, scope ,field_value)
+                    keyword_2, junk = correct_keyword(ocr_data[int(page_no)], keyword_ch, scope, field_value)
                     keyword_box = keyword_extract(ocr_data[int(page_no)], keyword_2, scope)
                     if keyword_box:
                         # field['keyword']=keyword_ch=keyword_2    ###### changed here
@@ -574,8 +602,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                         'y': keyword_box['y'],
                         'width': keyword_box['width'],
                         'height': keyword_box['height']
-                        }
-
+                    }
 
                     # Calculate distance to box edges wrt keyword
                     top = keyword_t - box_t
@@ -593,7 +620,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 bottom = box_b
                 left = box_l
 
-            print('top',top,'b',bottom,'r',right,'l',left)
+            print('top', top, 'b', bottom, 'r', right, 'l', left)
             try:
                 print('in try loop')
                 cbdict = {
@@ -605,12 +632,12 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                     'validation': pattern if pattern else '',
                     'scope': scope,
                     'page': page_no
-                    }
+                }
                 if field_type not in checkboxes_all:
                     checkboxes_all[field_type] = [cbdict]
                 else:
                     checkboxes_all[field_type].append(cbdict)
-                print('final checkbox ',checkboxes_all)
+                print('final checkbox ', checkboxes_all)
             except Exception as e:
                 pass
     else:
@@ -630,15 +657,15 @@ def get_pre_processed_char(ocr_data):
 
     return pre_processed_char
 
+
 @zipkin_span(service_name='ace_template_training', span_name='get_trained_info')
 def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_keyword={}, pre_processed_char=[]):
-    print('fields',fields)
+    print('fields', fields)
     field_data = {}
     extracted_data = {}
 
     checkboxes_all = {}
     junk = ''
-
 
     if not pre_processed_char:
         pre_processed_char = get_pre_processed_char(ocr_data)
@@ -648,9 +675,9 @@ def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_key
         if not field['value']:
             continue
             field_data[field_type] = {
-                'value' : '',
-                'not trained' : True,
-                'keyword' : ''
+                'value': '',
+                'not trained': True,
+                'keyword': ''
             }
         else:
             field_type = field['field']
@@ -666,41 +693,35 @@ def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_key
             except:
                 kv_keywords = {}
 
-
             # logging.debug(f'values - {values}')
-            keyword, relative, kv_scope, split_check, context_key_field_info, feud, key_val_meta = predict_keywords(keywords, values, kv_keywords, ocr_data, page_no, pre_processed_char)
+            keyword, relative, kv_scope, split_check, context_key_field_info, feud, key_val_meta = predict_keywords(
+                keywords, values, kv_keywords, ocr_data, page_no, pre_processed_char)
 
             checkboxes_all = get_checkbox(field_type, field, checkboxes_all, validation)
 
-
             field_data[field_type] = {
                 'keyword': keyword,
-                'value' : field['value'],
+                'value': field['value'],
                 'top': relative['top'],
                 'right': relative['right'],
                 'bottom': relative['bottom'],
                 'left': relative['left'],
                 'scope': kv_scope,
-                'scope_value' : field['coordinates'][0],
-                'scope_key' : field['coordinates'][1] if len(field['coordinates']) > 1 else {},
+                'scope_value': field['coordinates'][0],
+                'scope_key': field['coordinates'][1] if len(field['coordinates']) > 1 else {},
                 'page': page_no,
-                'junk' : '',
-                'key_val_meta':key_val_meta,
-                'validation':validation,
-                'split_check' : split_check,
-                'multi_key_field_info':'',
-                'context_key_field_info':context_key_field_info,
-                'boundary_data' : feud
+                'junk': '',
+                'key_val_meta': key_val_meta,
+                'validation': validation,
+                'split_check': split_check,
+                'multi_key_field_info': '',
+                'context_key_field_info': context_key_field_info,
+                'boundary_data': feud
             }
-
 
     ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
 
-
-
-
-
-    #for saving to ner
+    # for saving to ner
     # train_params = {    "ocr_text":ocr_text,
     #                             "field_data":field_data
     #                         }
@@ -709,7 +730,7 @@ def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_key
     # route = 'train'
     # response = requests.post(f'http://{host}:{port}/{route}', json=train_params)
 
-    #training the ner keyword prediction model
+    # training the ner keyword prediction model
     # try:
     #     ner_model_path = './app/model/'
     #     keyword_trainer = KeywordTrainer(ner_model_path)
@@ -725,41 +746,42 @@ def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_key
 
 
 @zipkin_span(service_name='ace_template_training', span_name='update_queue_trace')
-def update_queue_trace(queue_db,case_id,latest):
+def update_queue_trace(queue_db, case_id, latest):
     queue_trace_q = "SELECT * FROM `trace_info` WHERE `case_id`=%s"
-    queue_trace_df = queue_db.execute(queue_trace_q,params=[case_id])
+    queue_trace_df = queue_db.execute(queue_trace_q, params=[case_id])
 
     if queue_trace_df.empty:
         message = f' - No such case ID `{case_id}` in `trace_info`.'
         print(f'ERROR: {message}')
-        return {'flag':False,'message':message}
+        return {'flag': False, 'message': message}
     # Updating Queue Name trace
     try:
         queue_trace = list(queue_trace_df.queue_trace)[0]
     except:
         queue_trace = ''
     if queue_trace:
-        queue_trace += ','+latest
+        queue_trace += ',' + latest
     else:
         queue_trace = latest
 
-    #Updating last_updated_time&date
+    # Updating last_updated_time&date
 
     try:
         last_updated_dates = list(queue_trace_df.last_updated_dates)[0]
     except:
         last_updated_dates = ''
     if last_updated_dates:
-        last_updated_dates += ','+ datetime.now().strftime(r'%d/%m/%Y %H:%M:%S')
+        last_updated_dates += ',' + datetime.now().strftime(r'%d/%m/%Y %H:%M:%S')
     else:
         last_updated_dates = datetime.now().strftime(r'%d/%m/%Y %H:%M:%S')
 
-    update = {'queue_trace':queue_trace}
-    where = {'case_id':case_id}
+    update = {'queue_trace': queue_trace}
+    where = {'case_id': case_id}
     update_q = "UPDATE `trace_info` SET `queue_trace`=%s, `last_updated_dates`=%s WHERE `case_id`=%s"
-    queue_db.execute(update_q,params=[queue_trace,last_updated_dates,case_id])
+    queue_db.execute(update_q, params=[queue_trace, last_updated_dates, case_id])
 
-    return {'flag':True,'message':'Updated Queue Trace'}
+    return {'flag': True, 'message': 'Updated Queue Trace'}
+
 
 @zipkin_span(service_name='ace_template_training', span_name='convert_coord_for_ui')
 def convert_coord_for_ui(value, page_no=0):
@@ -787,7 +809,7 @@ def prepare_predicted_data(values, field_name, keyword, page_no):
     if field['value']:
         field['value'] = ' '.join(field['value'])
 
-    valueCords = {'top':10000, 'bottom':0, 'right':0 ,'left':10000}
+    valueCords = {'top': 10000, 'bottom': 0, 'right': 0, 'left': 10000}
     for value in values:
         valueCords = merge_coord(valueCords, value)
 
@@ -800,6 +822,7 @@ def prepare_predicted_data(values, field_name, keyword, page_no):
     field['keycheck'] = True
 
     return field
+
 
 @zipkin_span(service_name='ace_template_training', span_name='get_max_marks_fields')
 def get_max_marks_fields(fields):
@@ -822,8 +845,9 @@ def get_max_marks_fields(fields):
 
     return max_fields
 
+
 @zipkin_span(service_name='ace_template_training', span_name='get_neighbourhood_dict')
-def get_neighbourhood_dict():
+def get_neighbourhood_dict(tenant_id=None):
     """
     Author : Akshat Goyal
 
@@ -834,7 +858,8 @@ def get_neighbourhood_dict():
         'host': 'template_db',
         'port': '3306',
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
     db_data = db.get_all('field_neighbourhood_dict')
@@ -857,7 +882,6 @@ def get_neighbourhood_dict():
         fields[field_type] = neighbourhood_dict
         field_orientation[field_type] = orientation_variation
 
-
     return fields, field_orientation
 
 
@@ -870,7 +894,7 @@ def get_distance(field, sorted_neighbourhood, ocr_data, pre_processed_char):
 
     """
 
-    #so that we can use field as scope
+    # so that we can use field as scope
     field_scope = convert_coord_for_ui(field, field['page'])
 
     dis = []
@@ -878,12 +902,12 @@ def get_distance(field, sorted_neighbourhood, ocr_data, pre_processed_char):
     for neighbour in sorted_neighbourhood:
         coord = get_coords(ocr_data, neighbour[0], field_scope, pre_processed_char)
         if coord:
-            #taking the neighbour location with heighest wieght and taking the coord
+            # taking the neighbour location with heighest wieght and taking the coord
             coord = sorted(coord, key=lambda x: x[1])[0][0]
 
-            #neighbour having close connection are closer than they appear
+            # neighbour having close connection are closer than they appear
             if neighbour[1] != 0:
-                distance = caculate_dis(coord, field)/neighbour[1]
+                distance = caculate_dis(coord, field) / neighbour[1]
             else:
                 distance = caculate_dis(coord, field)
 
@@ -921,61 +945,64 @@ def get_ring_fenced_field(fields, neighbourhood, ocr_data, pre_processed_char):
     return most_prob_field
 
 
-@zipkin_span(service_name='ace_template_training', span_name='pdf_to_image')
-def pdf_to_image(file_name):
-    source_folder = '/home/akshat/extract/Srini1300'
-    file_path  = Path(source_folder) / file_name
+# @zipkin_span(service_name='ace_template_training', span_name='pdf_to_image')
+# def pdf_to_image(file_name):
+#     source_folder = '/home/akshat/extract/Srini1300'
+#     file_path = Path(source_folder) / file_name
+#
+#     if not os.path.isfile(file_path):
+#         source_folder = '/var/www/training_api/app/invoice_files'
+#         file_path = Path(source_folder) / file_name
+#
+#     images = convert_from_path(file_path)
+#
+#     return images
+#
+#
+# @zipkin_span(service_name='ace_template_training', span_name='make_cv_box_list')
+# def make_cv_box_list(word_list, file_name, field_name):
+#     if file_name:
+#         images = pdf_to_image(file_name)
+#
+#     for word in word_list:
+#         make_cv_box(word, file_name, images, field_name)
+#
+#     cv2.destroyAllWindows()
+#
+#
+# @zipkin_span(service_name='ace_template_training', span_name='make_cv_box')
+# def make_cv_box(word_temp, file_path, images=None, field_name=''):
+#     global parameters
+#     if images is None:
+#         images = pdf_to_image(file_name)
+#
+#     print(word_temp)
+#     # if the word also have weightage
+#     if type(word_temp) is list:
+#         word = word_temp[0]
+#     else:
+#         word = word_temp
+#
+#     # converting to opencv image
+#     img = np.array(images[word['page']])
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#
+#     w, h, c = img.shape
+#     rf = parameters['default_img_width'] / int(h)
+#     img = cv2.resize(img, (0, 0), fx=rf, fy=rf)
+#     print(word)
+#     if type(word) == list:
+#         word = word[0]
+#
+#     cv2.rectangle(img, (int(word['left']), int(word['top'])), (int(word['right']), int(word['bottom'])), (0, 0, 255), 2)
+#
+#     img = cv2.resize(img, (0, 0), fx=1, fy=.75)
+#
+#     cv2.imshow(field_name, img)
+#     while (1):
+#         if cv2.waitKey() == 13:
+#             break
 
-    if  not os.path.isfile(file_path):
-        source_folder = '/var/www/training_api/app/invoice_files'
-        file_path  = Path(source_folder) / file_name
-
-    images = convert_from_path(file_path)
-
-    return images
-
-
-@zipkin_span(service_name='ace_template_training', span_name='make_cv_box_list')
-def make_cv_box_list(word_list, file_name, field_name):
-    if file_name:
-        images = pdf_to_image(file_name)
-
-    for word in word_list:
-        make_cv_box(word, file_name, images, field_name)
-
-    cv2.destroyAllWindows()
-
-@zipkin_span(service_name='ace_template_training', span_name='make_cv_box')
-def make_cv_box(word_temp, file_path, images = None, field_name=''):
-    if images is None:
-        images = pdf_to_image(file_name)
-
-    print(word_temp)
-    #if the word also have weightage
-    if type(word_temp) is list:
-        word = word_temp[0]
-    else:
-        word = word_temp
-
-    #converting to opencv image
-    img = np.array(images[word['page']])
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    w,h,c = img.shape
-    rf = 670/int(h)
-    img = cv2.resize(img, (0,0), fx=rf, fy=rf)
-    print(word)
-    if type(word) == list:
-        word = word[0]
-        
-    cv2.rectangle(img, (int(word['left']),int(word['top'])), (int(word['right']),int(word['bottom'])), (0,0,255), 2)
-
-    img = cv2.resize(img, (0,0), fx=1, fy=.75)
-
-    cv2.imshow(field_name, img)
-    while(1):
-        if cv2.waitKey() == 13:
-            break
 
 @zipkin_span(service_name='ace_template_training', span_name='get_predicted_fields')
 def get_predicted_fields(
@@ -986,8 +1013,9 @@ def get_predicted_fields(
         pre_processed_char,
         field_validations,
         quadrant_dict,
-        case_id=''
-    ):
+        case_id='',
+        tenant_id=None
+):
     """
     Author : Akshat Goyal
 
@@ -995,8 +1023,7 @@ def get_predicted_fields(
 
     predicted_fields = []
 
-    field_neighbourhood_dict, field_orientation_dict = get_neighbourhood_dict()
-
+    field_neighbourhood_dict, field_orientation_dict = get_neighbourhood_dict(tenant_id)
 
     logging.debug(f'field_neighbourhood_dict - {field_neighbourhood_dict}')
     logging.debug(f'fields_keyword - {fields_keywords}')
@@ -1015,15 +1042,14 @@ def get_predicted_fields(
                 continue
             max_fields = get_max_marks_fields(fields_keywords[field_name])
 
-            
-
             logging.debug(f'max field - {max_fields}')
 
             # if field_name == 'Invoice Total':
-                # make_cv_box_list(max_fields, file_name, field_name)
+            # make_cv_box_list(max_fields, file_name, field_name)
 
             if field_name in field_neighbourhood_dict:
-                ring_fenced_field = get_ring_fenced_field(max_fields, field_neighbourhood_dict[field_name], ocr_data, pre_processed_char)
+                ring_fenced_field = get_ring_fenced_field(max_fields, field_neighbourhood_dict[field_name], ocr_data,
+                                                          pre_processed_char)
             else:
                 ring_fenced_field = max_fields[0]
 
@@ -1033,11 +1059,13 @@ def get_predicted_fields(
             # logging.debug(f'all_values - {all_values[page_no]}')
             value = ''
 
-            if field_name in  field_orientation_dict:
-                values = kv_values_prediction(all_values[page_no], [ring_fenced_field], field_orientation_dict[field_name], field_validations.get('field_name', None))
+            if field_name in field_orientation_dict:
+                values = kv_values_prediction(all_values[page_no], [ring_fenced_field],
+                                              field_orientation_dict[field_name],
+                                              field_validations.get('field_name', None))
             else:
-                values = kv_values_prediction(all_values[page_no], [ring_fenced_field], {} , field_validations.get('field_name', None))
-
+                values = kv_values_prediction(all_values[page_no], [ring_fenced_field], {},
+                                              field_validations.get('field_name', None))
 
             logging.debug(f'value - {values}')
             if values:
@@ -1047,20 +1075,19 @@ def get_predicted_fields(
         else:
             print('no keyword is found')
             if case_id:
-                page_dimensions = get_page_dimension(case_id)
+                page_dimensions = get_page_dimension(case_id, tenant_id=tenant_id)
             else:
                 page_dimensions = {}
             # on which page will we find the value
             if field_name in quadrant_dict and page_dimensions:
                 values = []
                 for page in all_values:
-                    value_temp = keywords_lying_in_exact_quadrant_value(page, quadrant_dict[field_name], page_dimensions)
+                    value_temp = keywords_lying_in_exact_quadrant_value(page, quadrant_dict[field_name],
+                                                                        page_dimensions)
                     values.extend(value_temp)
 
                 if values:
                     field = prepare_predicted_data(values, field_name, None, values[0]['page'])
-
-
 
         if not field:
             field = {}
@@ -1084,16 +1111,17 @@ def get_trained_data_format(field):
     if field['value']:
         field_data = {
             'keyword': field['keyword'],
-            'value' : field['value'],
+            'value': field['value'],
             'scope': field['coordinates'][1] if len(field['coordinates']) > 1 else {},
-            'scope_value' : field['coordinates'][0],
+            'scope_value': field['coordinates'][0],
             'page': field['coordinates'][0]['page'],
-            'junk' : '',
+            'junk': '',
         }
     else:
         field_data = {}
 
     return field_data
+
 
 @zipkin_span(service_name='ace_template_training', span_name='get_nearest_neighbour')
 def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEIGHBOURS):
@@ -1113,20 +1141,21 @@ def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEI
         for keyword in field_neighbourhood[field]:
             logging.debug(f'field_data - ', field_data['scope'])
             if keyword['right'] - keyword['left'] > 0 \
-                and field_data['scope']['right'] - field_data['scope']['left'] > 0:
+                    and field_data['scope']['right'] - field_data['scope']['left'] > 0:
 
                 distance = caculate_dis(field_data['scope'], keyword)
                 if keyword['word']:
                     dis.add((keyword['word'], distance))
         if dis:
             dis = list(dis)
-            dis = sorted(dis, key=lambda x: x[1] )
+            dis = sorted(dis, key=lambda x: x[1])
             neighbour_dict[field] = dis[:no_of_neighbour]
 
     return neighbour_dict
 
+
 @zipkin_span(service_name='ace_template_training', span_name='update_field_dict')
-def update_field_dict(config):
+def update_field_dict(config, tenant_id):
     """
     Author : Akshat Goyal
     """
@@ -1135,11 +1164,12 @@ def update_field_dict(config):
         'host': 'template_db',
         'port': '3306',
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
 
-    old_field_dict = get_field_dict(for_update=True)
+    old_field_dict = get_field_dict(for_update=True, tenant_id=tenant_id)
     table_name = 'field_dict'
 
     new_fields = {}
@@ -1148,14 +1178,14 @@ def update_field_dict(config):
         if field_type in old_field_dict:
             new_fields[field_type] = {}
             new_fields[field_type].update(old_field_dict[field_type])
-            if  value not in old_field_dict[field_type]:
+            if value not in old_field_dict[field_type]:
                 new_fields[field_type][value] = 1
             else:
                 new_fields[field_type][value] = old_field_dict[field_type][value] + 1
 
 
         elif field_type not in old_field_dict:
-            new_fields[field_type] = {value : 1}
+            new_fields[field_type] = {value: 1}
 
     for field_type, value in new_fields.items():
         var = json.dumps(value)
@@ -1169,16 +1199,20 @@ def update_field_dict(config):
         if check:
             try:
                 if value != old_field_dict[field_type]:
-                    update = "UPDATE {} SET `variation` = '{}' WHERE `field_type` = '{}'".format(table_name, var, field_type)
+                    update = "UPDATE {} SET `variation` = '{}' WHERE `field_type` = '{}'".format(table_name, var,
+                                                                                                 field_type)
                     db.execute(update)
             except:
-                insert = "INSERT INTO {} (`field_type`, `variation`) VALUES ('{}', '{}')".format(table_name, field_type, var)
+                insert = "INSERT INTO {} (`field_type`, `variation`) VALUES ('{}', '{}')".format(table_name, field_type,
+                                                                                                 var)
                 db.execute(insert)
         else:
-            insert = "INSERT INTO {} (`field_type`, `variation`) VALUES ('{}', '{}')".format(table_name, field_type, var)
+            insert = "INSERT INTO {} (`field_type`, `variation`) VALUES ('{}', '{}')".format(table_name, field_type,
+                                                                                             var)
             db.execute(insert)
 
     return "Updated Field Dict"
+
 
 @zipkin_span(service_name='ace_template_training', span_name='merge_neightbour_dict_value')
 def merge_neightbour_dict_value(old_neighbours, maybe_new_neighbours, multi=False):
@@ -1191,13 +1225,13 @@ def merge_neightbour_dict_value(old_neighbours, maybe_new_neighbours, multi=Fals
     if not multi:
         new_neighbours = [maybe_new_neighbours[0]]
     else:
-        new_neighbours = [neighbour[0] for neighbour in  maybe_new_neighbours]
+        new_neighbours = [neighbour[0] for neighbour in maybe_new_neighbours]
 
-    #for finding same word in old neighours
+    # for finding same word in old neighours
     for neighbour, count in old_neighbours.items():
         new_neighbours_list[neighbour] = count
         for new_neighbour in new_neighbours:
-            if SequenceMatcher(None,neighbour,new_neighbour).ratio()>0.9:
+            if SequenceMatcher(None, neighbour, new_neighbour).ratio() > 0.9:
                 new_neighbours_list[neighbour] += 1
                 new_neighbours.remove(new_neighbour)
                 break
@@ -1225,7 +1259,7 @@ def merge_key_orientation(old_orientation_list, orientation):
     for neighbour, count in old_orientation_list:
         if neighbour == orientation:
             orientation_consumed = True
-            new_orientation_list.append([neighbour, count+1])
+            new_orientation_list.append([neighbour, count + 1])
         else:
             new_orientation_list.append([neighbour, count])
 
@@ -1233,6 +1267,7 @@ def merge_key_orientation(old_orientation_list, orientation):
         new_orientation_list.append([orientation, 1])
 
     return new_orientation_list
+
 
 @zipkin_span(service_name='ace_template_training', span_name='get_orientation_dict')
 def get_orientation_dict(trained_info):
@@ -1246,8 +1281,9 @@ def get_orientation_dict(trained_info):
 
     return orientation_dict
 
+
 @zipkin_span(service_name='ace_template_training', span_name='update_field_neighbour_dict')
-def update_field_neighbour_dict(neighbour_dict, trained_info):
+def update_field_neighbour_dict(neighbour_dict, trained_info, tenant_id=None):
     """
     Author : Akshat Goyal
     """
@@ -1255,21 +1291,20 @@ def update_field_neighbour_dict(neighbour_dict, trained_info):
         'host': 'template_db',
         'port': '3306',
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
 
-    old_neighbour_dict, old_orientation_dict = get_neighbourhood_dict()
+    old_neighbour_dict, old_orientation_dict = get_neighbourhood_dict(tenant_id)
     new_fields = {}
     new_orientation_dict = {}
     table_name = 'field_neighbourhood_dict'
 
     orientation_dict = get_orientation_dict(trained_info)
 
-
     logging.debug(f'old_neighbour_dict - {old_neighbour_dict}')
     logging.debug(f'neighbour_dict - {neighbour_dict}')
-
 
     for field_type, neighbours in neighbour_dict.items():
         if field_type not in old_neighbour_dict:
@@ -1278,8 +1313,8 @@ def update_field_neighbour_dict(neighbour_dict, trained_info):
         else:
             new_values = merge_neightbour_dict_value(old_neighbour_dict[field_type], neighbours, multi=True)
             new_fields[field_type] = new_values
-            new_orientation_dict[field_type] = merge_key_orientation(old_orientation_dict[field_type], orientation_dict[field_type])
-
+            new_orientation_dict[field_type] = merge_key_orientation(old_orientation_dict[field_type],
+                                                                     orientation_dict[field_type])
 
     for field_type, value in new_fields.items():
         var = json.dumps(value)
@@ -1293,16 +1328,22 @@ def update_field_neighbour_dict(neighbour_dict, trained_info):
         if check:
             try:
                 if value != old_neighbour_dict[field_type]:
-                    update = "UPDATE {} SET `neighbourhood_dict` = '{}', `orientation_variation` = '{}' WHERE `field` = '{}'".format(table_name, var, json.dumps(new_orientation_dict[field_type]), field_type)
+                    update = "UPDATE {} SET `neighbourhood_dict` = '{}', `orientation_variation` = '{}' WHERE `field` " \
+                             "= '{}'".format(
+                        table_name, var, json.dumps(new_orientation_dict[field_type]), field_type)
                     db.execute(update)
             except:
-                insert = "INSERT INTO {} (`field`, `neighbourhood_dict`, `orientation_variation`) VALUES ('{}', '{}', '{}')".format(table_name, field_type, var, json.dumps(new_orientation_dict[field_type]))
+                insert = "INSERT INTO {} (`field`, `neighbourhood_dict`, `orientation_variation`) VALUES ('{}', '{}', " \
+                         "'{}')".format(
+                    table_name, field_type, var, json.dumps(new_orientation_dict[field_type]))
                 db.execute(insert)
         else:
-            insert = "INSERT INTO {} (`field`, `neighbourhood_dict`, `orientation_variation`) VALUES ('{}', '{}', '{}')".format(table_name, field_type, var, json.dumps(new_orientation_dict[field_type]))
+            insert = "INSERT INTO {} (`field`, `neighbourhood_dict`, `orientation_variation`) VALUES ('{}', '{}', '{}')".format(
+                table_name, field_type, var, json.dumps(new_orientation_dict[field_type]))
             db.execute(insert)
 
     return "Updated Field neighbourhood dict"
+
 
 @zipkin_span(service_name='ace_template_training', span_name='get_field_dict_from_info')
 def get_field_dict_from_info(trained_info):
@@ -1319,6 +1360,7 @@ def get_field_dict_from_info(trained_info):
                 pass
     return dictionary
 
+
 @zipkin_span(service_name='ace_template_training', span_name='prepare_neighbours')
 def prepare_neighbours(ocr_field_keyword, trained_info):
     field_neighbourhood = {}
@@ -1334,18 +1376,17 @@ def prepare_neighbours(ocr_field_keyword, trained_info):
                     field_neighbourhood[field] = [keyword[0] for keyword in keywords]
                 # logging.debug(f'field_neighbourhood - {field_neighbourhood[field]}')
 
-
     return field_neighbourhood
 
+
 @zipkin_span(service_name='ace_template_training', span_name='extract_quadrant_information')
-def extract_quadrant_information(trained_info, case_id):
+def extract_quadrant_information(trained_info, case_id, tenant_id=None):
     """
     Author : Akshat Goyal
     """
     quadrant_info = {}
 
-    page_dimensions = get_page_dimension(case_id)
-
+    page_dimensions = get_page_dimension(case_id, tenant_id=tenant_id)
 
     for field, field_data in trained_info.items():
         field_page = field_data['page']
@@ -1357,7 +1398,7 @@ def extract_quadrant_information(trained_info, case_id):
 
 
 @zipkin_span(service_name='ace_template_training', span_name='update_quadrant_dict')
-def update_quadrant_dict(quadrant_dict):
+def update_quadrant_dict(quadrant_dict, tenant_id):
     """
     Author : Akshat Goyal
     """
@@ -1365,11 +1406,12 @@ def update_quadrant_dict(quadrant_dict):
         'host': 'template_db',
         'port': '3306',
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
 
-    old_quadrant_dict = get_quadrant_dict(for_update=True)
+    old_quadrant_dict = get_quadrant_dict(for_update=True, tenant_id=tenant_id)
 
     new_quadrant_dict = {}
 
@@ -1378,14 +1420,14 @@ def update_quadrant_dict(quadrant_dict):
         if field in old_quadrant_dict:
             new_quadrant_dict[field] = {}
             new_quadrant_dict[field].update(old_quadrant_dict[field])
-            if  quad not in old_quadrant_dict[field]:
+            if quad not in old_quadrant_dict[field]:
                 new_quadrant_dict[field][quad] = 1
             else:
                 new_quadrant_dict[field][quad] = old_quadrant_dict[field][quad] + 1
         else:
-            new_quadrant_dict[field] = {quad : 1}
+            new_quadrant_dict[field] = {quad: 1}
 
-        #adding to db
+        # adding to db
         table_name = 'field_quadrant_dict'
 
         var = json.dumps(new_quadrant_dict[field])
@@ -1411,15 +1453,15 @@ def update_quadrant_dict(quadrant_dict):
 
 
 @zipkin_span(service_name='ace_template_training', span_name='update_field_dict_with_neighbour')
-def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char, case_id):
+def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char, case_id, tenant_id=None):
     """
     Author : Akshat Goyal
     """
     dictionary = get_field_dict_from_info(trained_info)
 
-    update_field_dict(dictionary)
+    update_field_dict(dictionary, tenant_id=tenant_id)
 
-    field_with_variation = get_field_dict()
+    field_with_variation = get_field_dict(tenant_id=tenant_id)
 
     _, ocr_field_keyword = get_keywords(ocr_data, field_with_variation, pre_processed_char, field_with_variation)
 
@@ -1430,14 +1472,14 @@ def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char,
 
     logging.debug(f'neighbour_dict - {neighbour_dict}')
 
+    update_field_neighbour_dict(neighbour_dict, trained_info, tenant_id)
 
-    update_field_neighbour_dict(neighbour_dict, trained_info)
+    quadrant_dict = extract_quadrant_information(trained_info, case_id, tenant_id=tenant_id)
 
-    quadrant_dict = extract_quadrant_information(trained_info, case_id)
-
-    update_quadrant_dict(quadrant_dict)
+    update_quadrant_dict(quadrant_dict, tenant_id=tenant_id)
 
     return True
+
 
 @zipkin_span(service_name='ace_template_training', span_name='remove_keys')
 def remove_keys(ocr_data, ocr_keywords):
@@ -1454,8 +1496,9 @@ def remove_keys(ocr_data, ocr_keywords):
             for key in ocr_keywords:
                 logging.debug(f"key - {key}")
 
-                if percentage_inside([word['left'], word['right'], word['bottom'], word['top']],\
-                    [key['left'], key['right'], key['bottom'], key['top']]) > 0.7:
+                if percentage_inside([word['left'], word['right'], word['bottom'], word['top']], \
+                                     [key['left'], key['right'], key['bottom'],
+                                      key['top']]) > parameters['remove_key_match_threshold']:
                     word_match = True
             if not word_match:
                 page_values.append(word)
@@ -1466,13 +1509,14 @@ def remove_keys(ocr_data, ocr_keywords):
 
 
 @zipkin_span(service_name='ace_template_training', span_name='get_field_validations')
-def get_field_validations():
+def get_field_validations(tenant_id=None):
     # * Get the OCR tab ID
     db_config = {
         'host': 'queue_db',
         'user': 'root',
         'password': 'root',
-        'port': '3306'
+        'port': '3306',
+        'tenant_id': tenant_id
     }
     queue_db = DB('queues', **db_config)
 
@@ -1493,46 +1537,48 @@ def get_field_validations():
 
 
 '''Utility functions table info '''
+
+
 @zipkin_span(service_name='ace_template_training', span_name='header_helper')
 def header_helper(json_data):
     result = []
-    for k,v in json_data.items():
+    for k, v in json_data.items():
         if type(v) is dict:
-            for key,value in v.items():
-                if(key == 'label' and k.startswith('v')):
-                    result.append((k,value))
+            for key, value in v.items():
+                if (key == 'label' and k.startswith('v')):
+                    result.append((k, value))
 
     header_list_dict = {}
-    split_cols={}
+    split_cols = {}
     prev_key = result[0][0]
     for each in result:
-        if(prev_key in each[0] and prev_key in header_list_dict):
+        if (prev_key in each[0] and prev_key in header_list_dict):
             split_cols[prev_key].append(each[1])
-            header_list_dict[prev_key] += ' '+each[1]
+            header_list_dict[prev_key] += ' ' + each[1]
         else:
             split_cols[each[0]] = [each[1]]
             header_list_dict[each[0]] = each[1]
             prev_key = each[0]
     col_children_no = {}
-    for k,v in split_cols.items():
+    for k, v in split_cols.items():
         col_children = {}
-        if(len(v)>1):
-            for i in range(1,len(v)):
-                if(v[0] in col_children):
+        if (len(v) > 1):
+            for i in range(1, len(v)):
+                if (v[0] in col_children):
                     col_children[v[0]].append(v[i])
                 else:
                     col_children[v[0]] = [v[i]]
         if col_children:
             col_children_no[k] = col_children
 
-    return header_list_dict,col_children_no
+    return header_list_dict, col_children_no
+
 
 @zipkin_span(service_name='ace_template_training', span_name='get_header_list')
 def get_header_list(json_data):
-    header_list_dict,col_children_no = header_helper(json_data)
-    header_list=[v for k,v in header_list_dict.items()]
-    return header_list,col_children_no
-
+    header_list_dict, col_children_no = header_helper(json_data)
+    header_list = [v for k, v in header_list_dict.items()]
+    return header_list, col_children_no
 
 
 @app.route('/force_template', methods=['POST', 'GET'])
@@ -1556,7 +1602,8 @@ def force_template():
             'host': 'queue_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
 
@@ -1565,7 +1612,8 @@ def force_template():
             'host': 'extraction_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
 
         extraction_db = DB('extraction', **extraction_db_config)
@@ -1574,25 +1622,24 @@ def force_template():
             'host': 'stats_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
 
         stats_db = DB('stats', **stats_db_config)
 
-        fields = {}
-        fields['template_name'] = template_name
-        fields['cluster'] = None
-        fields['queue'] = 'Processing'
+        fields = {'template_name': template_name, 'cluster': None, 'queue': 'Processing'}
 
         # Insert a new record for each file of the cluster with template name set and cluster removed
         print(f'Extracting for case ID `{case_id}`')
 
         if retrain == 'yes':
             queue_db.update('process_queue', update=fields, where={'case_id': case_id})
-            extraction_db.execute('DELETE from `ocr` where `case_id` = %s', params = [case_id])
-            extraction_db.execute('DELETE from `business_rule` where `case_id` = %s', params = [case_id])
+            extraction_db.execute('DELETE from `ocr` where `case_id` = %s', params=[case_id])
+            extraction_db.execute('DELETE from `business_rule` where `case_id` = %s', params=[case_id])
             audit_data = {
-                "type": "update", "last_modified_by": "Force Template", "table_name": "process_queue", "reference_column": "case_id",
+                "type": "update", "last_modified_by": "Force Template", "table_name": "process_queue",
+                "reference_column": "case_id",
                 "reference_value": case_id, "changed_data": json.dumps(fields)
             }
             stats_db.insert_dict(audit_data, 'audit')
@@ -1609,9 +1656,10 @@ def force_template():
 
         queue_db.update('process_queue', update=fields, where={'case_id': case_id})
         audit_data = {
-                "type": "update", "last_modified_by": "Force Template", "table_name": "process_queue", "reference_column": "case_id",
-                "reference_value": case_id, "changed_data": json.dumps(fields)
-            }
+            "type": "update", "last_modified_by": "Force Template", "table_name": "process_queue",
+            "reference_column": "case_id",
+            "reference_value": case_id, "changed_data": json.dumps(fields)
+        }
         stats_db.insert_dict(audit_data, 'audit')
 
         # Send case ID to extraction topic
@@ -1641,7 +1689,8 @@ def force_template():
 
             queue_db.update('process_queue', update=fields, where={'case_id': cluster_case_id})
             audit_data = {
-                "type": "update", "last_modified_by": "Force Template Cluster", "table_name": "process_queue", "reference_column": "case_id",
+                "type": "update", "last_modified_by": "Force Template Cluster", "table_name": "process_queue",
+                "reference_column": "case_id",
                 "reference_value": case_id, "changed_data": json.dumps(fields)
             }
             stats_db.insert_dict(audit_data, 'audit')
@@ -1649,8 +1698,8 @@ def force_template():
             # Send case ID to extraction topic
             produce('extract', {'case_id': cluster_case_id})
 
-
         return jsonify({'flag': True, 'message': 'Successfully extracted!'})
+
 
 @app.route('/retrain', methods=['POST', 'GET'])
 def retrain():
@@ -1672,7 +1721,8 @@ def retrain():
             'host': 'queue_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
         # queue_db = DB('queues')
@@ -1681,7 +1731,8 @@ def retrain():
             'host': 'template_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         trained_db = DB('template_db', **trained_db_config)
         # trained_db = DB('template_db')
@@ -1690,7 +1741,8 @@ def retrain():
             'host': 'table_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         table_db = DB('table_db', **table_db_config)
         # trained_db = DB('template_db')
@@ -1699,7 +1751,8 @@ def retrain():
             'host': 'extraction_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extarction_db_config)
         # extraction_db = DB('extraction')
@@ -1708,7 +1761,8 @@ def retrain():
             'host': 'stats_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
 
         stats_db = DB('stats', **stats_db_config)
@@ -1743,7 +1797,8 @@ def retrain():
             table_data_column_values = {
                 'template_name': template_name,
                 'method': table_method,
-                'table_data': json.dumps(table_trained_info) #bytes(table_trained_info, 'utf-8').decode('utf-8', 'ignore')
+                'table_data': json.dumps(table_trained_info)
+                # bytes(table_trained_info, 'utf-8').decode('utf-8', 'ignore')
             }
             table_db.insert_dict(table_data_column_values, 'table_info')
         except:
@@ -1752,7 +1807,6 @@ def retrain():
         # process_queue_df = queue_db.get_all('process_queue')
         query = "SELECT * from process_queue where case_id = %s"
         latest_case = queue_db.execute(query, params=[case_id])
-
 
         # * Calculate relative positions and stuff
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
@@ -1767,7 +1821,7 @@ def retrain():
             'field_data': json.dumps(trained_data),
         }
         # trained_db.insert_dict(trained_data_column_values, 'trained_info')
-        trained_db.update('trained_info', update=trained_data_column_values, where={'template_name':template_name})
+        trained_db.update('trained_info', update=trained_data_column_values, where={'template_name': template_name})
         # TODO: Add table data into a table training microservice database
 
         # * Save extracted data to ocr table
@@ -1788,9 +1842,9 @@ def retrain():
                 print(f' - `{column_name}` does not exist in `ocr` table. Skipping field.')
                 continue
 
-            #Add highlight to the dict
-            #extracted_column_values['highlight'] = highlight
-            highlight = get_highlights(value, ocr_data,value_scope[0],page_no)
+            # Add highlight to the dict
+            # extracted_column_values['highlight'] = highlight
+            highlight = get_highlights(value, ocr_data, value_scope[0], page_no)
             extracted_column_values['highlight'][column_name] = highlight
 
             extracted_column_values[column_name] = value
@@ -1800,13 +1854,12 @@ def retrain():
         standardized_data['highlight'] = json.dumps(extracted_column_values['highlight'])
         if table_check:
             standardized_data['Table'] = trained_table
-        extraction_db.update('ocr',standardized_data,{'case_id':case_id})
+        extraction_db.update('ocr', standardized_data, {'case_id': case_id})
         audit_data = {
-                "type": "update", "last_modified_by": "Train", "table_name": "ocr", "reference_column": "case_id",
-                "reference_value": case_id, "changed_data": json.dumps(standardized_data)
-            }
+            "type": "update", "last_modified_by": "Train", "table_name": "ocr", "reference_column": "case_id",
+            "reference_value": case_id, "changed_data": json.dumps(standardized_data)
+        }
         stats_db.insert_dict(audit_data, 'audit')
-
 
         return jsonify({'flag': True, 'message': 'Retraining completed!'})
 
@@ -1820,6 +1873,7 @@ def test_fields():
             transport_handler=http_transport,
             sample_rate=0.5,
     ):
+        global  parameters
         tenant_id = ''
         if 'tenant_id' in data:
             tenant_id = data['tenant_id']
@@ -1831,7 +1885,8 @@ def test_fields():
             'host': 'queue_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
 
@@ -1839,7 +1894,8 @@ def test_fields():
             'host': 'template_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         templates_db = DB('template_db', **template_db_config)
 
@@ -1859,19 +1915,18 @@ def test_fields():
         else:
             field_data = data['field_data']
             updated_fields = {}
-            for key,field in field_data.items():
+            for key, field in field_data.items():
                 if not field.get('not_in_invoice', False):
                     updated_fields[key] = field
 
-            resize_factor = data['width']/670
-            trained_info,checkboxes_all  = get_trained_info(ocr_data, updated_fields,resize_factor)
+            resize_factor = data['width'] / parameters['default_img_width']
+            trained_info, checkboxes_all = get_trained_info(ocr_data, updated_fields, resize_factor)
             logging.info(f'trained_info `{trained_info}`')
             logging.info(f'checkbox_info `{checkboxes_all}`')
 
-
-        value_extract_params = {    "case_id":case_id,
-                                    "field_data":trained_info,
-                                    "checkbox_data":checkboxes_all
+        value_extract_params = {"case_id": case_id,
+                                "field_data": trained_info,
+                                "checkbox_data": checkboxes_all
                                 }
 
         host = 'extractionapi'
@@ -1881,8 +1936,9 @@ def test_fields():
         print(f'Sending Data: {value_extract_params}')
         headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
         response = requests.post(f'http://{host}:{port}/{route}', json=value_extract_params, headers=headers)
-        print('response',response.content)
-        return jsonify({'flag':'true', 'data':response.json()})
+        print('response', response.content)
+        return jsonify({'flag': 'true', 'data': response.json()})
+
 
 @app.route('/train', methods=['POST', 'GET'])
 def train():
@@ -1899,7 +1955,7 @@ def train():
 
         # ! Requires `template_name`, `extracted_data`, `case_id`, `trained_data`, `resize_factor`
         # ! `header_ocr`, `footer_ocr`, `address_ocr`
-        print('ui_data',ui_data)
+        print('ui_data', ui_data)
         # Database configuration
         db_config = {
             'host': 'queue_db',
@@ -1925,7 +1981,8 @@ def train():
             'host': 'table_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
         table_db = DB('table_db', **table_db_config)
         # trained_db = DB('template_db')
@@ -1944,7 +2001,8 @@ def train():
             'host': 'stats_db',
             'user': 'root',
             'password': 'root',
-            'port': '3306'
+            'port': '3306',
+            'tenant_id': tenant_id
         }
 
         stats_db = DB('stats', **stats_db_config)
@@ -1953,7 +2011,7 @@ def train():
         new_vendor = ui_data['temp_type']
         fields = ui_data['fields']
         updated_fields = {}
-        for key,field in fields.items():
+        for key, field in fields.items():
             if not field.get('not_in_invoice', False):
                 updated_fields[key] = field
         fields = updated_fields
@@ -1972,7 +2030,7 @@ def train():
         resize_factor = ui_data['resize_factor']
         header_ocr = ui_data['template']['header_ocr']['value']
         footer_ocr = ui_data['template']['footer_ocr']['value']
-        address_ocr = [ui_data['template']['address_ocr']['value']] # A list because ... idk ask Ashish
+        address_ocr = [ui_data['template']['address_ocr']['value']]  # A list because ... idk ask Ashish
         try:
             unique_fields = ui_data['template']['uniqueFields']['fields']
             condition = ui_data['template']['uniqueFields']['condition']
@@ -1993,24 +2051,23 @@ def train():
             except:
                 table_method = ''
 
-
             table_data_column_values = {
                 'template_name': template_name,
                 'method': table_method,
-                'table_data': json.dumps(table_trained_info) #bytes(table_trained_info, 'utf-8').decode('utf-8', 'ignore')
+                'table_data': json.dumps(table_trained_info)
+                # bytes(table_trained_info, 'utf-8').decode('utf-8', 'ignore')
             }
             table_db.insert_dict(table_data_column_values, 'table_info')
-
 
             # saving table headers dictionary
             try:
                 json_data = table_trained_info
-                header_list,col_children_no = get_header_list(json_data)
+                header_list, col_children_no = get_header_list(json_data)
                 table_header_list_dict = {}
                 table_keywords_dict = {}
                 for header in header_list:
                     table_header_list_dict[header] = ''
-                    [table_keywords_dict.update({ word : ''}) for word in header.split()]
+                    [table_keywords_dict.update({word: ''}) for word in header.split()]
                 table_keywords = {
                     'table_header_list': table_header_list_dict,
                     'table_keywords': table_keywords_dict
@@ -2030,7 +2087,7 @@ def train():
                     'table_keywords': json.dumps(table_keywords_old)
                 }
                 where = {'id': 0}
-                table_db.update('table_keywords',update=table_keywords, where=where)
+                table_db.update('table_keywords', update=table_keywords, where=where)
             except Exception as e:
                 print(e)
                 print('error in saving table keywords')
@@ -2043,15 +2100,13 @@ def train():
         process_queue_df = queue_db.execute(query)
         # latest_process_queue = queue_db.get_latest(process_queue_df, 'case_id', 'created_date')
         query = "SELECT * from process_queue where case_id = %s"
-        latest_case = queue_db.execute(query,params=[case_id])
-
+        latest_case = queue_db.execute(query, params=[case_id])
 
         # * Calculate relative positions and stuff
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queue_db.execute(query, params=params)
         ocr_data = json.loads(list(ocr_info.ocr_data)[0])
-
 
         trained_data, checkboxes_all = get_trained_info(ocr_data, fields, resize_factor)
 
@@ -2061,7 +2116,7 @@ def train():
             char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
             pre_processed_char.append([char_index_list, haystack])
 
-        update_field_dict_with_neighbour(trained_data, ocr_data, pre_processed_char, case_id)
+        update_field_dict_with_neighbour(trained_data, ocr_data, pre_processed_char, case_id, tenant_id=tenant_id)
 
         # * Add trained information & template name into `trained_info` table
         trained_data_column_values = {
@@ -2077,9 +2132,9 @@ def train():
         trained_db.insert_dict(trained_data_column_values, 'trained_info')
 
         ui_train_data = {
-            'case_id' : case_id,
-            'template_name' : template_name,
-            'ui_train_info' : json.dumps(ui_data)
+            'case_id': case_id,
+            'template_name': template_name,
+            'ui_train_info': json.dumps(ui_data)
         }
 
         trained_db.insert_dict(ui_train_data, 'ui_train_data')
@@ -2091,7 +2146,7 @@ def train():
         extracted_column_values = {'case_id': case_id}
         columns_in_ocr = extraction_db.get_column_names('ocr')
         extracted_column_values['highlight'] = {}
-        print(fields, '*'*50)
+        print(fields, '*' * 50)
         for _, field in fields.items():
             column_name = field['field']
             value = field['value']
@@ -2105,9 +2160,9 @@ def train():
                 print(f' - `{column_name}` does not exist in `ocr` table. Skipping field.')
                 continue
 
-            #Add highlight to the dict
-            #extracted_column_values['highlight'] = highlight
-            highlight = get_highlights(value, ocr_data,value_scope[0],page_no)
+            # Add highlight to the dict
+            # extracted_column_values['highlight'] = highlight
+            highlight = get_highlights(value, ocr_data, value_scope[0], page_no)
             extracted_column_values['highlight'][column_name] = highlight
 
             extracted_column_values[column_name] = value
@@ -2119,35 +2174,33 @@ def train():
 
         extraction_db.insert_dict(standardized_data, 'ocr')
         audit_data = {
-                "type": "insert", "last_modified_by": "Train", "table_name": "ocr", "reference_column": "case_id",
-                "reference_value": case_id, "changed_data": json.dumps(standardized_data)
-            }
+            "type": "insert", "last_modified_by": "Train", "table_name": "ocr", "reference_column": "case_id",
+            "reference_value": case_id, "changed_data": json.dumps(standardized_data)
+        }
         stats_db.insert_dict(audit_data, 'audit')
 
-
         # * Update the queue name and template name in the process_queue
-        query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE `workflow_definition`.`queue_id`=`queue_definition`.`id`'
+        query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
+                '`workflow_definition`.`queue_id`=`queue_definition`.`id` '
         template_exc_wf = queue_db.execute(query)
         move_to_queue_id = list(template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']['move_to'])[0]
         query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
         move_to_queue_df = queue_db.execute(query, params=[move_to_queue_id])
         move_to_queue = list(move_to_queue_df['name'])[0]
-        update = {'queue':move_to_queue,'template_name':template_name}
-        where = {'case_id':case_id}
-        queue_db.update('process_queue',update=update,where=where)
+        update = {'queue': move_to_queue, 'template_name': template_name}
+        where = {'case_id': case_id}
+        queue_db.update('process_queue', update=update, where=where)
         audit_data = {
-                "type": "update", "last_modified_by": "Train", "table_name": "process_queue", "reference_column": "case_id",
-                "reference_value": case_id, "changed_data": json.dumps(update)
-            }
+            "type": "update", "last_modified_by": "Train", "table_name": "process_queue", "reference_column": "case_id",
+            "reference_value": case_id, "changed_data": json.dumps(update)
+        }
         stats_db.insert_dict(audit_data, 'audit')
 
-        #updating queue trace information
-        update_queue_trace(queue_db,case_id,move_to_queue)
+        # updating queue trace information
+        update_queue_trace(queue_db, case_id, move_to_queue)
 
-        
         # # To Enable only training
         # return jsonify({'flag': True, 'message': 'Training completed!'})
-
 
         # * Run extraction on the same cluster
         cluster = list(latest_case.cluster)[0]
@@ -2168,7 +2221,8 @@ def train():
 
             queue_db.update('process_queue', update=fields, where={'case_id': cluster_case_id})
             audit_data = {
-                "type": "update", "last_modified_by": "Train", "table_name": "process_queue", "reference_column": "case_id",
+                "type": "update", "last_modified_by": "Train", "table_name": "process_queue",
+                "reference_column": "case_id",
                 "reference_value": case_id, "changed_data": json.dumps(fields)
             }
             stats_db.insert_dict(audit_data, 'audit')
@@ -2178,18 +2232,14 @@ def train():
 
         return jsonify({'flag': True, 'message': 'Training completed!'})
 
-    return "HIIIIIIIIIIIIII"
 
 @app.route('/get_ocr_data_training', methods=['POST', 'GET'])
 def get_ocr_data():
     data = request.json
 
     case_id = data['case_id']
-    try:
-        retrain = data['retrain']
-    except:
-        retrain = ''
 
+    tenant_id = data['tenant_id'] if 'tenant_id' in data else None
 
     logging.debug(f'case_id - {case_id}')
 
@@ -2197,7 +2247,8 @@ def get_ocr_data():
         'host': 'queue_db',
         'port': 3306,
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     db = DB('queues', **db_config)
     # db = DB('queues')
@@ -2206,26 +2257,10 @@ def get_ocr_data():
         'host': 'template_db',
         'user': 'root',
         'password': 'root',
-        'port': '3306'
+        'port': '3306',
+        'tenant_id': tenant_id
     }
     trained_db = DB('template_db', **trained_db_config)
-
-    extarction_db_config = {
-        'host': 'extraction_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306'
-    }
-    extraction_db = DB('extraction', **extarction_db_config)
-
-    table_db_config = {
-        'host': 'table_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306'
-    }
-    table_db = DB('table_db', **table_db_config)
-
 
     # print("Case ID:", case_id)
 
@@ -2236,12 +2271,12 @@ def get_ocr_data():
 
         tab_list = str(tuple(ocr_tab_id))
         query = f'SELECT * FROM `field_definition` WHERE `tab_id`in {tab_list}'
-        
+
         ocr_fields_df = db.execute(query)
         mandatory_fields = list(ocr_fields_df.loc[ocr_fields_df['mandatory'] == 1]['display_name'])
         logging.debug(f'OCR Fields DF: {ocr_fields_df}')
         fields = list(ocr_fields_df['display_name'])
-        
+
     except Exception as e:
         print(f'Error getting mandatory fields: {e}')
         mandatory_fields = []
@@ -2260,7 +2295,6 @@ def get_ocr_data():
     ocr_info = db.execute(query, params=params)
     ocr_data = json.loads(list(ocr_info.ocr_data)[0])
 
-
     pre_processed_char = []
     for index, page in enumerate(ocr_data):
         page = sort_ocr(page)
@@ -2270,17 +2304,15 @@ def get_ocr_data():
 
     file_name = list(case_files['file_name'])[0]
 
-    quadrant_dict = get_quadrant_dict()
+    quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
     _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id)
 
     ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
 
-    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id)
+    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'])
 
-
-
-    print('ocr_field_keyword- ',ocr_field_keyword)
+    print('ocr_field_keyword- ', ocr_field_keyword)
     # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
 
     # ocr_field_keyword = json.loads(list(ocr_info.fields_keywords)[0])
@@ -2293,21 +2325,20 @@ def get_ocr_data():
     ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char)
     all_values = remove_keys(ocr_data, ocr_keywords)
 
+    field_validations = get_field_validations(tenant_id)
 
-    field_validations = get_field_validations()
-
-    #todo remove field_keyword from ocr_data
+    # todo remove field_keyword from ocr_data
     predicted_fields = get_predicted_fields(
-                            mandatory_fields,
-                            all_values,
-                            ocr_field_keyword,
-                            ocr_data,
-                            pre_processed_char,
-                            field_validations,
-                            quadrant_dict,
-                            case_id=case_id
-                        )
-
+        mandatory_fields,
+        all_values,
+        ocr_field_keyword,
+        ocr_data,
+        pre_processed_char,
+        field_validations,
+        quadrant_dict,
+        case_id=case_id,
+        tenant_id=tenant_id
+    )
 
     if predicted_fields:
         trained_data = {}
@@ -2323,10 +2354,9 @@ def get_ocr_data():
         if type(check) != bool:
             check = not check.empty
 
-
         if check:
-            to_update = {'field_data':json.dumps(trained_data)}
-            where = {'case_id' : case_id}
+            to_update = {'field_data': json.dumps(trained_data)}
+            where = {'case_id': case_id}
 
             trained_db.update('trained_info_predicted', update=to_update, where=where)
 
@@ -2335,47 +2365,13 @@ def get_ocr_data():
             trained_data_column_values = {
                 'case_id': case_id,
                 'field_data': json.dumps(trained_data),
-                'ocr_data' : json.dumps(ocr_data)
+                'ocr_data': json.dumps(ocr_data)
             }
             trained_db.insert_dict(trained_data_column_values, 'trained_info_predicted')
 
-
-    if retrain.lower() == 'yes':
-        template_name = list(case_files['template_name'])[0]
-        # print('template_name',template_name)
-        # '''Fetch fields train info from database'''
-        trained_info = trained_db.get_all('trained_info')
-        trained_info = trained_info.loc[trained_info['template_name'] == template_name]
-        field_data = json.loads(list(trained_info.field_data)[0])
-        # Fetch Table train info from database
-        table_train_info = table_db.get_all('table_info')
-        table_train_info = table_train_info.loc[table_train_info['template_name'] == template_name]
-        try:
-            table_info = json.loads(list(table_train_info.table_data)[0])
-        except:
-            table_info = {}
-        extraction_ocr = extraction_db.get_all('ocr')
-        extraction_ocr = extraction_ocr.loc[extraction_ocr['case_id'] == case_id]
-        highlight = json.loads(list(extraction_ocr.highlight)[0])
-
-        fields_info = get_fields_info(ocr_data,highlight,field_data)
-
-        return jsonify({'flag': True,
-            'data': ocr_data,
-            'info': {
-                'fields': fields_info,
-                'table': table_info
-            },
-            'template_name': template_name,
-            'vendor_list': sorted(vendor_list),
-            'template_list': sorted(template_list),
-            'mandatory_fields': mandatory_fields,
-            'type':'blob'
-            }
-        )
-
-    return jsonify({'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields, 'predicted_fields' : predicted_fields, 'fields': fields, 'type' : 'blob'})
-
+    return jsonify(
+        {'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list),
+         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': 'blob'})
 
 
 if __name__ == '__main__':
