@@ -50,46 +50,6 @@ def http_transport(encoded_span):
         headers={'Content-Type': 'application/x-thrift'},
     )
 
-def isListEmpty(inList):
-    if isinstance(inList, list):    # Is a list
-        return all( map(isListEmpty, inList) )
-    return False # Not a list
-
-
-def update_queue_trace(queue_db,case_id,latest):
-    queue_trace_q = "SELECT * FROM `trace_info` WHERE `case_id`=%s"
-    queue_trace_df = queue_db.execute(queue_trace_q,params=[case_id])
-
-    if queue_trace_df.empty:
-        message = f' - No such case ID `{case_id}` in `trace_info`.'
-        logging.error(message)
-        return {'flag':False,'message':message}
-    # Updating Queue Name trace
-    try:
-        queue_trace = list(queue_trace_df.queue_trace)[0]
-    except:
-        queue_trace = ''
-    if queue_trace:
-        queue_trace += ','+latest
-    else:
-        queue_trace = latest
-
-    #Updating last_updated_time&date
-
-    try:
-        last_updated_dates = list(queue_trace_df.last_updated_dates)[0]
-    except:
-        last_updated_dates = ''
-    if last_updated_dates:
-        last_updated_dates += ','+ datetime.now().strftime(r'%d/%m/%Y %H:%M:%S')
-    else:
-        last_updated_dates = datetime.now().strftime(r'%d/%m/%Y %H:%M:%S')
-
-    update_q = "UPDATE `trace_info` SET `queue_trace`=%s, `last_updated_dates`=%s WHERE `case_id`=%s"
-    queue_db.execute(update_q,params=[queue_trace,last_updated_dates,case_id])
-
-    return {'flag':True,'message':'Updated Queue Trace'}
-
 def get_template_exceptions(db, data, tenant_id=None):
     logging.info('Getting template exceptions')
     logging.info(f'Data: {data}')
@@ -210,17 +170,6 @@ def get_blob(case_id, tenant_id):
 
 @app.route("/get_blob_data", methods=['POST', 'GET'])
 def get_blob_data():
-    data = request.json
-    case_id = data['case_id']
-    tenant_id = data.pop('tenant_id', None)
-
-    blob_data = get_blob(case_id, tenant_id)
-
-    return jsonify({"flag": True, "data": blob_data})
-
-@app.route("/get_blob_data1", methods=['POST', 'GET'])
-@app.route('/get_blob_data1/<case_id>', methods=['POST', 'GET'])
-def get_blob_data1(case_id=None):
     data = request.json
     case_id = data['case_id']
     tenant_id = data.pop('tenant_id', None)
@@ -412,33 +361,15 @@ def recon_get_columns(table_unique_id, tenant_id):
     db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
 
-    # * COLUMNS
-#    logging.info(f'Getting column details for `{queue_name}`...')
-    # query = "SELECT id, column_id from recon_column_mapping where table_unique_id = %s ORDER BY column_order ASC"
-    # table_column_ids = list(db.execute(query, params=[table_unique_id]).column_id) 
-
-    # Get columns using column ID and above result from column configuration table
-#    columns_time = time()
     query = f"SELECT `column_definition`.*, `recon_column_mapping`.`column_order` FROM `column_definition`, `recon_column_mapping` where `column_definition`.`id` = `recon_column_mapping`.`column_id` and `recon_column_mapping`.`table_unique_id` = %s ORDER BY `recon_column_mapping`.`column_order` ASC"
     columns_df = db.execute_(query, params=[table_unique_id])
-    # columns_df = columns_definition_df[columns_definition_df['id'].isin(table_column_ids)]
-
     extraction_columns_df = columns_df.loc[columns_df['source'] != 'process_queue']
-#    logging.debug(f'Columns DF: {columns_df}')
     columns = list(columns_df['column_name'])
-#    logging.debug(f'Columns: {columns}')
-#    logging.debug(f'Time taken for columns in q {time()-columns_time}')
-
-#    util_columns = ['total_processes', 'completed_processes', 'case_lock', 'failure_status']
-#    logging.debug(f'Appending utility columns {util_columns}')
-#    columns += util_columns
-#    logging.debug(f'Columns after appending utility columns: {columns}')
 
     extraction_columns_list = list(extraction_columns_df['column_name'])
 
     return_data = {
         'columns': columns,
-        # 'util_columns': util_columns,
         'extraction_columns_df': extraction_columns_df.to_dict(orient= 'records'),
         'extraction_columns_list': extraction_columns_list,
         'columns_df': columns_df
@@ -450,7 +381,6 @@ def get_recon_data(queue_id, queue_name, tenant_id):
     db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
     
-    # queue_id = '49'
     query = f"SELECT * FROM `recon_table_mapping` where `queue_id` = '{queue_id}'"
     recon_table_mapping_df = db.execute(query)
     
@@ -1794,42 +1724,6 @@ def fix_JSON(json_message=None):
 
     logging.info(f'Response: {result}')
     return result
-
-
-def get_ocr_stats(db,from_date=None, to_date=None, total_fields  = 9):
-    """Return the ocr stats from the from_date, to_date"""
-    logging.info('Getting OCR Stats')
-
-    if (not to_date) or (not from_date):
-        query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Approved'"
-        df = db.execute_(query)
-    else:
-        if to_date == from_date:
-            from_date += " 00:00:01"
-            to_date += " 23:59:59"
-        query = "SELECT fa.fields_changed, pq.created_date FROM `field_accuracy` fa,process_queue pq where fa.case_id =pq.case_id and pq.queue='Approved' and pq.created_date > %s and pq.created_date < %s"
-        df = db.execute_(query, params=[from_date, to_date])
-
-    fields_changes_list = []
-
-    for ele in list(df['fields_changed']):
-        try:
-            fields_changes_list.append(len(json.loads(ele,strict=False)))
-        except Exception as e:
-            logging.warning(f'Exception handled. [{e}]')
-            fix_json_ele = fix_JSON(ele)
-            fields_changes_list.append(len(fix_json_ele))
-
-    manual_changes = sum(fields_changes_list)
-    total = len(df['fields_changed'])*total_fields
-    extracted_ace = total - manual_changes
-    
-    logging.debug(f'Manual changes: {manual_changes}')
-    logging.debug(f'Extracted ACE: {extracted_ace}')
-    logging.debug(f'Total: {total}')
-    logging.debug(f'Manual + Extracted ACE: {manual_changes + extracted_ace}')
-
-    return manual_changes, extracted_ace, total
 
 @app.route('/move_to_verify', methods=['POST', 'GET'])
 def move_to_verify():
