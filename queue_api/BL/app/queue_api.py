@@ -56,12 +56,9 @@ def get_template_exceptions(db, data, tenant_id=None, queue_uid=''):
 
     template_db = DB('template_db', **db_config)
 
-    columns_data = get_columns(queue_uid, tenant_id, True)
-    
+    columns_data = get_columns(queue_uid, tenant_id, True) 
     columns = columns_data['columns']
-
     column_mapping = columns_data['column_mapping']
-
     column_order = list(column_mapping.keys())
 
     all_st = time()
@@ -98,25 +95,14 @@ def get_template_exceptions(db, data, tenant_id=None, queue_uid=''):
         template_db.engine.close()
         return {'flag': False, 'message': message}
 
-def get_snapshot(db, data):
+def get_snapshot(db, data, queue_uid, tenant_id):
     start_point = data['start']
     end_point = data['end']
     offset = end_point - start_point
 
-    # TODO: Value of "columns" will come from a database.
-    # Columns to display is configured by the user from another screen.
-    columns = [
-            'case_id',
-            'queue',
-            'created_date',
-        ]
-
-    column_mapping = {
-        "fax_unique_id": "case_id",
-        "current_queue": "queue",
-        "created_date": "created_date",
-        }
-
+    columns_data = get_columns(queue_uid, tenant_id, True) 
+    columns = columns_data['columns']
+    column_mapping = columns_data['column_mapping']
     column_order = list(column_mapping.keys())
 
     logging.debug(f'Selecting columns: {columns}')
@@ -673,7 +659,7 @@ def get_queue(queue_id=None):
             elif queue_type == 'snapshot':
                 logging.info(f' > Redirecting to `get_snapshot` route.')
 
-                response_data = get_snapshot(db, {'start': start_point, 'end': end_point})
+                response_data = get_snapshot(db, {'start': start_point, 'end': end_point}, queue_uid, tenant_id)
 
                 return jsonify(response_data)
             
