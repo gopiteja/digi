@@ -10,7 +10,7 @@ from db_utils import DB
 from producer import produce
 from ace_logger import Logging
 
-logging = Logging().getLogger('ace').getLogger('ace')
+logging = Logging().getLogger('ace')
 
 db_config = {
     'host': os.environ['HOST_IP'],
