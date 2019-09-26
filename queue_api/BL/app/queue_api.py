@@ -1269,7 +1269,7 @@ def refresh_fields(case_id=None):
 
         logging.info(f'Response: {response_data}')
         return jsonify(response_data)
-    except Exception as e:
+    except:
         logging.exception('Something went wrong refreshin fields. Check trace.')
         return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})
 
