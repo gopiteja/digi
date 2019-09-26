@@ -156,22 +156,26 @@ def save_changes(case_id, data, tenant_id):
         logging.exception('Something went wrong saving changes. Check trace.')
         return {'flag': False, 'message': 'Something went wrong saving changes. Check logs.'}
 
+def create_consumer(route, broker_url='broker:9092'):
+    consumer = KafkaConsumer(
+                    bootstrap_servers=broker_url,
+                    value_deserializer=lambda value: json.loads(value.decode()),
+                    auto_offset_reset='earliest',
+                    group_id=route,
+                    api_version=(0,10,1),
+                    enable_auto_commit=False,
+                    session_timeout_ms=800001,
+                    request_timeout_ms=800002
+    )
+
+    return consumer
 
 def consume(broker_url='broker:9092'):
     try:
         route = 'save_changes'
         logging.info(f'Listening to topic: {route}')
 
-        consumer = KafkaConsumer(
-            bootstrap_servers=broker_url,
-            value_deserializer=lambda value: json.loads(value.decode()),
-            auto_offset_reset='earliest',
-            group_id='save_changes',
-            api_version=(0,10,1),
-            enable_auto_commit=False,
-            session_timeout_ms=800001,
-            request_timeout_ms=800002
-        )
+        consumer = create_consumer(route)
         logging.debug('Consumer object created.')
 
         parts = consumer.partitions_for_topic(route)
@@ -181,16 +185,7 @@ def consume(broker_url='broker:9092'):
             produce(route, {})
             print(f'Listening to topic `{route}`...')
             while parts is None:
-                consumer = KafkaConsumer(
-                    bootstrap_servers=broker_url,
-                    value_deserializer=lambda value: json.loads(value.decode()),
-                    auto_offset_reset='earliest',
-                    group_id='sap_portal',
-                    api_version=(0,10,1),
-                    enable_auto_commit=False,
-                    session_timeout_ms=800001,
-                    request_timeout_ms=800002
-                )
+                consumer = create_consumer(route)
                 parts = consumer.partitions_for_topic(route)
                 logging.warning("No partition. In while loop. Make it stop")
 
