@@ -1458,13 +1458,7 @@ def get_queues_cache(username, tenant_id=None):
     logging.debug(f'Username: {username}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'AlgoTeam123',
-        'tenant_id': tenant_id
-    }
+    db_config['tenant_id'] = tenant_id
 
     group_db = DB('group_access', **db_config)
     queue_db = DB('queues', **db_config)
@@ -1660,6 +1654,6 @@ def move_to_verify():
         response = {'flag': True, 'status_type': 'success', 'message': "Successfully sent to Verify"}
         logging.info(f'Response: {response}')
         return jsonify(response)
-    except Exception as e:
+    except:
         logging.exception(f'Something went wrong while getting queues. Check trace.')
         return jsonify({'flag':False, 'status_type': 'failed', 'message':'System error! Please contact your system administrator.'})
