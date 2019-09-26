@@ -8,7 +8,7 @@ except:
 
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 @zipkin_span(service_name='ace_template_training', span_name='get_context_box')
 def get_context_box(ocr_data, keyword_boxes, context):

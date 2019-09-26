@@ -18,7 +18,7 @@ except:
     from db_utils import DB
     from producer import produce
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def http_transport(encoded_span):
     body = encoded_span

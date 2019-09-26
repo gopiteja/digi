@@ -15,7 +15,7 @@ except:
     from producer import produce
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def generate_report(data):
     report_type = data['report_type']

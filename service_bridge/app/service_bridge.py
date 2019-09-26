@@ -16,7 +16,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 @app.route('/test', methods=['POST', 'GET'])
 def test():

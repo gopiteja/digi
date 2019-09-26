@@ -6,7 +6,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 '''
 twins- Helper function which return whether two words are close based

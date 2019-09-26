@@ -51,7 +51,7 @@ except:
     with open('parameters.json') as f:
         parameters = json.loads(f.read())
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 ANALYST_DATABASE = parameters['database_name']
 # DEFAULT_IMGPATH = parameters['ui_folder'] + 'assets/images/invoices/'

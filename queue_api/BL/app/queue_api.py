@@ -24,7 +24,7 @@ from app.get_fields_info_utils import sort_ocr
 from app import app
 from app import cache 
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 # Database configuration
 db_config = {

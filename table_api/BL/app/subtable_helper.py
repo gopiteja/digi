@@ -11,7 +11,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def subtable_helper(haystack, needle, img):
 	if needle:

@@ -17,7 +17,7 @@ except:
     app = Flask(__name__)
     cors = CORS(app)
     
-logging = Logging().getLogger('ace')
+logging = Logging()
 logging_config = {
         'level': logging.DEBUG,
         'format': '%(asctime)s - %(levelname)s - %(filename)s @%(lineno)d : %(funcName)s() - %(message)s'

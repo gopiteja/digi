@@ -1,7 +1,7 @@
 import comtypes.client as cc
 import FREConfig
 from ace_logger import Logging
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 # class Singleton(type):
 #     # def __init__(cls, name, bases, attrs, **kwargs):

@@ -17,7 +17,7 @@ from ace_logger import Logging
 
 from app import app
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 # Database configuration
 db_config = {

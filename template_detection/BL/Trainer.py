@@ -6,7 +6,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 class TrainingModeEnum(IntEnum):
     TM_Precision = 0,

@@ -3,7 +3,7 @@ from EngineHolder import EngineHolder
 from ClassifierTypeEnum import ClassifierTypeEnum
 from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 
 class TrainingModeEnum(IntEnum):

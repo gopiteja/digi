@@ -2,7 +2,7 @@ from EngineHolder import EngineHolder
 from Trainer import ProcessingOptions
 from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 
 class LoadModelOperation:

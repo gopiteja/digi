@@ -7,7 +7,7 @@ import subprocess
 
 app = Flask(__name__)
 cors = CORS(app)
-# logging = Logging().getLogger('ace')
+# logging = Logging()
 
 
 @app.route('/database_ocr', methods=['POST', 'GET'])

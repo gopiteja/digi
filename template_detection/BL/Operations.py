@@ -5,7 +5,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 class LoadModelOperation:
     filename = None

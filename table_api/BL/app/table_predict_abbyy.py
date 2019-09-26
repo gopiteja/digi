@@ -28,7 +28,7 @@ DEFAULT_IMGPATH = parameters['ui_folder'] + 'assets/images/invoices/'
 # xml_folder_path = parameters['abbyy_xml']
 xml_folder_path = './table_xml/ocr_xml_'
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def execute_query(sql,database = ANALYST_DATABASE):
     data = None

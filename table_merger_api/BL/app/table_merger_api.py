@@ -21,7 +21,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
