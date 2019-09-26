@@ -960,7 +960,6 @@ def get_dropdown(queue_id, tenant_id=None):
 @app.route('/get_fields/<case_id>', methods=['POST', 'GET'])
 def get_fields(case_id=None):
     try:
-        st_time = time()
         data = request.json
 
         logging.info(f'Request data: {data}')
@@ -1129,15 +1128,6 @@ def get_fields(case_id=None):
 
         logging.debug('Fetching failure messages')
         failure_msgs_data = {}
-        # query = "SELECT * from `validation` where `case_id` = %s"
-        # validation_results = extraction_db.execute(query, params=[case_id])
-        # if not validation_results.empty:
-        #     validation_results = validation_results.to_dict(orient='records')[0]
-            
-        #     for field in validation_results:
-        #         msg = validation_results[field] 
-        #         if  msg and (msg != '1') and (msg != '0'):
-        #             failure_msgs_data[field] = msg
         failure_msgs_data.pop('case_id', None)
         failure_msgs_data.pop('highlight', None)
         
@@ -1151,13 +1141,6 @@ def get_fields(case_id=None):
                 error_logs_str = error_logs_str[1:]
             
             error_logs_list = error_logs_str.split('|')
-
-        failures = {
-            'validation_errors': failure_msgs_data,
-            'processing_errors': error_logs_list
-        }
-        
-        logging.debug(f'Failures: {failures}')
 
         response_data = {}
         query = "SELECT id, tab_id, pattern FROM field_definition WHERE unique_name = 'addon_table'"
@@ -1192,14 +1175,12 @@ def get_fields(case_id=None):
             'time_spent': 0,
             'timer': list(queue_info.timer)[0],
             'ocr_data': ocr_data,
-            'failures':failures,
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
             'pdf_type': 'folder' if tenant_id else 'blob'
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
-        # Lock the file and assign it to the operator
         update = {
             'operator': operator
         }
@@ -1208,10 +1189,6 @@ def get_fields(case_id=None):
         }
         queue_db.update('process_queue', update=update, where=where)
 
-        # if len(json.dumps(response_data)) > 200:
-        #     logging.info(f'Response: {json.dumps(response_data)[:100]}...{json.dumps(response_data)[-100:]}')
-        # else:
-        #     logging.info(f'Response: {response_data}')
         return jsonify(response_data)
 
     except Exception as e:
@@ -1380,23 +1357,17 @@ def get_ocr_data():
             retrain = ''
 
         db_config['tenant_id'] = tenant_id
-
         db = DB('queues', **db_config)
  
         trained_db = DB('template_db', **db_config)
-
         extraction_db = DB('extraction', **db_config)
-
         table_db = DB('table_db', **db_config)
 
         logging.debug('Getting mandatory fields')
-        # Get all OCR mandatory fields
         try:
             tab_df = db.get_all('tab_definition')
             ocr_tab_id = tab_df.index[tab_df['source'] == 'ocr'].tolist()
-            logging.debug('ocr_tabi_id')
             logging.debug(ocr_tab_id)
-            # tab_list = ','.join(ocr_tab_id)
             tab_list = str(tuple(ocr_tab_id))
             query = f'SELECT * FROM `field_definition` WHERE `tab_id`in {tab_list}'
             
@@ -1424,7 +1395,6 @@ def get_ocr_data():
         ocr_data = json.loads(ocr_data)
         ocr_data = [sort_ocr(data) for data in ocr_data]
 
-        vendor_list = list(trained_db.get_all('vendor_list').vendor_name)
         template_list = list(trained_db.get_all('trained_info').template_name)
 
         fields_list = list(ocr_fields_df['display_name'])
@@ -1456,13 +1426,12 @@ def get_ocr_data():
                     'table': table_info
                 },
                 'template_name': template_name,
-                'vendor_list': sorted(vendor_list),
                 'template_list': sorted(template_list),
                 'mandatory_fields': mandatory_fields,
                 'fields': fields_list,
                 'type': 'blob'})
 
-        return jsonify({'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields,'fields': fields_list, 'type': 'blob'})
+        return jsonify({'flag': True, 'data': ocr_data, 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields,'fields': fields_list, 'type': 'blob'})
     except Exception as e:
         logging.exception('Something went wrong when getting ocr data. Check trace.')
         return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
