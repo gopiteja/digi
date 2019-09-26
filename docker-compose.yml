@@ -49,6 +49,8 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
       - file_output:/var/www/table_api/app/invoice_files
+    depends_on:
+      - apache_base
     # logging:
     #   driver: gelf
     #   options:
@@ -72,6 +74,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+    depends_on:
+      - apache_base
     # logging:
     #   driver: gelf
     #   options:
@@ -135,6 +139,8 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
       - file_output:/var/www/table_api/app/invoice_files
+    depends_on:
+      - apache_base
     # logging:
     #   driver: gelf
     #   options:
@@ -311,6 +317,8 @@ services:
         aliases:
           - abbyydatabase
     restart: on-failure:3
+    depends_on:
+      - apache_base
   # logging:
   #   driver: gelf
   #   options:
