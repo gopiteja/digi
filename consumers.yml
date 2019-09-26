@@ -48,11 +48,11 @@ services:
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
     volumes:
       - files:/app/files
-    logging:
-      driver: gelf
-      options:
-        gelf-address: udp://127.0.0.1:12201
-        tag: "digital_signature_tag"
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "digital_signature_tag"
 
   # Template Detection
   detection_app:
@@ -122,11 +122,11 @@ services:
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
     volumes:
       - invoice_files:/app/invoice_files
-    logging:
-      driver: gelf
-      options:
-        gelf-address: udp://127.0.0.1:12201
-        tag: "table_consumer_tag"
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_consumer_tag"
 
   business_rules_consumer:
     image: 'business_rules_consumer'
