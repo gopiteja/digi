@@ -1,7 +1,7 @@
 import argparse
 import json
 import requests
-from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -14,6 +14,8 @@ try:
     from app.table_predict_abbyy import table_training_abbyy
     from app.complex_data_table_generator import complex_data_table_generator
     from app.find_intersections import find_intersections
+    with open('app/parameters.json') as f:
+        parameters = json.loads(f.read())
 except:
     from ace_logger import Logging
     from db_utils import DB
@@ -22,6 +24,8 @@ except:
     from table_predict_abbyy import table_training_abbyy
     from complex_data_table_generator import complex_data_table_generator
     from find_intersections import find_intersections
+    with open('parameters.json') as f:
+        parameters = json.loads(f.read())
 
 try:
     from app import app
@@ -29,23 +33,27 @@ except:
     app = Flask(__name__)
     CORS(app)
 
+
 def http_transport(encoded_span):
     body = encoded_span
     requests.post(
         'http://servicebridge:5002/zipkin',
         data=body,
-        headers={'Content-Type': 'application/x-thrift'},)
+        headers={'Content-Type': 'application/x-thrift'}, )
+
 
 logging = Logging()
 
+
 @zipkin_span(service_name='table_api', span_name='apply_business_rules')
-def predict_with_template(case_id, template_name):
+def predict_with_template(case_id, template_name, tenant_id=None):
     logging.info(f'in predict with template')
     queue_db_config = {
         'host': 'queue_db',
         'port': 3306,
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     queue_db = DB('queues', **queue_db_config)
     # queue_db = DB('queues')
@@ -66,7 +74,8 @@ def predict_with_template(case_id, template_name):
         'host': 'table_db',
         'port': 3306,
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     table_db = DB('table_db', **table_db_config)
     # table_db = DB('table_db')
@@ -76,7 +85,6 @@ def predict_with_template(case_id, template_name):
 
     template_name = template_name.strip()
     logging.debug(f'template name `{template_name}`')
-
 
     # template_data = table_info_df.loc[table_info_df['template_name'] == template_name]
     template_data = table_db.execute(query, params=[template_name])
@@ -92,7 +100,7 @@ def predict_with_template(case_id, template_name):
 
         if method == 'abbyy':
             logging.debug(f'Running `table_predict_abbyy`')
-            predicted_table = table_prediction_abbyy(ocr_data, 670, trained_data, file_path, xml_string=xml_string)
+            predicted_table = table_prediction_abbyy(ocr_data, parameters['default_img_width'], trained_data, file_path, xml_string=xml_string)
             table_data.append([predicted_table['table'][0][0]])
         elif method == 'tnox':
             logging.debug(f'Running `complex_table_prediction`')
@@ -106,12 +114,12 @@ def predict_with_template(case_id, template_name):
             logging.info(message)
             return {'flag': False, 'message': message}
 
-
     extraction_db_config = {
         'host': 'extraction_db',
         'port': 3306,
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     extraction_db = DB('extraction', **extraction_db_config)
     # extraction_db = DB('extraction')
@@ -120,7 +128,8 @@ def predict_with_template(case_id, template_name):
         'host': 'queue_db',
         'port': 3306,
         'user': 'root',
-        'password': 'root'
+        'password': 'root',
+        'tenant_id': tenant_id
     }
     queue_db = DB('queues', **queue_db_config)
 
@@ -128,7 +137,8 @@ def predict_with_template(case_id, template_name):
         'host': 'stats_db',
         'user': 'root',
         'password': 'root',
-        'port': '3306'
+        'port': '3306',
+        'tenant_id': tenant_id
     }
 
     stats_db = DB('stats', **stats_db_config)
@@ -143,15 +153,16 @@ def predict_with_template(case_id, template_name):
     }
     if extraction_db.update('ocr', **update_params):
         audit_data = {
-                "type": "update", "last_modified_by": "Table Consumer", "table_name": "ocr", "reference_column": "case_id",
-                "reference_value": case_id, "changed_data": json.dumps(update_params['update'])
-            }
+            "type": "update", "last_modified_by": "Table Consumer", "table_name": "ocr", "reference_column": "case_id",
+            "reference_value": case_id, "changed_data": json.dumps(update_params['update'])
+        }
         stats_db.insert_dict(audit_data, 'audit')
         return {'flag': True, 'data': table_data}
     else:
         message = f'Error updating table in OCR table for case ID `{case_id}`.'
         logging.info(message)
         return {'flag': False, 'message': message}
+
 
 @app.route('/extract_header', methods=['POST', 'GET'])
 def extract_header():
@@ -221,12 +232,13 @@ def extract_header():
 
     return jsonify(data)
 
+
 @app.route('/predict_with_ui_data', methods=['POST', 'GET'])
 def predict_with_ui_data():
     with zipkin_span(service_name='table_api', span_name='predict_with_ui_data',
-        transport_handler=http_transport,
-        # port=5014,
-        sample_rate=0.5,):
+                     transport_handler=http_transport,
+                     # port=5014,
+                     sample_rate=0.5, ):
         try:
             data = request.json
             logging.info(f'data{data}')
@@ -234,12 +246,14 @@ def predict_with_ui_data():
             method = data['method']
             case_id = data['case_id']
             image_width = data['img_width']
+            tenant_id = data['tenant_id'] if 'tenant_id' in data else None
 
             queue_db_config = {
                 'host': 'queue_db',
                 'port': 3306,
                 'user': 'root',
-                'password': 'root'
+                'password': 'root',
+                'tenant_id': tenant_id
             }
             queue_db = DB('queues', **queue_db_config)
             # queue_db = DB('queues')
@@ -272,4 +286,4 @@ def predict_with_ui_data():
 
             return jsonify({'flag': True, 'message': 'Predicted table.', 'data': table_data})
         except Exception as e:
-            return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})
+            return jsonify({'flag': False, 'message': 'System error! Please contact your system administrator.'})

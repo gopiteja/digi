@@ -24,7 +24,7 @@ except:
 
 
 ANALYST_DATABASE = parameters['database_name']
-DEFAULT_IMGPATH = parameters['ui_folder'] + 'assets/images/invoices/'
+DEFAULT_IMGPATH = parameters['default_image_path'] + 'assets/images/invoices/'
 # xml_folder_path = parameters['abbyy_xml']
 xml_folder_path = './table_xml/ocr_xml_'
 
@@ -531,7 +531,7 @@ def table_training_abbyy(ocr_data_list, img_width, trained_data, xml_string, fil
             #     json_data = json_data[0]
             # except:
             #     pass
-            rf = img_width/670
+            rf = img_width/parameters['default_img_width']
 
 
             # ocr_data,multi_page_table,page_no = get_ocr_data(ocr_data_list,json_data,header_list)
@@ -703,7 +703,7 @@ def table_prediction_abbyy(ocr_data_list, img_width, trained_data, file_name=Non
         for table_num in range(len(json_data_list)):
             json_data = json_data_list[table_num]
             # print('json datasss',json_data)
-            rf = img_width/670
+            rf = img_width/parameters['default_img_width']
             # ocr_data,multi_page_table,page_no = get_ocr_data(ocr_data_list,json_data,header_list)
 
             ocr_data = ocr_data_list[table_num]

@@ -38,5 +38,8 @@
     "validation_queue": "validation"
   },
   "handwritten_engine": "vision",
-  "ui_folder": "/opt/lampp/htdocs/training/"
+  "default_image_path" :  "./invoice_files/",
+  "line_score_threshold" : 0.7,
+  "match_score_threshold" : 0.75,
+  "match_list_threshold" : 0.6
 }

@@ -1,6 +1,0 @@
-chardet
-kafka
-pandas
-sqlalchemy
-mysqlclient
-pdfminer.six

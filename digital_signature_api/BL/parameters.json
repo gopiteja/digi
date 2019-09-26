@@ -1,9 +1,0 @@
-{
-  "db": {
-    "database_name": "ace",
-    "host": "monitor_db",
-    "user": "root",
-    "pass": "root"
-  },
-  "pdf_resolution": 300
-}

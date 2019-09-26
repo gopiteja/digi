@@ -14,5 +14,12 @@
   "algonox_detection_method": "ngram",
   "n_training_samples": 3,
   "static_input_path": "C:\\Users\\t00004100\\Desktop\\ashyam\\output",
-  "abbyy_classification_enabled": 0
+  "abbyy_classification_enabled": 0,
+  "pdf_plumber_port" :5022,
+  "junk_words_thres" : 10,
+  "battle_resolver_threshold" : 20,
+  "abbyy_url" : "",
+  "matching_threshold" : 0.7,
+  "address_threshold" : 0.5,
+  "n_ngram" : 2
 }

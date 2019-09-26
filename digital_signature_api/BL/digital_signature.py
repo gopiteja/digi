@@ -1,9 +1,21 @@
+import os
+
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdftypes import resolve1
+from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 
 from db_utils import DB
-from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
+from ace_logger import Logging
+
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
+
+logging = Logging()
 
 @zipkin_span(service_name='digital_signature', span_name='load_form')
 def load_form(filename):
@@ -60,22 +72,15 @@ def digitally_signed(filepath: str) -> bool:
             return False
         
     except FileNotFoundError:
-        print ("The file does not exist")
+        logging.error("The file does not exist")
         return False
     except:
-        print ("The invoice does not have the key AcroForm...is it scanned? or ?")
+        logging.exception("The invoice does not have the key AcroForm...is it scanned? or ?")
         return False
 
 @zipkin_span(service_name='digital_signature', span_name='is_pdf_signed')
-def is_pdf_signed(case_id, file_name):
-    db_config = {
-        'host': 'extraction_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root'
-    }
-    db = DB('extraction', **db_config)
-    # db = DB('extraction')
+def is_pdf_signed(case_id, file_name, tenant_id=None):
+    db = DB('extraction', tenant_id=tenant_id, **db_config)
     
     file_path ='./files/' + file_name
     digital_signature = 0
@@ -84,11 +89,10 @@ def is_pdf_signed(case_id, file_name):
         digital_signature = 1
 
     try:
-        query = 'INSERT INTO `validation` (`case_id`, `Digital Signature`) VALUES (%s, %s)'
-        params = [case_id, digital_signature]
+        query = 'UPDATE `process_queue` SET `digitally_signed`=%s WHERE `case_id`=%s'
+        params = [digital_signature, case_id]
         db.execute(query, params=params)
-        return {'flag': True}
+        return {'flag': True, 'digitally_signed': digital_signature}
     except:
-        traceback.print_exc()
-        print(f'Error occured while updating value of `Digital Signature` in validation. Check logs.')
+        logging.exception(f'Error occured while updating value of `Digital Signature` in validation. Check logs.')
         return {'flag': False}

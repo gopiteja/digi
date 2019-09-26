@@ -1,17 +1,22 @@
 import traceback
 from fuzzywuzzy import fuzz
+import json
 
 try:
     from app.ace_logger import Logging
+    with open('app/parameters.json') as f:
+        parameters = json.loads(f.read())
 except:
     from ace_logger import Logging
+    with open('parameters.json') as f:
+        parameters = json.loads(f.read())
 
 logging = Logging()
 
 def get_context_box(ocr_data, keyword_boxes, context):
     context_box_dict = None
-    high_fuzzy_score = 0
-    context_match_threshold = 70
+    high_fuzzy_score = parameters['high_fuzzy_score']
+    context_match_threshold = parameters['context_match_threshold']
 
     # Loop through all keywords found
     for keyword_data in keyword_boxes:
@@ -34,10 +39,10 @@ def get_context_box(ocr_data, keyword_boxes, context):
         logging.debug(f'B: {B}')
 
         for data in ocr_data:
-            if  (data['left'] + int(0.5 * data['width']) >= L
-                    and data['right'] - int(0.5 * data['width']) <= R
-                    and data['top'] + int(0.5 * data['height']) >= T
-                    and data['bottom'] - int(0.5 * data['height']) <= B):
+            if  (data['left'] + int(parameters['box_left_margin_ratio'] * data['width']) >= L
+                    and data['right'] - int(parameters['box_right_margin_ratio'] * data['width']) <= R
+                    and data['top'] + int(parameters['box_top_margin_ratio'] * data['height']) >= T
+                    and data['bottom'] - int(parameters['box_bottom_margin_ratio'] * data['height']) <= B):
                 ocr_box_data.append(data)
 
         # Compare text from OCR data with context text

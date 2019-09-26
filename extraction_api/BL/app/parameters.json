@@ -37,5 +37,12 @@
     "validation_queue": "validation"
   },
   "handwritten_engine": "vision",
-  "ui_folder": "/opt/lampp/htdocs/drl/"
+  "ui_folder": "./invoice_files/",
+  "value_box_padding": 0,
+  "box_left_margin_ratio": 0.5,
+  "box_right_margin_ratio": 0.5,
+  "box_top_margin_ratio": 0.5,
+  "box_bottom_margin_ratio": 0.5,
+  "context_match_threshold": 70,
+  "high_fuzzy_score": 0
 }
