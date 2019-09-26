@@ -44,9 +44,5 @@
   "box_top_margin_ratio": 0.5,
   "box_bottom_margin_ratio": 0.5,
   "context_match_threshold": 70,
-  "high_fuzzy_score": 0,
-  "host": ,
-  "password": ,
-  "port": ,
-  "user" ,
+  "high_fuzzy_score": 0
 }
