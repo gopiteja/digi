@@ -134,7 +134,7 @@ services:
       - LOG_FORMAT=${LOG_FORMAT}
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
     volumes:
-      - invoice_files:/var/www/table_api/app/invoice_files
+      - file_output:/var/www/table_api/app/invoice_files
     # logging:
     #   driver: gelf
     #   options:

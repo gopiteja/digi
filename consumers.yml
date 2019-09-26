@@ -356,7 +356,7 @@ volumes:
     external: true
     name: ui_images
 
-  # Table API
+  # Invoices
   invoice_files:
     external: true
     name: file_output
