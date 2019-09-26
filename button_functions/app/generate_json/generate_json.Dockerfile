@@ -5,8 +5,8 @@ FROM apache_base
 # instruction creates a directory with this name if it doesn’t exist
 WORKDIR /app
 
-# Copy all files
-COPY ./app /app/
+# Copy rest of the files
+COPY . /app/
 
-# Run app
-CMD ["python", "-u", "json_export.py"]
+# Run yourr_api.py when the container launches
+CMD ["python", "-u", "generate_json.py"]

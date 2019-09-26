@@ -1,5 +1,6 @@
 import ast
 import json
+import os
 import traceback
 import pandas as pd
 
@@ -11,12 +12,16 @@ from time import sleep
 
 from db_utils import DB
 from producer import produce
-try:
-    from .ace_logger import Logging
-except:
-    from ace_logger import Logging
+from ace_logger import Logging
 
 logging = Logging()
+
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
 def table_as_kv(extracted_data_maintable):
     extracted_data_maintable_kv = {}
@@ -67,24 +72,14 @@ def table_as_kv(extracted_data_maintable):
                 extracted_data_maintable_kv[header_names[i]].append(row[i][0])
     return extracted_data_maintable_kv
 
-
-def merge_table(data):
-
+def merge_table(data, tenant_id):
     case_id = data['case_id']
 
     logging.debug(f"Merging table for case_id:{case_id}")
 
     tables = ['json_reader', 'sap', 'ocr', 'business_rule']
 
-    # Database configuration
-    db_config = {
-        'host': 'extraction_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306'
-    }
-    db = DB('extraction', **db_config)
-    # db = DB('extraction') # Development purpose
+    db = DB('extraction', tenant_id=tenant_id, **db_config)
 
     combined_table_data = {}
     for table in tables:
@@ -236,6 +231,7 @@ def consume(broker_url='broker:9092'):
 
         for message in consumer:
             data = message.value
+            tenant_id = data.get('tenant_id', None)
             try:
                 case_id = data['case_id']
                 functions = data['functions']
@@ -275,7 +271,7 @@ def consume(broker_url='broker:9092'):
 
             # Call save changes function
             try:
-                result = merge_table(function_params)
+                result = merge_table(function_params, tenant_id)
             except:
                 # Unlock the case.
                 query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'

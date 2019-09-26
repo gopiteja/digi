@@ -1,11 +1,17 @@
 import argparse
 import json
+import os
+import requests
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from kafka import KafkaConsumer, TopicPartition
-
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+
+from ace_logger import Logging
+from db_utils import DB
+from producer import produce
+from json_exporter import JSONExport
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
@@ -18,21 +24,17 @@ def http_transport(encoded_span):
         headers={'Content-Type': 'application/x-thrift'},
     )
 
-try:
-    from app.ace_logger import Logging
-    from app.db_utils import DB
-    from app.json_exporter import JSONExport
-    from app.producer import produce
-except:
-    from ace_logger import Logging
-    from db_utils import DB
-    from json_exporter import JSONExport
-    from producer import produce
-
 logging = Logging()
 
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
+
 @zipkin_span(service_name='excel_export_api', span_name='export_json')
-def export_json(content):
+def export_json(content, tenant_id):
     logging.info('Exporting to JSON.')
     logging.debug(f'Data recieved: {content}')
 
@@ -45,15 +47,7 @@ def export_json(content):
         return {'flag': False, 'message': message}
 
     # * STEP 0 - Get metadata
-    # Database configuration
-    queue_db_config = {
-        'host': 'queue_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306'
-    }
-    queue_db = DB('queues', **queue_db_config)
-    # queue_db = DB('queues_')  # Development purpose
+    queue_db = DB('queues', tenant_id=tenant_id, **db_config)
 
     case_data = queue_db.get_all('process_queue', {'case_id': case_id})
     # latest_case_file = queue_db.get_latest(case_files, 'case_id', 'created_date')
@@ -64,15 +58,7 @@ def export_json(content):
         return {'flag': False, 'message': message}
 
     # * STEP 1 - Get data to export
-    # Database configuration
-    extraction_db_config = {
-        'host': 'extraction_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306'
-    }
-    extraction_db = DB('extraction', **extraction_db_config)
-    # extraction_db = DB('extraction')  # Development purpose
+    extraction_db = DB('extraction', tenant_id=tenant_id, **db_config)
 
     if case_id is not None:
         data = extraction_db.get_all('combined', condition={'case_id': case_id})
@@ -85,15 +71,7 @@ def export_json(content):
         return {'flag': False, 'message': message}
 
     # * STEP 2 - Getting export configuration
-    # Database configuration
-    json_export_db_config = {
-        'host': 'json_export_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306'
-    }
-    json_export_db = DB('json_export', **json_export_db_config)
-    # json_export_db = DB('json_export')  # Development purpose
+    json_export_db = DB('json_export', tenant_id=tenant_id, **db_config)
 
     # Get active configuration
     all_configs = json_export_db.get_all('configuration')
@@ -134,26 +112,6 @@ def consume(broker_url='broker:9092'):
     try:
         route = 'generate_json'
 
-        common_db_config = {
-            'host': 'common_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        kafka_db = DB('kafka', **common_db_config)
-        # kafka_db = DB('kafka')
-
-        queue_db_config = {
-            'host': 'queue_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root'
-        }
-        queue_db = DB('queues', **queue_db_config)
-        # queue_db = DB('queues')
-
-        message_flow = kafka_db.get_all('grouped_message_flow')
-
         logging.debug(f'Listening to topic `{route}`...')
         consumer = KafkaConsumer(
             bootstrap_servers=broker_url,
@@ -190,23 +148,17 @@ def consume(broker_url='broker:9092'):
         partitions = [TopicPartition(route, p) for p in parts]
         consumer.assign(partitions)
 
-        query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
-        function_info = queue_db.execute(query, params=[route])
-        in_progress_message = list(function_info['in_progress_message'])[0]
-        failure_message = list(function_info['failure_message'])[0]
-        success_message = list(function_info['success_message'])[0]
-
         for message in consumer:
             data = message.value
+            tenant_id = data.get('tenant_id', None)
             try:
                 case_id = data['case_id']
                 functions = data['functions']
-                tenant_id = data['tenant_id']
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
-                tenant_id = ''
                 consumer.commit()
                 continue
+
             with zipkin_span(service_name='json_export', span_name='consume', 
                     transport_handler=http_transport, port=5007, sample_rate=0.5,) as  zipkin_context:
                 zipkin_context.update_binary_annotations({'Tenant':tenant_id})
@@ -217,6 +169,17 @@ def consume(broker_url='broker:9092'):
                 except:
                     consumer.commit()
                     continue
+
+                kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
+                queue_db = DB('queues', tenant_id=tenant_id, **db_config)
+
+                query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
+                function_info = queue_db.execute(query, params=[route])
+                in_progress_message = list(function_info['in_progress_message'])[0]
+                failure_message = list(function_info['failure_message'])[0]
+                success_message = list(function_info['success_message'])[0]
+
+                message_flow = kafka_db.get_all('grouped_message_flow')
 
                 # Get message group functions
                 group_messages = message_flow.loc[message_flow['message_group'] == group]
@@ -242,7 +205,7 @@ def consume(broker_url='broker:9092'):
 
                 # Call the function
                 try:
-                    result = export_json(function_params)
+                    result = export_json(function_params, tenant_id)
                 except:
                     # Unlock the case.
                     query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'

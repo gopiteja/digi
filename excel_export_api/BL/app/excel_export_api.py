@@ -5,26 +5,31 @@ Created Date: 18-02-2019
 import argparse
 import json
 import openpyxl
+import os
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pathlib import Path
+from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+
+from ace_logger import Logging
+from db_utils import DB
 
 try:
-    from app import app
-    from app.ace_logger import Logging
-    from app.db_utils import DB
     from app.excel_export import ExportExcel
 except:
-    from ace_logger import Logging
-    from db_utils import DB
     from excel_export import ExportExcel
     app = Flask(__name__)
     CORS(app)
 
 logging = Logging()
 
-from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
@@ -59,11 +64,8 @@ def export_excel():
             content = request.json
             logging.debug(f'Data recieved: {content}')
 
-            case_id = content.pop('case_id', None)
-            try:
-                tenant_id = content.pop('case_id', None) 
-            except:
-                tenant_id = '' 
+            case_id = content.get('case_id', None)
+            tenant_id = content.get('tenant_id', None) 
 
             zipkin_context.update_binary_annotations({'Tenant':tenant_id})
             # Sanity checks
@@ -73,15 +75,7 @@ def export_excel():
                 return jsonify({'flag': False, 'message': message})
 
             # * STEP 1 - Get data to export
-            extraction_db_config = {
-                'host': 'extraction_db',
-                'user': 'root',
-                'password': 'root',
-                'port': '3306',
-                'tenant_id': tenant_id
-            }
-            db = DB('extraction', **extraction_db_config)
-            # db = DB('extraction')  # Development purpose
+            db = DB('extraction', tenant_id=tenant_id, **db_config)
 
             if case_id is not None:
                 data = db.get_all('combined', condition={'case_id': case_id})
@@ -94,15 +88,7 @@ def export_excel():
                 return jsonify({'flag': True, 'message': message})
 
             # * STEP 2 - Getting export configuration
-            excel_export_db_config = {
-                'host': 'excel_export_db',
-                'user': 'root',
-                'password': 'root',
-                'port': '3306',
-                'tenant_id': tenant_id
-            }
-            excel_export_db = DB('excel_export', **excel_export_db_config)
-            # excel_export_db = DB('excel_export')  # Development purpose
+            excel_export_db = DB('excel_export', tenant_id=tenant_id, **db_config)
 
             # Get active configuration
             all_configs = excel_export_db.get_all('configuration')
@@ -132,15 +118,6 @@ def export_excel():
                 exclude_fields = active_config['exclude_fields'].split(',')
             else:
                 exclude_fields = []
-
-            try:
-                field_mapping = json.loads(active_config['field_mapping'])
-            except:
-                field_mapping = {}
-
-            ee = ExportExcel(export_type, exclude_fields, save_type, custom_name, field_mapping)
-
-            return jsonify(ee.export(data))
 
             try:
                 field_mapping = json.loads(active_config['field_mapping'])

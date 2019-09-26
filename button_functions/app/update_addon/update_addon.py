@@ -18,21 +18,19 @@ except:
 
 logging = Logging()
 
-def get_details(customer_id):
-    """very hsbc specific ...lot of hard codings"""
-    db_config = {
-    'host': '3.208.195.34',
-    'port': 3306,
-    'user': 'root',
-    'password': 'AlgoTeam123'
-    }
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
-    stats_db = DB('hsbc_stats', **db_config)
+def get_details(customer_id, tenant_id):
+    """very hsbc specific ...lot of hard codings"""
+    stats_db = DB('hsbc_stats', tenant_id=tenant_id, **db_config)
     params = [customer_id]
     query = "SELECT `Global Business` from `UCIC_Details_Source` where `Customer Id` = %s"
     lob = list(stats_db.execute_default_index(query, params=params)['Global Business'])[0]
-
-    
     query = "SELECT `Account Number`, `GHO` from `Closed_Accounts_Source` where `Customer Id` = %s"
     df = stats_db.execute_default_index(query, params=params)
     accn_num, gho = (list(df['Account Number'])[0], list(df['GHO'])[0])
@@ -43,14 +41,7 @@ def update_addon(data, tenant_id):
     try:
         case_id = data['case_id']
 
-        extraction_db_config = {
-            'host': 'extraction_db',
-            'port': 3306,
-            'user': 'root',
-            'password': 'root',
-            'tenant_id': tenant_id
-        }
-        extraction_db = DB('extraction', **extraction_db_config)
+        extraction_db = DB('extraction', tenant_id=tenant_id, **db_config)
         # get the data from the ocr table
         query = "SELECT `id`,`Add On Table` from `ocr` where case_id = %s"
         params = [case_id]
@@ -67,7 +58,7 @@ def update_addon(data, tenant_id):
         customer_ids = [val['Customer ID'] for val in addon_table[0]['rowData']] # hard coded part
         row_data = []
         for customer_id in customer_ids:
-            cust_acc_num, gho_code, lob = get_details(customer_id)
+            cust_acc_num, gho_code, lob = get_details(customer_id, tenant_id)
             row_data.append({'Customer ID': customer_id, 'Customer Account Number': cust_acc_num, 'GHO Code':gho_code,  'LOB':lob})
         new_addon_table['rowData'] = row_data
         new_addon_tables.append(new_addon_table)
@@ -129,24 +120,14 @@ def consume(broker_url='broker:9092'):
             try:
                 case_id = data['case_id']
                 functions = data['functions']
-                tenant_id = data['tenant_id']
+                tenant_id = data.get('tenant_id', None)
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
                 consumer.commit()
                 continue
             
-            db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': '3306',
-                'user': 'root',
-                'password': os.environ['LOCAL_DB_PASSWORD'],
-                'tenant_id' : tenant_id
-            }
-            kafka_db = DB('kafka', **db_config)
-            # kafka_db = DB('kafka')
-
-            queue_db = DB('queues', **db_config)
-            # queue_db = DB('queues')
+            kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
+            queue_db = DB('queues', tenant_id=tenant_id, **db_config)
 
             query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
             function_info = queue_db.execute(query, params=[route])

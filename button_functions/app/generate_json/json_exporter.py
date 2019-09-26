@@ -1,17 +1,12 @@
 import json
+import requests
 
 from datetime import datetime
 from pandas import to_timedelta, DataFrame
 from pathlib import Path
-
-try:
-    from app.ace_logger import Logging
-    from app.db_utils import DB
-except:
-    from ace_logger import Logging
-    from db_utils import DB
-
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+
+from ace_logger import Logging
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
