@@ -13,12 +13,6 @@ from flask_cors import CORS
 from flask import Flask, jsonify, request
 from pathlib import Path
 
-# from email.mime.multipart import MIMEMultipart
-# from email.mime.text import MIMEText
-# from email.mime.base import MIMEBase
-# from email import encoders
-# import smtplib
-
 from producer import produce
 from db_utils import DB
 from ace_logger import Logging
@@ -27,21 +21,18 @@ app = Flask(__name__)
 cors = CORS(app)
 logging = Logging()
 
-# path_to_watch = Path('./input')
-# output_path = Path('./output')
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
 def watch(path_to_watch, output_path):
     logging.info('Watch folder started.')
     logging.debug(f'Watching folder: {path_to_watch}')
 
-    db_config = {
-        'host': 'queue_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root'
-    }
     queue_db = DB('queues', **db_config)
-    # queue_db = DB('queues')
 
     stats_db_config = {
             'host': 'stats_db',
