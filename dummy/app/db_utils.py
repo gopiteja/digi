@@ -14,7 +14,7 @@ from time import time
 
 from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 class DB(object):
     def __init__(self, database, host='127.0.0.1', user='root', password='', port='3306', tenant_id=None):

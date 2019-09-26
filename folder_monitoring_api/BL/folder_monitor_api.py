@@ -25,7 +25,7 @@ from ace_logger import Logging
 
 app = Flask(__name__)
 cors = CORS(app)
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 # path_to_watch = Path('./input')
 # output_path = Path('./output')

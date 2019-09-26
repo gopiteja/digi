@@ -24,7 +24,7 @@ def http_transport(encoded_span):
         headers={'Content-Type': 'application/x-thrift'},
     )
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 db_config = {
     'host': os.environ['HOST_IP'],

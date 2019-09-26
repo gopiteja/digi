@@ -12,7 +12,7 @@ except:
     from ace_logger import Logging
     from opencV_and import match_box
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def get_parameters():
     with open('configs/template_detection_params.json') as f:

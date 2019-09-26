@@ -13,7 +13,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def sort_ocr(data):
     data = sorted(data, key = lambda i: (i['top']))

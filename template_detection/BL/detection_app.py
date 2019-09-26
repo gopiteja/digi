@@ -34,11 +34,11 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 FEF_XML = 7
 XCA_Ascii = 1
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 app = Flask(__name__)
 cors = CORS(app)

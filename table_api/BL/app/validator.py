@@ -12,7 +12,7 @@ try:
 except:
     from ace_logger import Logging
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 def get_parameters():
     with open('./parameters.json') as f:

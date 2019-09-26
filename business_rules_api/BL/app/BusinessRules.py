@@ -12,7 +12,7 @@ try:
 except:
     from ace_logger import Logging
     
-# logging = Logging().getLogger('ace')
+# logging = Logging()
 
 @Lib.add_methods_from(_StaticFunctions, _BooleanReturnFunctions, _AssignFunction) 
 class BusinessRules():

@@ -31,7 +31,7 @@ db_config = {
     'port': os.environ['LOCAL_DB_PORT'],
 }
 
-logging = Logging().getLogger('ace')
+logging = Logging()
 
 @zipkin_span(service_name='process_time_consumer', span_name='process_time')
 def process_time(data, tenant_id=None):
