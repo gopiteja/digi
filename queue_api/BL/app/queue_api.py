@@ -16,16 +16,11 @@ from pandas import Series, Timedelta, to_timedelta
 from time import time
 from itertools import chain, repeat, islice, combinations
 from ace_logger import Logging
-
-try:
-    from app.get_fields_info import get_fields_info
-    from app.get_fields_info_utils import sort_ocr
-except:
-    from get_fields_info import get_fields_info
-    from get_fields_info_utils import sort_ocr
-    
+  
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
     
+from app.get_fields_info import get_fields_info
+from app.get_fields_info_utils import sort_ocr
 from app import app
 from app import cache 
 
@@ -50,7 +45,7 @@ def http_transport(encoded_span):
         headers={'Content-Type': 'application/x-thrift'},
     )
 
-def get_template_exceptions(db, data, tenant_id=None):
+def get_template_exceptions(db, data, tenant_id=None, queue_uid=''):
     logging.info('Getting template exceptions')
     logging.info(f'Data: {data}')
     start_point = data['start']
@@ -61,29 +56,19 @@ def get_template_exceptions(db, data, tenant_id=None):
 
     template_db = DB('template_db', **db_config)
 
-    # TODO: Value of "columns" will come from a database.
-    # Columns to display is configured by the user from another screen.
-    columns = [
-            'case_id',
-            'cluster',
-            'created_date',
-            'operator'
-        ]
+    columns_data = get_columns(queue_uid, tenant_id, True)
+    
+    columns = columns_data['columns']
 
-    column_mapping = {
-        "fax_unique_id": "case_id",
-        "cluster": "cluster",
-        "created_date": "created_date",
-        "agent": "operator"
-        }
+    column_mapping = columns_data['column_mapping']
 
     column_order = list(column_mapping.keys())
 
     all_st = time()
     logging.debug(f'Selecting columns: {columns}')
 
-    process_queue_df = db.execute("SELECT * from `process_queue` where `queue`= 'Template Exceptions' LIMIT %s, %s", params=[start_point, offset])
-    total_files = list(db.execute("SELECT id,COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=['Template Exceptions'])['COUNT(DISTINCT `case_id`)'])[0]
+    process_queue_df = db.execute("SELECT * from `process_queue` where `queue`= %s LIMIT %s, %s", params=[queue_uid,start_point, offset])
+    total_files = list(db.execute("SELECT id,COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=[queue_uid])['COUNT(DISTINCT `case_id`)'])[0]
 
     logging.debug(f'Loading process queue {time()-all_st}')
     
@@ -264,28 +249,44 @@ def queue_name_type(queue_id, tenant_id):
     return queue_uid, queue_name, queue_type, queue_definition
 
 @cache.memoize(86400)
-def get_columns(queue_id, queue_name, tenant_id):
+def get_columns(queue_uid, tenant_id, template_exceptions=None):
     logging.debug('Getting columns (cache)')
-    logging.debug(f'Queue ID: {queue_id}')
-    logging.debug(f'Queue Name: {queue_name}')
+    logging.debug(f'Queue Unique Name: {queue_uid}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
     db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
 
     # * COLUMNS
-    logging.info(f'Getting column details for `{queue_name}`...')
-    query = "SELECT id, column_id from queue_column_mapping where queue_id = %s ORDER BY column_order ASC"
-    queue_column_ids = list(db.execute(query, params=[queue_id]).column_id) 
+    query = "SELECT id, column_id from queue_column_mapping where unique_name = %s ORDER BY column_order ASC"
+    queue_column_ids = list(db.execute(query, params=[queue_uid]).column_id) 
 
     # Get columns using column ID and above result from column configuration table
     columns_time = time()
     columns_definition = db.get_all('column_definition')
     columns_df = columns_definition.ix[queue_column_ids]
 
+    dd = columns_df.to_dict(orient='list')
+    final ={}
+    to_map = []
+
+    for key, value in dd.items():
+        to_map.append(value)
+
+    column_mapping = {}
+    for i in range(len(to_map[0])):
+        column_mapping[to_map[1][i]] = to_map[0][i] 
+
+    columns = list(columns_df.loc[columns_df['source'] == 'process_queue']['column_name'])
+    if template_exceptions:
+        return_data = {
+        'columns': columns,
+        'column_mapping': column_mapping
+        }
+        return return_data
+
     extraction_columns_df = columns_df.loc[columns_df['source'] != 'process_queue']
     logging.debug(f'Columns DF: {columns_df}')
-    columns = list(columns_df.loc[columns_df['source'] == 'process_queue']['column_name'])
     logging.debug(f'Columns: {columns}')
     logging.debug(f'Time taken for columns in q {time()-columns_time}')
 
@@ -298,10 +299,10 @@ def get_columns(queue_id, queue_name, tenant_id):
 
     return_data = {
         'columns': columns,
+        'column_mapping': column_mapping,
         'util_columns': util_columns,
         'extraction_columns_df': extraction_columns_df,
-        'extraction_columns_list': extraction_columns_list,
-        'columns_df': columns_df
+        'extraction_columns_list': extraction_columns_list
     }
 
     return return_data
@@ -652,7 +653,7 @@ def get_queue(queue_id=None):
             if queue_type == 'train':
                 logging.info(f' > Redirecting to `get_template_exception` route.')
 
-                response = get_template_exceptions(db, {'start': start_point, 'end': end_point}, tenant_id)
+                response = get_template_exceptions(db, {'start': start_point, 'end': end_point}, tenant_id, queue_uid)
 
                 extraction_db.engine.close()
 
@@ -696,12 +697,12 @@ def get_queue(queue_id=None):
 
             
             try:
-                columns_data = get_columns(queue_id, queue_name, tenant_id)
+                columns_data = get_columns(queue_uid, tenant_id)
                 columns = columns_data['columns']
                 util_columns = columns_data['util_columns']
                 extraction_columns_df = columns_data['extraction_columns_df']
                 extraction_columns_list = columns_data['extraction_columns_list']
-                columns_df = columns_data['columns_df']
+                column_mapping = columns_data['column_mapping']
                 
                 logging.debug(f'Extraction Columns: {extraction_columns_df}')
             except:
@@ -806,21 +807,6 @@ def get_queue(queue_id=None):
                 columns = [col for col in columns if col not in util_columns]
                 columns += extraction_columns_list
                 logging.debug(f'New columns: {columns}')
-
-                
-                dd = columns_df.to_dict(orient='list')
-                final ={}
-                to_map = []
-                logging.debug(f'DD: {dd}')
-
-                for key, value in dd.items():
-                    to_map.append(value)
-
-                logging.debug(f'To Map: {to_map}')
-                column_mapping = {}
-                for i in range(len(to_map[0])):
-                    column_mapping[to_map[1][i]] = to_map[0][i] 
-                logging.debug(f'Column Mapping: {column_mapping}')
             else:
                 column_mapping = {}
 
