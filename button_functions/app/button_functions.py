@@ -1,6 +1,7 @@
 import argparse
 import ast
 import json
+import os
 import requests
 import traceback
 import warnings
@@ -19,6 +20,13 @@ from ace_logger import Logging
 from app import app
 
 logging = Logging()
+
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
@@ -52,25 +60,9 @@ def execute_button_function():
             group = data['group']
             case_id = data['case_id']
             tenant_id = data['tenant_id']
-            queue_db_config = {
-                'host': 'queue_db',
-                'port': '3306',
-                'user': 'root',
-                'password': 'root',
-                'tenant_id':tenant_id
-            }
-            queue_db = DB('queues', **queue_db_config)
-            # queue_db = DB('kafka')
-             
-            common_db_config = {
-                'host': 'common_db',
-                'port': '3306',
-                'user': 'root',
-                'password': 'root',
-                'tenant_id':tenant_id
-            }
-            kafka_db = DB('kafka', **common_db_config)
-            # kafka_db = DB('kafka')
+
+            queue_db = DB('queues', tenant_id=tenant_id, **db_config)
+            kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
 
             message_flow = kafka_db.get_all('grouped_message_flow')
             group_messages = message_flow.loc[message_flow['message_group'] == group]
@@ -85,20 +77,11 @@ def execute_button_function():
             try:    
                 query_ = f"SELECT * FROM `button_functions` where `route` = '{first_route}'"
                 button_functions_df = queue_db.execute(query_)
-                type_ = list(button_functions_df['type'])[0]
-                if type_ == 'api':
-                    # host = 'servicebridge'
-                    # port = 80
-                    # route = first_route
-                    # data = {
-                    #     'case_id': case_id
-                    # }
-                    # response_data = requests.post(f'http://{host}:{port}/{route}', json=data)
+                button_type = list(button_functions_df['type'])[0]
+                if button_type == 'api':
                     return jsonify({'flag' : True, 'show_decision_tree': True })
             except:
-                print("failed in the changes made in button functions")
-                traceback.print_exc()
-                pass
+                logging.exception("failed in the changes made in button functions")
 
             query = 'UPDATE `process_queue` SET `case_lock`=1, `failure_status`=0, `completed_processes`=0, `total_processes`=0, `status`=NULL WHERE `case_id`=%s'
             queue_db.execute(query, params=[case_id])

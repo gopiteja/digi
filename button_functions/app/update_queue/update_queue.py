@@ -18,6 +18,13 @@ except:
 
 logging = Logging()
 
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
+
 def update_queue_trace(queue_db, case_id, latest):
     queue_trace_q = "SELECT * FROM `trace_info` WHERE `case_id`=%s"
     queue_trace_df = queue_db.execute(queue_trace_q, params=[case_id])
@@ -87,25 +94,8 @@ def update_queue(data, tenant_id):
         logging.error(f'ERROR: {message}')
         return {'flag': False, 'message': message}
 
-    db_config = {
-        'host': 'queue_db',
-        'port': 3306,
-        'user': 'root',
-        'password': 'root',
-        'tenant_id' : tenant_id
-    }
-    db = DB('queues', **db_config)
-    # db = DB('queues')
-
-    stats_db_config = {
-        'host': 'stats_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
-        'tenant_id' : tenant_id
-    }
-
-    stats_db = DB('stats', **stats_db_config)
+    db = DB('queues', tenant_id=tenant_id, **db_config)
+    stats_db = DB('stats', tenant_id=tenant_id, **db_config)
 
     # Get latest data related to the case from invoice table
     invoice_files_df = db.get_all('process_queue')
@@ -135,79 +125,6 @@ def update_queue(data, tenant_id):
         message = f'Something went wrong updating queue. Check logs.'
         logging.error(f'ERROR: - {message}')
         return {'flag': False, 'message': message}
-
-    # ! UPDATE TRACE INFO TABLE HERE
-    # update_queue_trace(db, case_id, queue)
-
-    # # Inserting fields into respective tables
-    # field_definition = db.get_all('field_definition')
-    # tab_definition = db.get_all('tab_definition')
-
-    # # Change tab ID to its actual names
-    # for index, row in field_definition.iterrows():
-    #     tab_id = row['tab_id']
-    #     tab_name = tab_definition.loc[tab_id]['text']
-    #     field_definition.loc[index, 'tab_id'] = tab_name
-
-    # # Create a new dictionary with key as table, and value as fields dict (column name: value)
-    # table_fields = {}
-    # for unique_name, value in fields.items():
-    #     unique_field_name = field_definition.loc[field_definition['unique_name'] == unique_name]
-
-    #     if unique_field_name.empty:
-    #         logging.debug(
-    #             f'No unique field name for {unique_name}. Check `field_defintion` database.')
-    #         continue
-        
-    #     tab_name = list(unique_field_name.tab_id)[0]
-    #     table = list(tab_definition.loc[tab_definition['text'] == tab_name]['source'])[0]
-    #     display_name = list(unique_field_name.display_name)[0]
-
-    #     if table not in table_fields:
-    #         table_fields[table] = {}
-
-    #     table_fields[table][display_name] = value
-    # logging.debug(f'Table <-> Fields: {table_fields}')
-
-    # extraction_db_config = {
-    #     'host': 'extraction_db',
-    #     'port': 3306,
-    #     'user': 'root',
-    #     'password': 'root'
-    # }
-    # extraction_db = DB('extraction', **extraction_db_config)
-    # # extraction_db = DB('extraction')
-
-    # # ! GET HIGHLIGHT FROM PREVIOUS RECORD BECAUSE UI IS NOT SENDING
-    # ocr_files_df = extraction_db.get_all('ocr')
-    # latest_ocr_files = extraction_db.get_latest(
-    #     ocr_files_df, 'case_id', 'created_date')
-    # ocr_case_files = latest_ocr_files.loc[latest_ocr_files['case_id'] == case_id]
-    # highlight = list(ocr_case_files.highlight)[0]
-
-    # for table_name, fields_dict in table_fields.items():
-    #     # Only in OCR table add the highlight
-    #     if table_name == 'ocr':
-    #         column_names = ['`case_id`', '`highlight`']
-    #         params = [case_id, highlight]
-    #     else:
-    #         column_names = ['`case_id`']
-    #         params = [case_id]
-
-    #     for column, value in fields_dict.items():
-    #         if column == 'Verify Operator':
-    #             column_names.append(f'`{column}`')
-    #             params.append(verify_operator)
-    #         else:
-    #             column_names.append(f'`{column}`')
-    #             params.append(value)
-    #     query_column_names = ', '.join(column_names)
-    #     query_values_placeholder = ', '.join(['%s'] * len(params))
-
-    #     query = f'INSERT INTO `{table_name}` ({query_column_names}) VALUES ({query_values_placeholder})'
-    #     logging.debug(f'INFO: Inserting into {table_name}')
-
-    #     extraction_db.execute(query, params=params)
 
     return {'flag': True, 'message': 'Changing queue completed.'}
 
@@ -266,18 +183,8 @@ def consume(broker_url='broker:9092'):
                 consumer.commit()
                 continue
             
-            db_config = {
-            'host': os.environ['HOST_IP'],
-            'port': '3306',
-            'user': 'root',
-            'password': os.environ['LOCAL_DB_PASSWORD'],
-            'tenant_id' : tenant_id
-            }
-            kafka_db = DB('kafka', **db_config)
-            # kafka_db = DB('kafka')
-
-            queue_db = DB('queues', **db_config)
-            # queue_db = DB('queues')
+            kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
+            queue_db = DB('queues', tenant_id=tenant_id, **db_config)
 
             query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
             function_info = queue_db.execute(query, params=[route])

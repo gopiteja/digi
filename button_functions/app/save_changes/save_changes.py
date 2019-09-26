@@ -17,6 +17,13 @@ except:
 
 logging = Logging()
 
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
+
 def update_table(db, case_id, file_name, changed_fields):
     logging.info('Updating table...')
 
@@ -65,23 +72,10 @@ def save_changes(case_id, data, tenant_id):
 
         fields = data['fields']
         changed_fields = data['field_changes']
-
-        try:
-            verify_operator = data['operator']
-        except:
-            logging.warning('Operator not in data. Setting as None')
-            verify_operator = None
-
-        db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': '3306',
-                'user': 'root',
-                'password': os.environ['LOCAL_DB_PASSWORD'],
-                'tenant_id': tenant_id
-            }
-        queue_db = DB('queues', **db_config)
-
-        stats_db = DB('stats', **db_config)
+        verify_operator = data.get('operator', None)
+        
+        queue_db = DB('queues', tenant_id=tenant_id, **db_config)
+        stats_db = DB('stats', tenant_id=tenant_id, **db_config)
 
         try:
             update_table(queue_db, case_id, "", changed_fields)
@@ -122,7 +116,7 @@ def save_changes(case_id, data, tenant_id):
 
             changed_fields_w_name[table_name][display_name] = fields_w_name[table_name][display_name]
 
-        extraction_db = DB('extraction', **db_config)
+        extraction_db = DB('extraction', tenant_id=tenant_id, **db_config)
 
         try:
             trained_info = {}
@@ -221,16 +215,8 @@ def consume(broker_url='broker:9092'):
                 consumer.commit()
                 continue
             
-            db_config = {
-                'host': os.environ['HOST_IP'],
-                'port': '3306',
-                'user': 'root',
-                'password': os.environ['LOCAL_DB_PASSWORD'],
-                'tenant_id': tenant_id
-            }
-
-            queue_db = DB('queues', **db_config)
-            kafka_db = DB('kafka', **db_config)
+            queue_db = DB('queues', tenant_id=tenant_id, **db_config)
+            kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
 
             query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
             function_info = queue_db.execute(query, params=[route])
