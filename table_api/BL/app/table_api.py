@@ -49,10 +49,10 @@ logging = Logging()
 def predict_with_template(case_id, template_name, tenant_id=None):
     logging.info(f'in predict with template')
     queue_db_config = {
-        'host': 'queue_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **queue_db_config)
@@ -71,10 +71,10 @@ def predict_with_template(case_id, template_name, tenant_id=None):
     xml_string = list(ocr_info.xml_data)[0]
 
     table_db_config = {
-        'host': 'table_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     table_db = DB('table_db', **table_db_config)
@@ -115,29 +115,29 @@ def predict_with_template(case_id, template_name, tenant_id=None):
             return {'flag': False, 'message': message}
 
     extraction_db_config = {
-        'host': 'extraction_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     extraction_db = DB('extraction', **extraction_db_config)
     # extraction_db = DB('extraction')
 
     queue_db_config = {
-        'host': 'queue_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **queue_db_config)
 
     stats_db_config = {
-        'host': 'stats_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
 
@@ -188,10 +188,10 @@ def extract_header():
         vers_formatted.append([(x1, y1), (x2, y2)])
 
     # queue_db_config = {
-    #     'host': 'queue_db',
+    #     'host': os.environ['HOST_IP'],
     #     'port': 3306,
-    #     'user': 'root',
-    #     'password': 'root'
+    #     'user': os.environ['LOCAL_DB_USER'],
+    #     'password': os.environ['LOCAL_DB_PASSWORD']
     # }
     # queue_db = DB('queues', **queue_db_config)
     # queue_db = DB('queues')
@@ -249,10 +249,10 @@ def predict_with_ui_data():
             tenant_id = data['tenant_id'] if 'tenant_id' in data else None
 
             queue_db_config = {
-                'host': 'queue_db',
+                'host': os.environ['HOST_IP'],
                 'port': 3306,
-                'user': 'root',
-                'password': 'root',
+                'user': os.environ['LOCAL_DB_USER'],
+                'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }
             queue_db = DB('queues', **queue_db_config)

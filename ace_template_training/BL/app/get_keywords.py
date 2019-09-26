@@ -334,10 +334,10 @@ def get_field_dict(for_update=False, tenant_id=None):
     :return field_dict from db
     """
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -362,10 +362,10 @@ def get_quadrant_dict(for_update=False, tenant_id=None):
     :return field_dict from db
     """
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -390,10 +390,10 @@ def get_page_dimension(case_id, standard_width=670, tenant_id=None):
     Author : Akshat Goyal
     """
     db_config = {
-        'host': 'queue_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
 

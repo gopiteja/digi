@@ -42,10 +42,10 @@ def get_field_dict(tenant_id=None):
     :return field_dict from db
     """
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -73,10 +73,10 @@ def cluster():
         except:
             tenant_id = None
         db_config = {
-            'host': 'queue_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root',
+            'host': os.environ['HOST_IP'],
+            'port': os.environ['LOCAL_DB_PORT'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
             'tenant_id': tenant_id
         }
         db = DB('queues', **db_config)

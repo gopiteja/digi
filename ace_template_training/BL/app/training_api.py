@@ -855,10 +855,10 @@ def get_neighbourhood_dict(tenant_id=None):
 
     """
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -1161,10 +1161,10 @@ def update_field_dict(config, tenant_id):
     """
 
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -1288,10 +1288,10 @@ def update_field_neighbour_dict(neighbour_dict, trained_info, tenant_id=None):
     Author : Akshat Goyal
     """
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -1403,10 +1403,10 @@ def update_quadrant_dict(quadrant_dict, tenant_id):
     Author : Akshat Goyal
     """
     db_config = {
-        'host': 'template_db',
-        'port': '3306',
-        'user': 'root',
-        'password': 'root',
+        'host': os.environ['HOST_IP'],
+        'port': os.environ['LOCAL_DB_PORT'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('template_db', **db_config)
@@ -1512,10 +1512,10 @@ def remove_keys(ocr_data, ocr_keywords):
 def get_field_validations(tenant_id=None):
     # * Get the OCR tab ID
     db_config = {
-        'host': 'queue_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **db_config)
@@ -1599,30 +1599,30 @@ def force_template():
 
         # Database configuration
         db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
 
         # Database configuration
         extraction_db_config = {
-            'host': 'extraction_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
 
         extraction_db = DB('extraction', **extraction_db_config)
 
         stats_db_config = {
-            'host': 'stats_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
 
@@ -1718,50 +1718,50 @@ def retrain():
         # ! `header_ocr`, `footer_ocr`, `address_ocr`
         # Database configuration
         db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
         # queue_db = DB('queues')
 
         trained_db_config = {
-            'host': 'template_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         trained_db = DB('template_db', **trained_db_config)
         # trained_db = DB('template_db')
 
         table_db_config = {
-            'host': 'table_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         table_db = DB('table_db', **table_db_config)
         # trained_db = DB('template_db')
 
         extarction_db_config = {
-            'host': 'extraction_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extarction_db_config)
         # extraction_db = DB('extraction')
 
         stats_db_config = {
-            'host': 'stats_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
 
@@ -1882,19 +1882,19 @@ def test_fields():
         query = "SELECT `id`, `ocr_data` from `ocr_info` WHERE `case_id`=%s"
 
         db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
 
         template_db_config = {
-            'host': 'template_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         templates_db = DB('template_db', **template_db_config)
@@ -1958,50 +1958,50 @@ def train():
         print('ui_data', ui_data)
         # Database configuration
         db_config = {
-            'host': 'queue_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
         # queue_db = DB('queues')
 
         trained_db_config = {
-            'host': 'template_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         trained_db = DB('template_db', **trained_db_config)
         # trained_db = DB('template_db')
 
         table_db_config = {
-            'host': 'table_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         table_db = DB('table_db', **table_db_config)
         # trained_db = DB('template_db')
 
         extarction_db_config = {
-            'host': 'extraction_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extarction_db_config)
         # extraction_db = DB('extraction')
 
         stats_db_config = {
-            'host': 'stats_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
 
@@ -2244,20 +2244,20 @@ def get_ocr_data():
     logging.debug(f'case_id - {case_id}')
 
     db_config = {
-        'host': 'queue_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     db = DB('queues', **db_config)
     # db = DB('queues')
 
     trained_db_config = {
-        'host': 'template_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
     trained_db = DB('template_db', **trained_db_config)
