@@ -27,7 +27,7 @@ try:
     from app.ace_logger import Logging
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
-    from app.smart_training.key_value_method_key_prediction aimport kv_values_prediction
+    from app.smart_training.key_value_method_key_prediction import kv_values_prediction
     from app.get_keywords import get_keywords, sort_ocr, get_coords, get_field_dict, get_keywords_for_value, \
         get_keywords_in_quadrant
     from app.get_keywords import caculate_dis, get_quadrant_dict, get_page_dimension, which_quadrant, \
