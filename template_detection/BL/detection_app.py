@@ -359,13 +359,35 @@ def abbyy_template_detection(data):
 
         if case_id_process == '' or case_id_process is None:
             try:
+                logging.info('Detecting using Abbyy')
+
+                db = DB('io_configuration', **template_db_config)
+        
+                input_config = db.get_all('input_configuration')
+                output_config = db.get_all('output_configuration')
+
+                logging.debug(f'Input Config: {input_config.to_dict()}')
+                logging.debug(f'Output Config: {output_config.to_dict()}')
+
+                # Sanity checks
+                if (input_config.loc[input_config['type'] == 'Document'].empty
+                        or output_config.loc[input_config['type'] == 'Document'].empty):
+                    message = 'Input/Output not configured in DB.'
+                    logging.error(message)
+                else:
+                    input_path = input_config.iloc[0]['access_1']
+                    output_path = output_config.iloc[0]['access_1']
+
+                file_path = './input/'+ output_path + '/' + file_name
+                
                 logging.info(' -> Trying PDF plumber...')
                 host = 'pdf_plumber_api'
                 port = parameters['pdf_plumber_port']
                 route = 'plumb'
                 data = {
                     'file_name': file_name,
-                    'tenant_id': tenant_id
+                    'tenant_id': tenant_id,
+                    'pdf' : pdfplumber.open(file_path)
                 }
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
                 pdf_response = response.json()
@@ -390,26 +412,7 @@ def abbyy_template_detection(data):
             # no matter what ....try..abbyyy....
             # if isListEmpty(pdf_data) or not pdf_working:
             try:
-                logging.info('Detecting using Abbyy')
-
-                db = DB('io_configuration', **template_db_config)
-        
-                input_config = db.get_all('input_configuration')
-                output_config = db.get_all('output_configuration')
-
-                logging.debug(f'Input Config: {input_config.to_dict()}')
-                logging.debug(f'Output Config: {output_config.to_dict()}')
-
-                # Sanity checks
-                if (input_config.loc[input_config['type'] == 'Document'].empty
-                        or output_config.loc[input_config['type'] == 'Document'].empty):
-                    message = 'Input/Output not configured in DB.'
-                    logging.error(message)
-                else:
-                    input_path = input_config.iloc[0]['access_1']
-                    output_path = output_config.iloc[0]['access_1']
-
-                file_path = './input/'+ output_path + '/' + file_name
+                
 
                 # file_data = open(file_path, 'rb')
 
