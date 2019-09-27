@@ -496,6 +496,7 @@ def abbyy_template_detection(data):
             #     continue
 
             if xml_string is not None or xml_string or not isListEmpty(pdf_data):
+                logging.debug('now the battle being')
                 try:
                     abbyy_ocr_data = xml_parser_sdk.convert_to_json(xml_string)
                 except Exception as e:
