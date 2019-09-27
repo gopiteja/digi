@@ -35,10 +35,6 @@ def watch(path_to_watch, output_path, tenant_id):
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
     stats_db = DB('stats', tenant_id=tenant_id, **db_config)
 
-    query = "SELECT id, case_id, batch_id from process_queue"
-    process_queue = queue_db.execute(query)
-    existing_case_ids = list(process_queue.case_id)
-    existing_batch_ids = list(process_queue.batch_id)
     supported_files = ['.pdf', '.jpeg', '.jpg', '.png']
 
     while True:
@@ -52,19 +48,13 @@ def watch(path_to_watch, output_path, tenant_id):
                     logging.warning('Skipping.')
                     continue
 
-            # Get unique case ID. Check whether generated case ID already exists
-            # while True:
-            #     unique_id = uuid.uuid4().hex[:7].upper()
-            #     if unique_id not in existing_case_ids:
-            #         break
-
             unique_id = file_path.stem # Some clients require file name as Case ID
 
             process_queue_df = queue_db.get_all('process_queue')
             case_id_process = process_queue_df.loc[process_queue_df['file_name'] == file_path.name]
             if case_id_process.empty:
                 insert_query = ('INSERT INTO `process_queue` (`file_name`, `document_type`, `case_id`, `file_path`, `source_of_invoice`) '
-                    'VALUES (%s, %s, %s, %s)')
+                    'VALUES (%s, %s, %s, %s, %s)')
                 params = [file_path.name, 'folder', unique_id, str(file_path.parent.absolute()), str(file_path.parent).split('/')[-1]]
                 queue_db.execute(insert_query, params=params)
                 logging.debug(f' - {file_path.name} inserted successfully into the database')
