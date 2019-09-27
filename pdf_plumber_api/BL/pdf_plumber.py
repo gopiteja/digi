@@ -132,6 +132,7 @@ def plumb():
             response = ocr(file_path, parameters['default_img_width'])
             return jsonify({'flag': True, 'data': response})
         except:
+            logging.exception('failed')
             return jsonify({'flag': False, 'message': 'PDF Plumbing failed.'})
 
 if __name__ == '__main__':
