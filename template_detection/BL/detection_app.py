@@ -488,20 +488,14 @@ def abbyy_template_detection(data):
             # else insert with status 0 (failed)
             # print("pdf_data", pdf_data)
             # print("saving ocr data")
-            if xml_string is None and isListEmpty(pdf_data):
-                query = "UPDATE `process_queue` SET `ocr_status`=0, `queue`='Failed' WHERE `case_id`=%s"
-                queue_db.execute(query, params=[case_id])
-                print(f'No OCR data for {file_name}. Continuing to next file.')
-                print('Updated OCR status in process_queue table to 0.')
-                continue
+            # if xml_string is None and isListEmpty(pdf_data):
+            #     query = "UPDATE `process_queue` SET `ocr_status`=0, `queue`='Failed' WHERE `case_id`=%s"
+            #     queue_db.execute(query, params=[case_id])
+            #     print(f'No OCR data for {file_name}. Continuing to next file.')
+            #     print('Updated OCR status in process_queue table to 0.')
+            #     continue
 
-                # if xml_string is not None or xml_string or not isListEmpty(pdf_data):
-                # if not isListEmpty(pdf_data) and pdf_working:
-                #     logging.debug("Using PDF data")
-                #     ocr_data = pdf_data
-                # else:
-                #     logging.debug("Using Abbyy data")
-                #     ocr_data = xml_parser_sdk.convert_to_json(xml_string)
+            if xml_string is not None or xml_string or not isListEmpty(pdf_data):
                 try:
                     abbyy_ocr_data = xml_parser_sdk.convert_to_json(xml_string)
                 except Exception as e:
