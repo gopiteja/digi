@@ -622,8 +622,6 @@ def value_extract(result, api=False, retrained=False):
         logging.info('Its API fields')
         output_.pop('method_used', 0)
         return output_
-    else:
-        output_['Vendor Name'] = template_name
 
     # Update queue of the file. Field exceptions if there are any suspicious value else Verify queue.
     is_field_exception = False
@@ -657,7 +655,7 @@ def value_extract(result, api=False, retrained=False):
     stats_db.insert_dict(audit_data, 'audit')
     logging.debug(f'Updated queue of case ID `{case_id}` to `{updated_queue}`')
 
-    update_queue_trace(queues_db, case_id, 'Verify')
+    update_queue_trace(queues_db, case_id, updated_queue)
 
     # * Add the fields to the OCR table of extraction DB
     logging.debug('Adding extracted data to the database')
