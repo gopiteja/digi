@@ -258,7 +258,7 @@ def predict_with_ui_data():
             table_db = DB(parameters['database_name'], **db_config)
             table_info = table_db.get_all('table_keywords')
 
-            queue_db = DB(queues, **db_config)
+            queue_db = DB('queues', **db_config)
 
 
             query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
