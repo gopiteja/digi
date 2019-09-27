@@ -78,7 +78,7 @@ def watch(path_to_watch, output_path, tenant_id):
                     logging.info(f'Producing to topic {topic}')
                     produce(topic, data)
                 else:
-                    logging.info(f'There is topic to send to for `folder_monitor`. [{topic}]')
+                    logging.info(f'There is no topic to send to for `folder_monitor`. [{topic}]')
 
 @app.route('/folder_monitor', methods=['POST', 'GET'])
 def folder_monitor():

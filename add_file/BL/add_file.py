@@ -128,7 +128,7 @@ def consume(broker_url='broker:9092'):
                             logging.info(f'Producing to topic {topic}')
                             produce(topic, data)
                         else:
-                            logging.info(f'There is topic to send to for `add_file`. [{topic}]')
+                            logging.info(f'There is no topic to send to for `add_file`. [{topic}]')
                 except:
                     logging.exception(f'Something went wrong while adding file to database. Check trace.')
                     consumer.commit()
