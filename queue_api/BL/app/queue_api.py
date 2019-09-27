@@ -236,7 +236,7 @@ def get_columns(queue_id, tenant_id, template_exceptions=None):
     db = DB('queues', **db_config)
 
     query = "SELECT id, column_id from queue_column_mapping where queue_id = %s ORDER BY column_order ASC"
-    queue_column_ids = list(db.execute(query, params=[queue_uid]).column_id) 
+    queue_column_ids = list(db.execute(query, params=[queue_id]).column_id) 
 
     columns_time = time()
     columns_definition = db.get_all('column_definition')
