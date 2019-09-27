@@ -30,6 +30,7 @@ from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_n
 
 from db_utils import DB
 from producer import produce
+from ace_logger import Logging
 
 try:
     # from app.db_utils import DB
@@ -43,7 +44,6 @@ try:
     from app.string_matching import merge_coord
     from app.string_matching import make_keyword_string
     from app.break_boundaries import break_boundaries
-    from app.ace_logger import Logging
     from app.extract_checkbox import *
 
     with open('app/parameters.json') as f:
