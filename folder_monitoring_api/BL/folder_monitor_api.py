@@ -34,6 +34,7 @@ def watch(path_to_watch, output_path, tenant_id):
 
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
     stats_db = DB('stats', tenant_id=tenant_id, **db_config)
+    kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
 
     supported_files = ['.pdf', '.jpeg', '.jpg', '.png']
 
@@ -75,7 +76,6 @@ def watch(path_to_watch, output_path, tenant_id):
             shutil.copy(file_path, output_path / (unique_id + file_path.suffix))
             logging.debug(f' - {file_path.name} moved to {output_path.absolute()} directory')
 
-            # TODO - Should not be a list. Change in abbyy detection function
             data = {
                 'case_id': unique_id,
                 'file_name': unique_id + file_path.suffix,
@@ -86,15 +86,13 @@ def watch(path_to_watch, output_path, tenant_id):
                 'type': 'file_ingestion'
             }
 
-            kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
-
             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
             message_flow = kafka_db.execute(query, params=['folder_monitor'])
 
             if message_flow.empty:
                 logging.error('`folder_monitor` is not configured in message flow table.')
             else:
-                topic = list(message_flow.send_to_topic)[0] # Get the first topic from message flow
+                topic = list(message_flow.send_to_topic)[0]
 
                 if topic is not None:
                     logging.info(f'Producing to topic {topic}')
