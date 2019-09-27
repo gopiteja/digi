@@ -5,28 +5,34 @@ Created Date: 18-02-2019
 import argparse
 import base64
 import json
+import os
+import requests
 import uuid
-
-from db_utils import DB
 
 from datetime import datetime
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from pathlib import Path
+from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+
+from ace_logger import Logging
+from db_utils import DB
+from producer import produce
 
 try:
     from app import app
-    from app.ace_logger import Logging
-    from app.producer import produce
 except:
-    from ace_logger import Logging
-    from producer import produce
     app = Flask(__name__)
     CORS(app)
 
 logging = Logging()
 
-from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
 def http_transport(encoded_span):
     # The collector expects a thrift-encoded list of spans. Instead of
@@ -58,11 +64,7 @@ def get_reports_queue():
             return jsonify({'flag': False, 'message': message})
 
         # Connect to reports database
-        reports_db_config = {
-            'host': 'reports_db',
-            'tenant_id': tenant_id
-        }
-        reports_db = DB('reports', **reports_db_config)
+        reports_db = DB('reports', tenant_id=tenant_id, **db_config)
 
         # Fetch reports
         logging.debug(f'Fetching reports for user `{user}`')
@@ -128,11 +130,7 @@ def generate_reports():
     file_name = f'{reference_id[:3]}-{timestamp}'
 
     # Add file to database
-    reports_db_config = {
-        'host': 'reports_db',
-        'tenant_id': tenant_id
-    }
-    reports_db = DB('reports', **reports_db_config)
+    reports_db = DB('reports', tenant_id=tenant_id, **db_config)
 
     insert_data = {
         'reference_id': reference_id,
@@ -162,11 +160,7 @@ def download_report():
         return jsonify({'flag': False, 'message': message})
 
     # Add file to database
-    reports_db_config = {
-        'host': 'reports_db',
-        'tenant_id': tenant_id
-    }
-    reports_db = DB('reports', **reports_db_config)
+    reports_db = DB('reports', tenant_id=tenant_id, **db_config)
 
     query = 'SELECT * FROM `reports_queue` WHERE `reference_id`=%s'
     report_info = reports_db.execute(query, params=[reference_id])

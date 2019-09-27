@@ -24,7 +24,6 @@ from db_utils import DB
 from template_detector import TemplateDetector
 
 try:
-    from app.ace_logger import Logging
 
     with open('app/configs/template_detection_params.json') as f:
         parameters = json.loads(f.read())

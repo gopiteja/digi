@@ -19,15 +19,16 @@ from nltk import edit_distance
 from pprint import pprint
 from pdf2image import convert_from_path
 from db_utils import DB
+from producer import produce
+from ace_logger import Logging
 
 try:
-    from app.producer import produce
+    # from app.producer import produce
     from app.extracto_utils import *
     from app.testing_extract import *
-    from app.ace_logger import Logging
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
-    from app.smart_training.key_value_method_key_prediction aimport kv_values_prediction
+    from app.smart_training.key_value_method_key_prediction import kv_values_prediction
     from app.get_keywords import get_keywords, sort_ocr, get_coords, get_field_dict, get_keywords_for_value, \
         get_keywords_in_quadrant
     from app.get_keywords import caculate_dis, get_quadrant_dict, get_page_dimension, which_quadrant, \

@@ -5,10 +5,10 @@ from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_n
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from ace_logger import Logging
+from db_utils import DB
 
 try:
-    from app.ace_logger import Logging
-    from app.db_utils import DB
     from app.table_predict import complex_table_prediction
     from app.table_predict_abbyy import table_prediction_abbyy
     from app.table_predict_abbyy import table_training_abbyy

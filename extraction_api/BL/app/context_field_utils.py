@@ -1,9 +1,9 @@
 import traceback
 from fuzzywuzzy import fuzz
 import json
+from ace_logger import Logging
 
 try:
-    from app.ace_logger import Logging
     with open('app/parameters.json') as f:
         parameters = json.loads(f.read())
 except:

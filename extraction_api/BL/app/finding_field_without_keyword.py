@@ -8,10 +8,7 @@ import json
 
 from functools import reduce
 
-try:
-    from app.ace_logger import Logging
-except:
-    from ace_logger import Logging
+from ace_logger import Logging
 
 thres = 0.7
 word_space_mul = 1.5

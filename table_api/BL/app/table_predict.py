@@ -21,9 +21,10 @@ from PIL import Image as PI
 # from wand.image import Image as WI
 # from wand.image import Color
 from pdf2image import convert_from_path
+from ace_logger import Logging
 
 try:
-    from app.ace_logger import Logging
+    
     from app.find_intersections import find_intersections
     from app.complex_data_table_generator import complex_data_table_generator
     from app.subtable_helper import subtable_helper
