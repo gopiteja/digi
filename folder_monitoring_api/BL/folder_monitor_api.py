@@ -51,27 +51,6 @@ def watch(path_to_watch, output_path, tenant_id):
 
             unique_id = file_path.stem # Some clients require file name as Case ID
 
-            process_queue_df = queue_db.get_all('process_queue')
-            case_id_process = process_queue_df.loc[process_queue_df['file_name'] == file_path.name]
-            if case_id_process.empty:
-                insert_query = ('INSERT INTO `process_queue` (`file_name`, `document_type`, `case_id`, `file_path`, `source_of_invoice`) '
-                    'VALUES (%s, %s, %s, %s, %s)')
-                params = [file_path.name, 'folder', unique_id, str(file_path.parent.absolute()), str(file_path.parent).split('/')[-1]]
-                queue_db.execute(insert_query, params=params)
-                logging.debug(f' - {file_path.name} inserted successfully into the database')
-            else:
-                logging.debug("File already exists in the database")
-
-            audit_data = {
-                    "type": "insert",
-                    "last_modified_by": "folder_monitor",
-                    "table_name": "process_queue",
-                    "reference_column": "case_id",
-                    "reference_value": unique_id,
-                    "changed_data": json.dumps({"stats_stage": 'Document ingested'})
-                }
-            stats_db.insert_dict(audit_data, 'audit')
-
             time.sleep(3) # Buffer time. Required to make sure files move without any error.
             shutil.copy(file_path, output_path / (unique_id + file_path.suffix))
             logging.debug(f' - {file_path.name} moved to {output_path.absolute()} directory')
@@ -81,6 +60,7 @@ def watch(path_to_watch, output_path, tenant_id):
                 'file_name': unique_id + file_path.suffix,
                 'files': [unique_id + file_path.suffix],
                 'source': [str(file_path.parent).split('/')[-1]],
+                'file_path': file_path,
                 'original_file_name': [file_path.name],
                 'tenant_id': tenant_id,
                 'type': 'file_ingestion'
