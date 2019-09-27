@@ -746,7 +746,7 @@ def get_queue(queue_id=None):
             dropdown, _, _ = get_dropdown(queue_id, tenant_id)
                         
             data = {
-                # 'files': files,
+                'files': files,
                 'buttons': button_attributes,
                 'dropdown_values': dropdown,
                 'field': field_attributes,
