@@ -78,18 +78,10 @@ def get_template_exceptions(db, data, tenant_id=None, queue_uid=None, queue_id='
 
         pagination = {"start": start_point + 1, "end": end_point, "total": total_files}
 
-        db.engine.close()
-        template_db.engine.close()
-
-        db.db_.dispose()
-        template_db.db_.dispose()
-
         return {'flag': True, 'data': {'columns': columns, 'column_mapping': column_mapping,'files': files, 'template_dropdown': trained_templates, 'pagination': pagination, 'column_order': column_order}}
     except Exception as e:
         message = f'Error occured while getting template exception details. {e}'
         logging.error(message)
-        db.engine.close()
-        template_db.engine.close()
         return {'flag': False, 'message': message}
 
 def get_snapshot(db, data, queue_id, tenant_id):
@@ -122,7 +114,6 @@ def get_snapshot(db, data, queue_id, tenant_id):
     except Exception as e:
         message = f'Error occured while getting snapshot details. {e}'
         logging.error(message)
-        db.engine.close()
         return {'flag': False, 'message': message}
 
 @cache.memoize(86400)
@@ -602,8 +593,6 @@ def get_queue(queue_id=None):
 
                 response = get_template_exceptions(db, {'start': start_point, 'end': end_point}, tenant_id, queue_uid, queue_id)
 
-                extraction_db.engine.close()
-
                 logging.info(f'Response: {response}')
                 return jsonify(response)
             elif queue_type == 'reports':
@@ -769,14 +758,6 @@ def get_queue(queue_id=None):
             pagination = {"start": start_point + 1, "end": end_point, "total": total_files}
 
             dropdown, _, _ = get_dropdown(queue_id, tenant_id)
-
-            db.engine.close()
-            # user_db.engine.close()
-            extraction_db.engine.close()
-
-            db.db_.dispose()
-            # user_db.db_.dispose()
-            extraction_db.db_.dispose()
             
             pdf_type = 'folder' if tenant_id else 'blob'
             
@@ -1263,9 +1244,6 @@ def refresh_fields(case_id=None):
             'updated_fields_dict': renamed_fields,
             'message': "Successfully applied all validations"
         }
-
-        queue_db.db_.dispose()
-        extraction_db.db_.dispose()
 
         logging.info(f'Response: {response_data}')
         return jsonify(response_data)
