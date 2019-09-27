@@ -379,7 +379,7 @@ def abbyy_template_detection(data):
                     output_path = output_config.iloc[0]['access_1']
 
                 file_path = './input/'+ output_path + '/' + file_name
-                
+
                 logging.info(' -> Trying PDF plumber...')
                 host = 'pdf_plumber_api'
                 port = parameters['pdf_plumber_port']
@@ -398,7 +398,7 @@ def abbyy_template_detection(data):
                 else:
                     pdf_data = None
             except:
-                logging.error('PDF plumbing failed.')
+                logging.exception('PDF plumbing failed.')
                 pdf_data = None
 
             if isListEmpty(pdf_data):
