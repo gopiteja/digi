@@ -715,7 +715,7 @@ def get_queue(queue_id=None):
                                     continue
 
                         query = "select column_name from column_definition where date = 1"
-                        columns_to_change = list(db.execute(query).column_name)
+                        columns_to_change = list(db.execute_(query).column_name)
 
                         for column in columns_to_change:
                             try:
