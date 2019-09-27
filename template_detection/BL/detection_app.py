@@ -405,7 +405,6 @@ def abbyy_template_detection(data):
                         or output_config.loc[input_config['type'] == 'Document'].empty):
                     message = 'Input/Output not configured in DB.'
                     logging.error(message)
-                    return jsonify({'flag': False, 'message': message})
                 else:
                     input_path = input_config.iloc[0]['access_1']
                     output_path = output_config.iloc[0]['access_1']
@@ -440,6 +439,7 @@ def abbyy_template_detection(data):
                 files_data = {'file': (file_name_, open(file_path, 'rb'))}
                 url = parameters['abbyy_url']
 
+                logging.debug(url)
                 response = requests.post(url, files=files_data)
 
                 logging.debug(type(response))
