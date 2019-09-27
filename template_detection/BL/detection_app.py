@@ -381,6 +381,8 @@ def abbyy_template_detection(data):
 
                 file_path = './input/'+ output_path + '/' + file_name
 
+                logging.info(file_path)
+
                 logging.info(' -> Trying PDF plumber...')
                 host = 'pdf_plumber_api'
                 port = parameters['pdf_plumber_port']
