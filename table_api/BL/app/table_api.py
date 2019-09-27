@@ -248,14 +248,14 @@ def predict_with_ui_data():
             image_width = data['img_width']
             tenant_id = data['tenant_id'] if 'tenant_id' in data else None
 
-            queue_db_config = {
+            db_config = {
                 'host': os.environ['HOST_IP'],
                 'port': 3306,
                 'user': os.environ['LOCAL_DB_USER'],
                 'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }
-            table_db = DB('table_db', **table_db_config)
+            table_db = DB(parameters['database_name'], **db_config)
             table_info = table_db.get_all('table_keywords')
             try:
                 table_keywords_dict = json.loads(list(table_info.table_keywords)[0])
