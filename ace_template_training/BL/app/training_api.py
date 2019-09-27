@@ -19,9 +19,10 @@ from nltk import edit_distance
 from pprint import pprint
 from pdf2image import convert_from_path
 from db_utils import DB
+from producer import produce
 
 try:
-    from app.producer import produce
+    # from app.producer import produce
     from app.extracto_utils import *
     from app.testing_extract import *
     from app.ace_logger import Logging
