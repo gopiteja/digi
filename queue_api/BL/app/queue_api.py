@@ -1142,10 +1142,6 @@ def get_fields(case_id=None):
         }
         queue_db.update('process_queue', update=update, where=where)
 
-        print(renamed_fields)
-        print()
-        print(fields_df.to_dict('index'))
-
         return jsonify(response_data)
 
     except Exception as e:
