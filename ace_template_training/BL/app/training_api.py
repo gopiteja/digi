@@ -1910,6 +1910,7 @@ def test_fields():
 
         ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
 
+        checkboxes_all = {}
         if force_check == 'yes':
             template_name = data['template_name']
             trained_info_data = templates_db.get_all('trained_info')
