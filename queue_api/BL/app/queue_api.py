@@ -714,7 +714,7 @@ def get_queue(queue_id=None):
                                     document[col] = val
                                     continue
 
-                        query = "select column_name from column_definition where data = 1"
+                        query = "select column_name from column_definition where date = 1"
                         columns_to_change = list(db.execute(query).column_name)
 
                         for column in columns_to_change:
