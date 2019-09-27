@@ -714,11 +714,11 @@ def get_queue(queue_id=None):
                         for column in columns_to_change:
                             try:
                                 document[column] = (document[column]).strftime(r'%B %d, %Y %I:%M %p')
+                            except ValueError:
+                                document[column] = ''
                             except:
                                 logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
                                 pass
-
-                        b
 
                 columns = [col for col in columns if col not in util_columns]
                 columns += extraction_columns_list
