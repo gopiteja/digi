@@ -630,7 +630,7 @@ def value_extract(result, api=False, retrained=False):
 
     query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
                 '`workflow_definition`.`queue_id`=`queue_definition`.`id` '
-    template_exc_wf = queue_db.execute(query)
+    template_exc_wf = queues_db.execute(query)
     workflow_frame = template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']
 
     queue_id = list(workflow_frame['queue_id'])[0]
