@@ -130,12 +130,7 @@ def database_upload():
             insertstitchedBLOB(key, pdf_blob)
 
             print("Inserted to PDF")
-            
-            # To save blob to file
-            # text_file = open(folder_monitor+key+'.pdf','wb')
-            # text_file.write(pdf_blob)
-            # text_file.close()
-            
+
             query = f"Update screen_shots set `processed` = 1 where Fax_unique_id = '{key}'"
             alorica_db.execute(query)
 
@@ -173,9 +168,9 @@ def database_upload():
             history = list(alorica_db.execute(query,params=[key]).History)[0]
 
             if case_id_process.empty:
-                insert_query = ('INSERT INTO `process_queue` (`case_id`, `agent`,`source_of_invoice`, `Fax_unique_id`, `communication_date_time`, `communication_date_time_bot`) '
-                    'VALUES (%s, %s, %s, %s, %s, %s)')
-                params = [key, agent, 'database', key, com_date, history]
+                insert_query = ('INSERT INTO `process_queue` (`case_id`, `document_type`,`agent`,`source_of_invoice`, `Fax_unique_id`, `communication_date_time`, `communication_date_time_bot`) '
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s)')
+                params = [key, 'blob', agent, 'database', key, com_date, history]
                 queues_db.execute(insert_query, params=params)
                 print(f' - {key} inserted successfully into the database')
 

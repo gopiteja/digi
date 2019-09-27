@@ -758,9 +758,7 @@ def get_queue(queue_id=None):
             pagination = {"start": start_point + 1, "end": end_point, "total": total_files}
 
             dropdown, _, _ = get_dropdown(queue_id, tenant_id)
-            
-            pdf_type = 'folder' if tenant_id else 'blob'
-            
+                        
             data = {
                 'files': files,
                 'buttons': button_attributes,
@@ -772,7 +770,6 @@ def get_queue(queue_id=None):
                 'pagination': pagination,
                 'column_mapping': column_mapping,
                 'column_order': list(column_mapping.keys()),
-                'pdf_type': pdf_type
             }
             logging.debug(f'Total time taken to get `{queue_name}` {time()-rt_time}')
 
@@ -1006,6 +1003,7 @@ def get_fields(case_id=None):
                 return jsonify({'flag': True, 'message': message, 'corrupted': True, 'file_name':file_name})
 
         case_operator = list(case_files.operator)[0]
+        pdf_type = list(case_files.document_type)[0]
         
         if case_operator is not None and case_operator != operator:
             message = f'This file/cluster is in use by the user `{case_operator}`.'
@@ -1153,7 +1151,7 @@ def get_fields(case_id=None):
             'ocr_data': ocr_data,
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
-            'pdf_type': 'folder' if tenant_id else 'blob'
+            'pdf_type': pdf_type
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
