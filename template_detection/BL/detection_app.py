@@ -350,10 +350,13 @@ def abbyy_template_detection(data):
         model_path = parameters['model_path']
 
         logging.info(f'Processing file {original_file_name}')
+        try:
+            query = "SELECT id, ocr_data from ocr_info where case_id = %s"
+            logging.debug(f'Case ID: `{case_id}`')
+            case_id_process = list(queue_db.execute(query, params=[case_id]).ocr_data)[0]
+        except:
+            case_id_process = None
 
-        query = "SELECT id, ocr_data from ocr_info where case_id = %s"
-        logging.debug(f'Case ID: `{case_id}`')
-        case_id_process = list(queue_db.execute(query, params=[case_id]).ocr_data)[0]
         if case_id_process == '' or case_id_process is None:
             try:
                 logging.info(' -> Trying PDF plumber...')
@@ -501,8 +504,8 @@ def abbyy_template_detection(data):
                     ocr_data = pdfplumber_ocr_data
 
                 ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
-                query = 'UPDATE `ocr_info` SET `ocr_text`=%s, `xml_data`=%s, `ocr_data`=%s WHERE `case_id`=%s'
-                params = [ocr_text, xml_string, json.dumps(ocr_data), case_id]
+                query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s%s, %s ,%s)'
+                params = [case_id, ocr_text, xml_string, json.dumps(ocr_data)]
                 queue_db.execute(query, params=params)
                 logging.debug('OCR data saved into ocr_info table.')
 
