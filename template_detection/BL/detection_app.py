@@ -108,20 +108,20 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
 
     # Initialization of DB
     template_db_config = {
-        'host': 'template_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     template_db = DB('template_db', **template_db_config)
     # template_db = DB('template_db')
 
     template_db_config = {
-        'host': 'queue_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **template_db_config)
@@ -309,20 +309,20 @@ def abbyy_template_detection(data):
 
     # Initialization of DB
     template_db_config = {
-        'host': 'template_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     template_db = DB('template_db', **template_db_config)
     # template_db = DB('template_db')
 
     template_db_config = {
-        'host': 'queue_db',
+        'host': os.environ['HOST_IP'],
         'port': 3306,
-        'user': 'root',
-        'password': 'root',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **template_db_config)

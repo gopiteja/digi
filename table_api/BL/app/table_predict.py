@@ -579,7 +579,7 @@ def header_proximity_finder(header_list, line_number, lines, img=None):
         line_score = check_line_score(line, header_list)
         # line_score = SequenceMatcher(None,' '.join([word['word'] for word in line]),' '.join([header.replace('  ',' ') for header in header_list])).ratio()
         # pass#print('score', line_score)
-        if line_score > :
+        if line_score > parameters['line_score_threshold']:
             t_idx -= 1
             # if img is not None:
             #     #pass#print('imageeeeeeeeeeee')

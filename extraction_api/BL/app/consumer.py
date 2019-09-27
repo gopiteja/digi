@@ -91,8 +91,8 @@ def consume(broker_url='broker:9092'):
 
             db_config = {
                 'host': os.environ['HOST_IP'],
-                'port': '3306',
-                'user': 'root',
+                'port': os.environ['LOCAL_DB_PORT'],
+                'user': os.environ['LOCAL_DB_USER'],
                 'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }

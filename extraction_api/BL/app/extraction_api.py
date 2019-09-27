@@ -263,20 +263,20 @@ def value_extract(result, api=False, retrained=False):
     is_field_exception = False
 
     queues_db_config = {
-        'host': 'queue_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
     queues_db = DB('queues', **queues_db_config)
     # queues_db = DB('queues')
 
     stats_db_config = {
-        'host': 'stats_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
 
@@ -317,10 +317,10 @@ def value_extract(result, api=False, retrained=False):
     else:
         # * Get trained info of the template from the template_db
         template_db_config = {
-            'host': 'template_db',
-            'user': 'root',
-            'password': 'root',
-            'port': '3306',
+            'host': os.environ['HOST_IP'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'port': os.environ['LOCAL_DB_PORT'],
             'tenant_id': tenant_id
         }
         templates_db = DB('template_db', **template_db_config)
@@ -644,10 +644,10 @@ def value_extract(result, api=False, retrained=False):
     # * Add the fields to the OCR table of extraction DB
     logging.debug('Adding extracted data to the database')
     extraction_db_config = {
-        'host': 'extraction_db',
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
     extraction_db = DB('extraction', **extraction_db_config)
@@ -671,10 +671,10 @@ def value_extract(result, api=False, retrained=False):
             logging.error('Update error.')
 
         common_db_config = {
-            'host': 'common_db',
-            'port': '3306',
-            'user': 'root',
-            'password': 'root',
+            'host': os.environ['HOST_IP'],
+            'port': os.environ['LOCAL_DB_PORT'],
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
             'tenant_id': tenant_id
         }
         kafka_db = DB('kafka', **common_db_config)
@@ -1762,10 +1762,10 @@ def extract_for_template():
 
             # Get all the cases from that vendor
             db_config = {
-                'host': 'queue_db',
+                'host': os.environ['HOST_IP'],
                 'port': 3306,
-                'user': 'root',
-                'password': 'root',
+                'user': os.environ['LOCAL_DB_USER'],
+                'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }
             db = DB('queues', **db_config)

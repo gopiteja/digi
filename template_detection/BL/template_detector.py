@@ -31,9 +31,9 @@ def load_trained_info(tenant_id):
     query = "SELECT * from trained_info"
     db_config = {
         'host': os.environ['HOST_IP'],
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **db_config)
@@ -56,9 +56,9 @@ def get_trained_templates(tenant_id, lower=False):
     query = "SELECT `template_name` FROM trained_info"
     db_config = {
         'host': os.environ['HOST_IP'],
-        'user': 'root',
-        'password': 'root',
-        'port': '3306',
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT'],
         'tenant_id': tenant_id
     }
     queue_db = DB('queues', **db_config)
