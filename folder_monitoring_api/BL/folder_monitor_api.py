@@ -65,7 +65,7 @@ def watch(path_to_watch, output_path, tenant_id):
                 'file_name': unique_id + file_path.suffix,
                 'files': [unique_id + file_path.suffix],
                 'source': [str(file_path.parent).split('/')[-1]],
-                'file_path': file_path,
+                'file_path': str(file_path),
                 'original_file_name': [file_path.name],
                 'tenant_id': tenant_id,
                 'type': 'file_ingestion'
