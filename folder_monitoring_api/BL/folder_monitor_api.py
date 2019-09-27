@@ -70,47 +70,19 @@ def watch(path_to_watch, output_path, tenant_id):
                 logging.debug(f' - {file_path.name} inserted successfully into the database')
             else:
                 logging.debug("File already exists in the database")
-            #Inserting ocr data in ocr_info table
-            ocr_info_df = queue_db.get_all('ocr_info',discard=['ocr_data','xml_data','ocr_text'])
-            case_id_ocr_info = ocr_info_df.loc[ocr_info_df['case_id'] == unique_id]
-            if case_id_ocr_info.empty:
-                insert_query = 'INSERT INTO `ocr_info` (`case_id`) VALUES (%s)'
-                params = [unique_id]
-                queue_db.execute(insert_query, params=params)
-                logging.debug(f' - OCR info for {file_path.name} inserted successfully into the database')
 
-                # Stats
-                query = "select * from process_queue where created_date = CURDATE()"
-                no_files = len(list(queue_db.execute(query).case_id))
-                query = "SELECT * from invoices_uploaded where date = CURDATE()"
-                current_date = stats_db.execute(query)
-                if current_date.empty:
-                    insert_query = f'INSERT INTO `invoices_uploaded` (`no_of_files`) VALUES ({no_files})'
-                    stats_db.execute(insert_query)
-                else:
-                    update_query = f'Update invoices_uploaded set `no_of_files` = {no_files} where date = CURDATE()'
-                    stats_db.execute(update_query)
-            else:
-                logging.debug("File already exists in the ocr info database")
-
-            #Inserting into trace_info table as well
-            trace_info_df = queue_db.get_all('trace_info',discard=['last_updated_dates','queue_trace','operators'])
-            case_id_trace_info = trace_info_df.loc[trace_info_df['case_id'] == unique_id]
-            if case_id_trace_info.empty:
-                insert_query = 'INSERT INTO `trace_info` (`case_id`) VALUES (%s)'
-                params = [unique_id]
-                queue_db.execute(insert_query, params=params)
-                logging.debug(f' - Trace info for {file_path.name} inserted successfully into the database')
-            else:
-                logging.debug("File already exists in the Trace info database")
-
+            audit_data = {
+                    "type": "insert",
+                    "last_modified_by": "folder_monitor",
+                    "table_name": "process_queue",
+                    "reference_column": "case_id",
+                    "reference_value": unique_id,
+                    "changed_data": json.dumps({"stats_stage": 'Document ingested'})
+                }
+            stats_db.insert_dict(audit_data, 'audit')
 
             time.sleep(3) # Buffer time. Required to make sure files move without any error.
-            # Delete file for Alorica
-            # os.remove(file_path)
             shutil.copy(file_path, output_path / (unique_id + file_path.suffix))
-            # shutil.copyfile(file_path, 'angular/' + (unique_id + file_path.suffix))
-            # shutil.move(file_path, 'training_ui/' + (unique_id + file_path.suffix))
             logging.debug(f' - {file_path.name} moved to {output_path.absolute()} directory')
 
             # TODO - Should not be a list. Change in abbyy detection function
@@ -120,17 +92,25 @@ def watch(path_to_watch, output_path, tenant_id):
                 'files': [unique_id + file_path.suffix],
                 'source': [str(file_path.parent).split('/')[-1]],
                 'original_file_name': [file_path.name],
-                'tenant_id': None,
+                'tenant_id': tenant_id,
                 'type': 'file_ingestion'
             }
 
             kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
 
-            message_flow = kafka_db.get_all('message_flow')
-            topic = list(message_flow.listen_to_topic)[0] # Get the first topic from message flow
+            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
+            message_flow = kafka_db.execute(query, params=['folder_monitor'])
 
-            logging.info(f'Producing to topic {topic}')
-            produce(topic, data)
+            if message_flow.empty:
+                logging.error('`folder_monitor` is not configured in message flow table.')
+            else:
+                topic = list(message_flow.send_to_topic)[0] # Get the first topic from message flow
+
+                if topic is not None:
+                    logging.info(f'Producing to topic {topic}')
+                    produce(topic, data)
+                else:
+                    logging.info(f'There is topic to send to for `folder_monitor`. [{topic}]')
 
 @app.route('/folder_monitor', methods=['POST', 'GET'])
 def folder_monitor():
