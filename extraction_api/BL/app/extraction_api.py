@@ -637,11 +637,11 @@ def value_extract(result, api=False, retrained=False):
     move_to_queue_id = list(workflow_frame['move_to'])[0]
     
     query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
-    move_to_queue_df = queue_db.execute(query, params=[move_to_queue_id])
+    move_to_queue_df = queues_db.execute(query, params=[move_to_queue_id])
     move_to_queue = list(move_to_queue_df['unique_name'])[0]
 
     query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
-    queue_df = queue_db.execute(query, params=[queue_id])
+    queue_df = queues_db.execute(query, params=[queue_id])
     queue_unique_name = list(move_to_queue_df['unique_name'])[0]
 
 
