@@ -30,7 +30,12 @@ db_config = {
 
 def watch(path_to_watch, output_path, tenant_id):
     logging.info('Watch folder started.')
+
+    path_to_watch = str(Path('./input').absolute() / Path(path_to_watch))
+    output_path = str(Path('./output').absolute() / Path(output_path))
+
     logging.debug(f'Watching folder: {path_to_watch}')
+    logging.debug(f'Output folder: {output_path}')
 
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
     stats_db = DB('stats', tenant_id=tenant_id, **db_config)
