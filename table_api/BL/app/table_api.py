@@ -255,7 +255,7 @@ def predict_with_ui_data():
                 'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }
-            table_db = DB(parameters['database_name'], **table_db_config)
+            table_db = DB('table_db', **table_db_config)
             table_info = table_db.get_all('table_keywords')
             try:
                 table_keywords_dict = json.loads(list(table_info.table_keywords)[0])
