@@ -1652,7 +1652,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce(send_to_topic, {'case_id': case_id})
+            produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id})
 
             return jsonify({'flag': True, 'message': 'Successfully extracting with new template. Please wait!'})
 
@@ -1670,7 +1670,7 @@ def force_template():
         stats_db.insert_dict(audit_data, 'audit')
 
         # Send case ID to extraction topic
-        produce(send_to_topic, {'case_id': case_id})
+        produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id})
 
         if cluster is not None:
             cluster_ids_query = "SELECT * from `process_queue` where `cluster` = %s"
@@ -1703,7 +1703,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce(send_to_topic, {'case_id': cluster_case_id})
+            produce(send_to_topic, {'case_id': cluster_case_id, 'tenant_id': tenant_id})
 
         return jsonify({'flag': True, 'message': 'Successfully extracted!'})
 
@@ -1910,6 +1910,7 @@ def test_fields():
 
         ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
 
+        checkboxes_all = {}
         if force_check == 'yes':
             template_name = data['template_name']
             trained_info_data = templates_db.get_all('trained_info')
@@ -2242,7 +2243,7 @@ def train():
             listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == 'train']
             send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
             # Send case ID to extraction topic
-            produce(send_to_topic, {'case_id': cluster_case_id})
+            produce(send_to_topic, {'case_id': cluster_case_id, 'tenant_id': tenant_id})
 
         return jsonify({'flag': True, 'message': 'Training completed!'})
 
