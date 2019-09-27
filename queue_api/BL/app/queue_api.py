@@ -676,13 +676,7 @@ def get_queue(queue_id=None):
                     query_result_list = query_result.to_dict('records')
                     logging.debug(f'Extraction data: {query_result_list}')
                 
-                    for document in files:
-                        try:
-                            document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
-                        except:
-                            logging.debug(f'Could not parse created date value. `created_date` might not be mapped for the queue `{queue_name}`.')
-                            pass
-                        
+                    for document in files:                       
                         try:
                             percentage_done = str(int((document['completed_processes']/document['total_processes'])*100))
                         except:
@@ -724,6 +718,8 @@ def get_queue(queue_id=None):
                                 logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
                                 pass
 
+                        b
+
                 columns = [col for col in columns if col not in util_columns]
                 columns += extraction_columns_list
                 logging.debug(f'New columns: {columns}')
@@ -750,12 +746,12 @@ def get_queue(queue_id=None):
             dropdown, _, _ = get_dropdown(queue_id, tenant_id)
                         
             data = {
-                'files': files,
+                # 'files': files,
                 'buttons': button_attributes,
                 'dropdown_values': dropdown,
                 'field': field_attributes,
                 'tabs': tabs,
-                # 'excel_source_data': excel_display_data,
+                'excel_source_data': excel_display_data,
                 'tab_type_mapping': tab_type_mapping,
                 'pagination': pagination,
                 'column_mapping': column_mapping,
