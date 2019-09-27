@@ -2,9 +2,9 @@
 import traceback
 from difflib import SequenceMatcher
 from math import sqrt
+from ace_logger import Logging
 try:
   from app.extracto_utils import needle_in_a_haystack
-  from app.ace_logger import Logging
 except:
   from extracto_utils import needle_in_a_haystack
   from ace_logger import Logging

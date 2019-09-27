@@ -23,7 +23,7 @@ from nltk import edit_distance
 import requests
 parent_dir = os.getcwd()
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
-from app.ace_logger import Logging
+from ace_logger import Logging
 with open('/var/www/extraction_api/app/parameters.json') as f:
     parameters = json.loads(f.read())
 logging = Logging()

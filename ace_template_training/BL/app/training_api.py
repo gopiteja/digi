@@ -20,12 +20,12 @@ from pprint import pprint
 from pdf2image import convert_from_path
 from db_utils import DB
 from producer import produce
+from ace_logger import Logging
 
 try:
     # from app.producer import produce
     from app.extracto_utils import *
     from app.testing_extract import *
-    from app.ace_logger import Logging
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
     from app.smart_training.key_value_method_key_prediction import kv_values_prediction

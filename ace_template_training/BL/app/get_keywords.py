@@ -7,9 +7,9 @@ import io
 from PyPDF2 import PdfFileReader
 from pathlib import Path
 from PIL import Image
+from db_utils import DB
 
 try:
-    from app.db_utils import DB
     from app.smart_training.string_matching import convert_ocrs_to_char_dict_only_al_num
     from app.smart_training.string_matching import remove_all_except_al_num
     from app.smart_training.string_matching import string_match_python

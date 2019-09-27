@@ -29,11 +29,11 @@ from nltk import edit_distance
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 
 from db_utils import DB
+from producer import produce
 
 try:
     # from app.db_utils import DB
     from app.extracto_utils import *
-    from app.producer import produce
     from app.context_field_utils import get_context_box
     from app.multi_key_utils import *
     from app.finding_field_without_keyword import find_field

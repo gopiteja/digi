@@ -1,10 +1,7 @@
 import traceback
 from fuzzywuzzy import fuzz
 
-try:
-    from app.ace_logger import Logging
-except:
-    from ace_logger import Logging
+from ace_logger import Logging
 
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
 
