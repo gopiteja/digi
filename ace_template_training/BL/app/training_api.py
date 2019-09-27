@@ -1627,6 +1627,12 @@ def force_template():
             'tenant_id': tenant_id
         }
 
+        kafka_db = DB('kafka', **db_config)
+
+        message_flow = kafka_db.get_all('message_flow')
+        listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == 'train']
+        send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
+
         stats_db = DB('stats', **stats_db_config)
 
         fields = {'template_name': template_name, 'cluster': None, 'queue': 'Processing'}
@@ -1646,7 +1652,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce('extract', {'case_id': case_id})
+            produce(send_to_topic, {'case_id': case_id})
 
             return jsonify({'flag': True, 'message': 'Successfully extracting with new template. Please wait!'})
 
@@ -1664,7 +1670,7 @@ def force_template():
         stats_db.insert_dict(audit_data, 'audit')
 
         # Send case ID to extraction topic
-        produce('extract', {'case_id': case_id})
+        produce(send_to_topic, {'case_id': case_id})
 
         if cluster is not None:
             cluster_ids_query = "SELECT * from `process_queue` where `cluster` = %s"
@@ -1697,7 +1703,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce('extract', {'case_id': cluster_case_id})
+            produce(send_to_topic, {'case_id': cluster_case_id})
 
         return jsonify({'flag': True, 'message': 'Successfully extracted!'})
 
@@ -1997,6 +2003,8 @@ def train():
             'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extarction_db_config)
+
+        kafka_db = DB('kafka', **db_config)
         # extraction_db = DB('extraction')
 
         stats_db_config = {
@@ -2229,8 +2237,12 @@ def train():
             }
             stats_db.insert_dict(audit_data, 'audit')
 
+
+            message_flow = kafka_db.get_all('message_flow')
+            listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == 'train']
+            send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
             # Send case ID to extraction topic
-            produce('extract', {'case_id': cluster_case_id})
+            produce(send_to_topic, {'case_id': cluster_case_id})
 
         return jsonify({'flag': True, 'message': 'Training completed!'})
 
