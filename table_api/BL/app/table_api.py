@@ -14,6 +14,7 @@ try:
     from app.table_predict_abbyy import table_training_abbyy
     from app.complex_data_table_generator import complex_data_table_generator
     from app.find_intersections import find_intersections
+    from app.table_training import *
     with open('app/parameters.json') as f:
         parameters = json.loads(f.read())
 except:
@@ -24,6 +25,7 @@ except:
     from table_predict_abbyy import table_training_abbyy
     from complex_data_table_generator import complex_data_table_generator
     from find_intersections import find_intersections
+    from table_training import *
     with open('parameters.json') as f:
         parameters = json.loads(f.read())
 
@@ -242,8 +244,6 @@ def predict_with_ui_data():
         try:
             data = request.json
             logging.info(f'data{data}')
-            table_data = data['table_data']
-            method = data['method']
             case_id = data['case_id']
             image_width = data['img_width']
             tenant_id = data['tenant_id'] if 'tenant_id' in data else None
@@ -255,34 +255,54 @@ def predict_with_ui_data():
                 'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }
-            queue_db = DB('queues', **queue_db_config)
-            # queue_db = DB('queues')
+            table_db = DB(parameters['database_name'], **table_db_config)
+            table_info = table_db.get_all('table_keywords')
+            try:
+                table_keywords_dict = json.loads(list(table_info.table_keywords)[0])
+            except:
+                table_keywords_dict = {}
+            keywords_list = []
+            for word in ocr_data_list[0]:
+                if word['word'] in table_keywords_dict:
+                    keywords_list.append(word)
+            logging.info(f'keywords list , {keywords_list}')
 
-            process_queue = queue_db.get_all('process_queue')
-            case_data = process_queue.loc[process_queue['case_id'] == case_id]
 
-            query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
-            params = [case_id]
-            ocr_info = queue_db.execute(query, params=params)
-            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
-            xml_string = list(ocr_info.xml_data)[0]
 
-            # ocr_data = json.loads(list(case_data.ocr_data)[0])
-            # xml_string = list(case_data.xml_data)[0]
-            file_name = list(case_data.file_name)[0]
+            # with open('app/ocr.json') as f:
+            #     ocr_data_list = json.loads(f.read())
+
+            # file_name = list(case_data.file_name)[0]
+            file_name = data['file_name']
+
+            # keywords_list = [{"width": 14, "height": 10, "top": 340, "bottom": 351, "right": 36, "left": 21, "word": "S.N.", "confidence": 100}, {"width": 50, "height": 10, "top": 340, "bottom": 351, "right": 91, "left": 41, "word": "Description", "confidence": 100}, {"width": 8, "height": 10, "top": 340, "bottom": 351, "right": 102, "left": 94, "word": "of", "confidence": 100}, {"width": 27, "height": 10, "top": 340, "bottom": 351, "right": 133, "left": 106, "word": "Goods", "confidence": 100}, {"width": 30, "height": 7, "top": 340, "bottom": 348, "right": 260, "left": 229, "word": "HSN/SAC", "confidence": 100}, {"width": 17, "height": 10, "top": 340, "bottom": 351, "right": 318, "left": 301, "word": "Qty.", "confidence": 100}, {"width": 18, "height": 10, "top": 340, "bottom": 351, "right": 341, "left": 322, "word": "Unit", "confidence": 100}, {"width": 16, "height": 10, "top": 340, "bottom": 351, "right": 379, "left": 363, "word": "List", "confidence": 100}, {"width": 21, "height": 10, "top": 340, "bottom": 351, "right": 403, "left": 382, "word": "Price", "confidence": 100}, {"width": 38, "height": 10, "top": 340, "bottom": 351, "right": 446, "left": 408, "word": "Discount", "confidence": 100}, {"width": 21, "height": 10, "top": 340, "bottom": 351, "right": 491, "left": 469, "word": "IGST", "confidence": 100}, {"width": 21, "height": 10, "top": 340, "bottom": 351, "right": 534, "left": 512, "word": "IGST", "confidence": 100}, {"width": 43, "height": 10, "top": 340, "bottom": 351, "right": 601, "left": 557, "word": "Amount(`)", "confidence": 100}, {"width": 21, "height": 10, "top": 353, "bottom": 364, "right": 251, "left": 229, "word": "Code", "confidence": 100}, {"width": 20, "height": 10, "top": 353, "bottom": 364, "right": 491, "left": 470, "word": "Rate", "confidence": 100},{"width": 29, "height": 8, "top": 353, "bottom": 362, "right": 534, "left": 504, "word": "Amount", "confidence": 100},{"width": 22, "height": 9, "top": 601, "bottom": 610, "right": 244, "left": 221, "word": "Grand", "confidence": 100}, {"width": 19, "height": 9, "top": 601, "bottom": 610, "right": 266, "left": 246, "word": "Total", "confidence": 100}]
 
             file_path = f'./invoice_files/{file_name}'
+            flag = data['flag']
 
-            if method == 'abbyy':
-                logging.debug(f'Running `table_predict_abbyy`')
-                table_data = table_training_abbyy(ocr_data, image_width, table_data, xml_string, file_path)
-            elif method == 'tnox':
-                logging.debug(f'Running `complex_table_prediction`')
-                table_data = complex_table_prediction(ocr_data, file_name, table_data['trained_data'])
-            else:
-                message = 'Unknown table prediction method `{method}`'
-                logging.info(message)
-                return jsonify({'flag': False, 'message': message})
+            if flag == 'crop':
+                table_crop = data['crop']
+                # table_crop = [{'x':30, 'y':335, 'height': 110, 'width': 4000}]
+                img_width = data['img_width']
+                table_data = table_training(ocr_data_list, keywords_list, [table_crop], file_path, img_width)
+            elif flag == 'lines':
+                table_lines = data['lines']
+                img_width = data['img_width']
+                table_data = extract_table_from_lines(ocr_data_list, table_lines, img_width)
+
+            logging.info(f'table fina, {table_data}')
+            # if method == 'abbyy':
+            #     logging.debug(f'Running `table_predict_abbyy`')
+            #     table_data = table_training_abbyy(ocr_data, image_width, table_data, xml_string, file_path)
+            # elif method == 'tnox':
+            #     logging.debug(f'Running `complex_table_prediction`')
+            #     table_data = complex_table_prediction(ocr_data, file_name, table_data['trained_data'])
+            # else:
+            #     message = 'Unknown table prediction method `{method}`'
+            #     logging.info(message)
+            #     return jsonify({'flag': False, 'message': message})
+
+
 
             return jsonify({'flag': True, 'message': 'Predicted table.', 'data': table_data})
         except Exception as e:
