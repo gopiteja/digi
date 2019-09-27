@@ -1,4 +1,5 @@
 import json
+import os
 import traceback
 
 from datetime import datetime, timedelta
@@ -6,30 +7,28 @@ from kafka import KafkaConsumer, TopicPartition
 from random import randint
 from time import sleep
 
+from ace_logger import Logging
 from db_utils import DB
-
-try:
-    from app.producer import produce
-    from app.ace_logger import Logging
-except:
-    from producer import produce
-    from ace_logger import Logging
+from producer import produce
 
 logging = Logging()
+
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT']
+}
 
 def generate_report(data):
     report_type = data['report_type']
     tenant_id = data['tenant_id']
     file_name = data['filename']
     reference_id = data['reference_id']
-#    from_date = data['from_date']
-#    to_date = data['to_date']
+    # from_date = data['from_date']
+    # to_date = data['to_date']
 
-    reports_db_config = {
-        'host': 'reports_db',
-        'tenant_id': tenant_id
-    }
-    reports_db = DB('reports', **reports_db_config)
+    reports_db = DB('reports', tenant_id=tenant_id, **db_config)
 
     # Get the report type configuration
     query = 'SELECT * FROM `report_types` WHERE `report_type`=%s'
@@ -41,11 +40,7 @@ def generate_report(data):
 
     # Get the report data using query or function
     if report_type_query:
-        query_db_config = {
-            'host': 'queue_db',
-            'tenant_id': tenant_id
-        }
-        query_db = DB(report_type_db, **query_db_config)
+        query_db = DB(report_type_db, tenant_id=tenant_id, **db_config)
         report_df = query_db.execute_(report_type_query)
         logging.debug('DF to export:')
         logging.debug(report_df)
@@ -125,7 +120,7 @@ def consume(broker_url='broker:9092'):
                         'host': 'reports_db',
                         'tenant_id': tenant_id
                     }
-                    reports_db = DB('reports', **reports_db_config)
+                    reports_db = DB('reports', tenant_id=tenant_id, **db_config)
                     query = 'UPDATE `reports_queue` SET `status`=%s WHERE `reference_id`=%s'
                     reports_db.execute(query, params=['Failed', reference_id])
                     consumer.commit()
