@@ -486,7 +486,7 @@ def abbyy_template_detection(data):
 
             # If OCR-ed successfully, insert into process_queue with status 1 (success)
             # else insert with status 0 (failed)
-            # print("pdf_data", pdf_data)
+            print("pdf_data", pdf_data)
             # print("saving ocr data")
             # if xml_string is None and isListEmpty(pdf_data):
             #     query = "UPDATE `process_queue` SET `ocr_status`=0, `queue`='Failed' WHERE `case_id`=%s"
