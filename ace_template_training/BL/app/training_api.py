@@ -1927,7 +1927,8 @@ def test_fields():
 
         value_extract_params = {"case_id": case_id,
                                 "field_data": trained_info,
-                                "checkbox_data": checkboxes_all
+                                "checkbox_data": checkboxes_all,
+                                "tenant_id" : tenant_id
                                 }
 
         host = 'extractionapi'

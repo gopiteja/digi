@@ -1395,9 +1395,8 @@ def create_children(queue, queue_definition_record,list_):
     return queue
 
 @cache.memoize(86400)
-def get_queues_cache(username, tenant_id=None):
+def get_queues_cache(tenant_id=None):
     logging.info('First time. Caching.')
-    logging.debug(f'Username: {username}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
     db_config['tenant_id'] = tenant_id
@@ -1493,7 +1492,7 @@ def get_queues_cache(username, tenant_id=None):
                 
         user_queues[user] = queues
 
-    return user_queues[username]
+    return user_queues
 
 @app.route('/get_queues', methods=['POST', 'GET'])
 def get_queues():
@@ -1509,13 +1508,12 @@ def get_queues():
         username = data.pop('username', None)
         tenant_id = data.pop('tenant_id', None)
 
-        logging.debug('Getting queues')
-
-        queues = get_queues_cache(username, tenant_id)
 
         if not username:
             return jsonify({'flag': False, 'message': 'logout'})
 
+        logging.debug('Getting queues')
+        queues = get_queues_cache(tenant_id)[username]
         if not queues:
             message = f'No queues available for role `{username}`.'
             logging.error(message)

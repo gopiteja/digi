@@ -8,8 +8,9 @@ from difflib import SequenceMatcher
 from nltk import edit_distance
 from difflib import SequenceMatcher
 
+from ace_logger import Logging
+
 try:
-    from app.ace_logger import Logging
     from app.cluster_headers import cluster_headers_chooser
     from app.table_predict import complex_table_prediction
     with open('app/parameters.json') as f:
