@@ -392,7 +392,25 @@ def abbyy_template_detection(data):
             try:
                 logging.info('Detecting using Abbyy')
 
-                file_path = './input/' + file_name
+                db = DB('io_configuration', **template_db_config)
+        
+                input_config = db.get_all('input_configuration')
+                output_config = db.get_all('output_configuration')
+
+                logging.debug(f'Input Config: {input_config.to_dict()}')
+                logging.debug(f'Output Config: {output_config.to_dict()}')
+
+                # Sanity checks
+                if (input_config.loc[input_config['type'] == 'Document'].empty
+                        or output_config.loc[input_config['type'] == 'Document'].empty):
+                    message = 'Input/Output not configured in DB.'
+                    logging.error(message)
+                    return jsonify({'flag': False, 'message': message})
+                else:
+                    input_path = input_config.iloc[0]['access_1']
+                    output_path = output_config.iloc[0]['access_1']
+
+                file_path = './input/'+ output_path + '/' + file_name
 
                 # file_data = open(file_path, 'rb')
 
