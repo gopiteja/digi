@@ -9,7 +9,7 @@
   "ocr_confidence": 100,
   "overlap_threshold": 0.7,
   "platform": "win32 darwin linux",
-  "database_name": "standard_ace",
+  "database_name": "table_db",
   "abbyy_xml": "./table_api/table_xml/",
   "supported_excels": [
     "xlsx",
