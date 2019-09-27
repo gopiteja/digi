@@ -31,8 +31,8 @@ db_config = {
 def watch(path_to_watch, output_path, tenant_id):
     logging.info('Watch folder started.')
 
-    path_to_watch = str(Path('./input').absolute() / Path(path_to_watch))
-    output_path = str(Path('./output').absolute() / Path(output_path))
+    path_to_watch = Path('./input').absolute() / Path(path_to_watch)
+    output_path = Path('./output').absolute() / Path(output_path)
 
     logging.debug(f'Watching folder: {path_to_watch}')
     logging.debug(f'Output folder: {output_path}')
@@ -97,6 +97,9 @@ def folder_monitor():
         input_config = db.get_all('input_configuration')
         output_config = db.get_all('output_configuration')
 
+        logging.debug(f'Input Config: {input_config.to_dict()}')
+        logging.debug(f'Output Config: {output_config.to_dict()}')
+
         # Sanity checks
         if (input_config.loc[input_config['type'] == 'Document'].empty
                 or output_config.loc[input_config['type'] == 'Document'].empty):
@@ -116,8 +119,8 @@ def folder_monitor():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        input_path = Path(input_path)
-        output_path = Path(output_path)
+        input_path = Path('./input').absolute() / Path(input_path)
+        output_path = Path('./output').absolute() / Path(output_path)
 
         # Only watch the folder if both are valid directory
         if input_path.is_dir() and output_path.is_dir():
