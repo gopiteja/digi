@@ -73,9 +73,7 @@ def login():
         db_config['tenant_id'] = tenant_id
 
         db = DB('group_access', **db_config)
-        # db = DB('authentication') # Development purpose
 
-        # Get all the users from the database
         try:
             users = db.get_all('active_directory')
             live_sessions = db.get_all('live_sessions')

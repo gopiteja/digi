@@ -42,7 +42,7 @@ def http_transport(encoded_span):
         headers={'Content-Type': 'application/x-thrift'},
     )
 
-def get_template_exceptions(db, data, tenant_id=None, queue_uid=''):
+def get_template_exceptions(db, data, tenant_id=None, queue_uid=None, queue_id=''):
     logging.info('Getting template exceptions')
     logging.info(f'Data: {data}')
     start_point = data['start']
@@ -53,7 +53,7 @@ def get_template_exceptions(db, data, tenant_id=None, queue_uid=''):
 
     template_db = DB('template_db', **db_config)
 
-    columns_data = get_columns(queue_uid, tenant_id, True) 
+    columns_data = get_columns(queue_id, tenant_id, True) 
     columns = columns_data['columns']
     column_mapping = columns_data['column_mapping']
     column_order = list(column_mapping.keys())
@@ -92,12 +92,12 @@ def get_template_exceptions(db, data, tenant_id=None, queue_uid=''):
         template_db.engine.close()
         return {'flag': False, 'message': message}
 
-def get_snapshot(db, data, queue_uid, tenant_id):
+def get_snapshot(db, data, queue_id, tenant_id):
     start_point = data['start']
     end_point = data['end']
     offset = end_point - start_point
 
-    columns_data = get_columns(queue_uid, tenant_id, True) 
+    columns_data = get_columns(queue_id, tenant_id) 
     columns = columns_data['columns']
     column_mapping = columns_data['column_mapping']
     column_order = list(column_mapping.keys())
@@ -227,15 +227,15 @@ def queue_name_type(queue_id, tenant_id):
     return queue_uid, queue_name, queue_type, queue_definition
 
 @cache.memoize(86400)
-def get_columns(queue_uid, tenant_id, template_exceptions=None):
+def get_columns(queue_id, tenant_id, template_exceptions=None):
     logging.debug('Getting columns (cache)')
-    logging.debug(f'Queue Unique Name: {queue_uid}')
+    logging.debug(f'Queue ID: {queue_id}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
     db_config['tenant_id'] = tenant_id
     db = DB('queues', **db_config)
 
-    query = "SELECT id, column_id from queue_column_mapping where unique_name = %s ORDER BY column_order ASC"
+    query = "SELECT id, column_id from queue_column_mapping where queue_id = %s ORDER BY column_order ASC"
     queue_column_ids = list(db.execute(query, params=[queue_uid]).column_id) 
 
     columns_time = time()
@@ -600,7 +600,7 @@ def get_queue(queue_id=None):
             if queue_type == 'train':
                 logging.info(f' > Redirecting to `get_template_exception` route.')
 
-                response = get_template_exceptions(db, {'start': start_point, 'end': end_point}, tenant_id, queue_uid)
+                response = get_template_exceptions(db, {'start': start_point, 'end': end_point}, tenant_id, queue_uid, queue_id)
 
                 extraction_db.engine.close()
 
@@ -620,7 +620,7 @@ def get_queue(queue_id=None):
             elif queue_type == 'snapshot':
                 logging.info(f' > Redirecting to `get_snapshot` route.')
 
-                response_data = get_snapshot(db, {'start': start_point, 'end': end_point}, queue_uid, tenant_id)
+                response_data = get_snapshot(db, {'start': start_point, 'end': end_point}, queue_id, tenant_id)
 
                 return jsonify(response_data)
             
@@ -643,7 +643,7 @@ def get_queue(queue_id=None):
             logging.debug(f'Case IDs: {case_ids}')
             
             try:
-                columns_data = get_columns(queue_uid, tenant_id)
+                columns_data = get_columns(queue_id, tenant_id)
                 columns = columns_data['columns']
                 util_columns = columns_data['util_columns']
                 extraction_columns_df = columns_data['extraction_columns_df']
