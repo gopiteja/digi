@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from kafka import KafkaConsumer, TopicPartition
 from random import randint
 from time import sleep
+from pathlib import Path
 
 from db_utils import DB
 from producer import produce
@@ -32,6 +33,8 @@ def add_file_to_db(data):
     # Check if we recieved the right data
     check_list = [unique_id, file_name, file_path]
     assert (None not in check_list), '`case_id`, `file_name`, `file_path` cant be None.'
+
+    file_path = Path(file_path)
 
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
     stats_db = DB('stats', tenant_id=tenant_id, **db_config)
