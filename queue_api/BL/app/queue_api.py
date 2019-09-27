@@ -1129,7 +1129,8 @@ def get_fields(case_id=None):
             'ocr_data': ocr_data,
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
-            'pdf_type': pdf_type
+            'pdf_type': pdf_type,
+            'failures' : {}
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
