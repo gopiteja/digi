@@ -10,14 +10,9 @@ from extraction_api import value_extract
 
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
 
-try:
-    from app.ace_logger import Logging
-    from app.db_utils import DB
-    from app.producer import produce
-except:
-    from ace_logger import Logging
-    from db_utils import DB
-    from producer import produce
+from ace_logger import Logging
+from db_utils import DB
+from producer import produce
 
 logging = Logging()
 

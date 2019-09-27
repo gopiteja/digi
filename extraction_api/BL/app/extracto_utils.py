@@ -3,10 +3,8 @@ import math
 from  difflib import SequenceMatcher
 import itertools
 
-try:
-    from app.ace_logger import Logging
-except:
-    from ace_logger import Logging
+
+from ace_logger import Logging
 
 logging = Logging()
 

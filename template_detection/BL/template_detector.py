@@ -6,9 +6,10 @@ import json
 import os
 from db_utils import DB
 from sklearn.feature_extraction import text
+from ace_logger import Logging
 
 try:
-    from app.ace_logger import Logging
+    
     from app.opencV_and import match_box
 except:
     from ace_logger import Logging

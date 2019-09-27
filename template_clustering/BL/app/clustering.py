@@ -20,10 +20,10 @@ from flask_cors import CORS
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.feature_extraction.text import TfidfVectorizer
+from db_utils import DB
+from ace_logger import Logging
 
 try:
-    from app.db_utils import DB
-    from app.ace_logger import Logging
     with open('app/parameters.json') as f:
         parameters = json.loads(f.read())
 except:
