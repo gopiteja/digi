@@ -175,10 +175,10 @@ def consume(broker_url='broker:9092'):
                     else:
                         logging.info("Consuming old message.")
                 except Exception as e:
-                    logging.warning(f"Error. Moving to next message. [{e}]")
+                    logging.Exception(f"Error. Moving to next message. [{e}]")
                 consumer.commit()
     except:
-        logging.warning('Something went wrong in consumer. Check trace.')
+        logging.Exception('Something went wrong in consumer. Check trace.')
 
 
 if __name__ == '__main__':
