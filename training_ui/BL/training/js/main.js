@@ -70,6 +70,8 @@ $(document).ready(function () {
     var case_id = getUrlParameter('case_id');
     var retrain = getUrlParameter('retrain');
     var user_name = getUrlParameter('user');
+    var host_name = getUrlParameter('host_name')
+    
     var template_name_retrain = getUrlParameter('template');
     var field_crop_flag;
     retrain = nullCheck(retrain) ? retrain : "no"
@@ -114,7 +116,7 @@ $(document).ready(function () {
             $(".initial_view").hide()
         }
 
-        sendObj.host_url = "http://acewns.com"
+        sendObj.host_url = host_name
 
         var settings11 = {
             "async": true,
