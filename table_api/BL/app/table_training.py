@@ -1,13 +1,18 @@
 import cv2
 import json
-from cluster_headers import cluster_headers_chooser
-try:
-    from magnet import get_cv_lines
-except:
-    from app.magnet import get_cv_lines
 import copy
-from table_predict import predict_maintable
-from table_predict import *
+
+
+try:
+    from app.magnet import get_cv_lines
+    from app.table_predict import *
+    from app.cluster_headers import cluster_headers_chooser
+except:
+    from magnet import get_cv_lines
+    from table_predict import *
+    from cluster_headers import cluster_headers_chooser
+
+
 # global footer_word
 def ocr_data_local(ocrData, T, L, R, B):
     '''
