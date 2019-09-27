@@ -2196,7 +2196,7 @@ def train():
         move_to_queue_id = list(template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']['move_to'])[0]
         query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
         move_to_queue_df = queue_db.execute(query, params=[move_to_queue_id])
-        move_to_queue = list(move_to_queue_df['name'])[0]
+        move_to_queue = list(move_to_queue_df['unique_name'])[0]
         update = {'queue': move_to_queue, 'template_name': template_name}
         where = {'case_id': case_id}
         queue_db.update('process_queue', update=update, where=where)

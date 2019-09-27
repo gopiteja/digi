@@ -264,8 +264,13 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         if predicted_template == '':
             logging.warning('No matching template found. Updating queue to `Template Exceptions`.')
             # Mark for clustering
-            query = "UPDATE `process_queue` SET `queue`= 'Template Exceptions' WHERE `case_id` = %s;"
-            queue_db.execute(query, params=[case_id])
+            query = 'SELECT * FROM `queue_definition` WHERE `name`=%s'
+            move_to_queue_df = queue_db.execute(query, params=['Template Exceptions'])
+            move_to_queue = list(move_to_queue_df['unique_name'])[0]
+
+
+            query = "UPDATE `process_queue` SET `queue`= %s WHERE `case_id` = %s;"
+            queue_db.execute(query, params=[move_to_queue, case_id])
 
             # Updating in trace_info table  as well
             query = "UPDATE `trace_info` SET `queue_trace`= 'Template Exceptions',`last_updated_dates`=%s  WHERE " \
