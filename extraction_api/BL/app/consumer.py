@@ -91,7 +91,7 @@ def consume(broker_url='broker:9092'):
                 'password': os.environ['LOCAL_DB_PASSWORD'],
                 'tenant_id': tenant_id
             }
-            extraction_db = DB('queues', **db_config)
+            extraction_db = DB('extraction', **db_config)
             kafka_db = DB('kafka', **db_config)
 
             logging.info(f'Recieved message: {data}')
