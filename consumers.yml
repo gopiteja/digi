@@ -6,6 +6,27 @@ networks:
     driver: overlay
 
 services:
+  # Add file to DB
+  add_file:
+    image: 'add_file'
+    container_name: 'add_file'
+    build: ./add_file/BL
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "add_file_tag"
+
   # Reports
   generate_report:
     image: 'generate_report'

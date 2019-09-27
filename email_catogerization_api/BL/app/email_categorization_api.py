@@ -6,17 +6,15 @@ import ast
 from flask_cors import CORS
 from flask import Flask, jsonify, request, redirect, url_for
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
-    
+
+from ace_logger import Logging
+from db_utils import DB
 try:
-    from app.ace_logger import Logging
-    from app.db_utils import DB
     from app import app
 except:
-    from ace_logger import Logging
-    from db_utils import DB
     app = Flask(__name__)
     cors = CORS(app)
-    
+
 logging = Logging()
 logging_config = {
         'level': logging.DEBUG,
@@ -24,6 +22,12 @@ logging_config = {
     }
 logging.basicConfig(**logging_config)
 
+db_config = {
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT'],
+}
 
 @app.route('/store_config', methods=['POST'])
 def store_config():
@@ -70,7 +74,7 @@ def store_config():
 
             return jsonify({'flag':False, 'msg': msg})
 
-        db = DB('email')
+        db = DB('email', **db_config)
         to_store_df = pd.DataFrame([to_store])
 
         to_store_df.reset_index(drop=True)
@@ -108,7 +112,7 @@ def get_filter_point():
         logging.info("filter_point")
         tenant_id = data['tenant_id']
 
-        db = DB('email')
+        db = DB('email', **db_config)
         email_data = db.get_all('table_name')
 
 
@@ -152,7 +156,7 @@ def categorize():
 
             return jsonify({'flag':False, 'msg': msg})
 
-        db = DB('email')
+        db = DB('email', **db_config)
 
         email_category_data = db.get_all('email_categorization')
 
@@ -209,7 +213,8 @@ def stored_config():
 
             return jsonify({'flag':False, 'msg': msg})
 
-        db = DB('email')
+
+        db = DB('email', **db_config)
 
         stored_data = db.get_all('email_categorization')
 
@@ -219,8 +224,6 @@ def stored_config():
             return jsonify({'flag':False, 'data':{}})
     except Exception as e:
         return jsonify({'flag':False, 'data':{}})
-
-
 
 @app.route('/delete_stored_config', methods=['POST'])
 def delete_stored_config():
@@ -249,7 +252,7 @@ def delete_stored_config():
 
             return jsonify({'flag':False, 'msg': msg})
 
-        db = DB('email')
+        db = DB('email', **db_config)
 
         query = "delete from email_categorization where id in ({})".format(" ,".join(str(elm) for elm in config_id))
 

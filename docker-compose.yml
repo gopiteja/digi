@@ -315,7 +315,7 @@ services:
     container_name: 'folder_monitor'
     build: ./folder_monitoring_api/BL
     volumes:
-      - file_input:/app/Portal
+      - file_input:/app/input
       - file_output:/app/output
       - angular_images:/app/angular
       - ui_images:/app/training_ui
