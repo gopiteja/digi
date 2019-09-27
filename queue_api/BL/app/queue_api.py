@@ -1008,7 +1008,7 @@ def get_fields(case_id=None):
         fields_df = field_definition.ix[field_ids] # Get field names using the unique field IDs
 
         logging.debug(f'Getting highlights for case `{case_id}`')
-        query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date limit 1"
+        query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date desc limit 1"
         case_id_ocr = extraction_db.execute(query, params=[case_id])
         try:
             highlight = json.loads(list(case_id_ocr['highlight'])[0])
@@ -1130,7 +1130,7 @@ def get_fields(case_id=None):
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
             'pdf_type': pdf_type,
-            'failures' : {}
+            'failures' : failure_msgs_data
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
@@ -1141,6 +1141,10 @@ def get_fields(case_id=None):
             'case_id': case_id
         }
         queue_db.update('process_queue', update=update, where=where)
+
+        print(renamed_fields)
+        print()
+        print(fields_df.to_dict('index'))
 
         return jsonify(response_data)
 
