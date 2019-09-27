@@ -719,7 +719,7 @@ def get_queue(queue_id=None):
 
                         for column in columns_to_change:
                             try:
-                                document[column] = (document[column]).strftime(r'%B %d, %Y %I:%M %p')
+                                document[column] = (document[column]).strftime(r'%x %X')
                             except:
                                 logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
                                 pass
