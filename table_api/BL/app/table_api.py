@@ -286,4 +286,5 @@ def predict_with_ui_data():
 
             return jsonify({'flag': True, 'message': 'Predicted table.', 'data': table_data})
         except Exception as e:
+            logging.exception(e)
             return jsonify({'flag': False, 'message': 'System error! Please contact your system administrator.'})
