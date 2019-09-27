@@ -120,13 +120,8 @@ def plumb():
     """
     logging.info('Entering get_ocr route')
     result = request.json
-    if 'tenant_id' in result:
-        tenant_id = result['case_id'] 
-    else:
-        tenant_id = '' 
     with zipkin_span(service_name='pdf_plumber_api', span_name='plumb', 
             transport_handler=http_transport, port=5007, sample_rate=0.5,) as  zipkin_context:
-        zipkin_context.update_binary_annotations({'Tenant':tenant_id})
 
         file_id = result['file_name']
         source_folder = './invoice_files'
