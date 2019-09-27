@@ -116,10 +116,6 @@ def consume(broker_url='broker:9092'):
                 except:
                     # Change status to failed
                     logging.exception(f'Something went wrong while generating report. Check trace.')
-                    reports_db_config = {
-                        'host': 'reports_db',
-                        'tenant_id': tenant_id
-                    }
                     reports_db = DB('reports', tenant_id=tenant_id, **db_config)
                     query = 'UPDATE `reports_queue` SET `status`=%s WHERE `reference_id`=%s'
                     reports_db.execute(query, params=['Failed', reference_id])
