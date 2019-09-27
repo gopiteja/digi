@@ -57,7 +57,7 @@ def watch(path_to_watch, output_path, tenant_id):
             unique_id = file_path.stem # Some clients require file name as Case ID
 
             time.sleep(3) # Buffer time. Required to make sure files move without any error.
-            shutil.copy(file_path, output_path / (unique_id + file_path.suffix))
+            shutil.move(file_path, output_path / (unique_id + file_path.suffix))
             logging.debug(f' - {file_path.name} moved to {output_path.absolute()} directory')
 
             data = {
