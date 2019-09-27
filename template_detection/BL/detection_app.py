@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import pymysql
 import requests
+import pdfplumber
 import shutil
 import subprocess
 import sys
