@@ -70,9 +70,9 @@ $(document).ready(function () {
     var case_id = getUrlParameter('case_id');
     var retrain = getUrlParameter('retrain');
     var user_name = getUrlParameter('user');
-    var host_name = getUrlParameter('host_name')
-    
     var template_name_retrain = getUrlParameter('template');
+    var tenant_id = getUrlParameter('host_name')
+
     var field_crop_flag;
     retrain = nullCheck(retrain) ? retrain : "no"
 
@@ -116,7 +116,7 @@ $(document).ready(function () {
             $(".initial_view").hide()
         }
 
-        sendObj.host_url = host_name
+        sendObj.tenant_id = tenant_id
 
         var settings11 = {
             "async": true,
@@ -217,6 +217,7 @@ $(document).ready(function () {
                 if (msg.type == 'blob') {
                     obj = {}
                     obj.case_id = case_id;
+                    obj.tenant_id = tenant_id
 
                     var settings11 = {
                         "async": true,
@@ -294,6 +295,7 @@ $(document).ready(function () {
         obj.case_id = case_id;
         obj.invoice_type = val;
         obj.queue = 'template'
+        obj.tenant_id = tenant_id
         // console.log(obj)
         var settings11 = {
             "async": true,
@@ -520,6 +522,7 @@ $(document).ready(function () {
             obj.case_id = case_id;
             obj.force_check = 'yes';
             obj.template_name = forcedTemplateName;
+            obj.tenant_id = tenant_id
             var settings11 = {
                 "async": true,
                 "crossDomain": true,
@@ -591,6 +594,7 @@ $(document).ready(function () {
         } else {
             obj.retrain = "no"
         }
+        obj.tenant_id = tenant_id
         var settings11 = {
             "async": true,
             "crossDomain": true,
@@ -932,7 +936,7 @@ $(document).ready(function () {
             $('#imageCountNum' + i).selectAreas('destroy');
         }
 
-
+        sendObj.tenant_id = tenant_id
         //(sendObj);
         var settings11 = {
             "async": true,
@@ -1005,7 +1009,7 @@ $(document).ready(function () {
         sendObj.case_id = case_id;
         sendObj.flag = 'lines'
         sendObj.img_width = $(".HorZOn ").width();
-
+        sendObj.tenant_id = tenant_id
         // console.log(sendObj, JSON.stringify(sendObj));
 
         // //(sendObj);
@@ -1203,6 +1207,7 @@ $(document).ready(function () {
             mainDataToSend.retrain = retrain;
             mainDataToSend.user = user_name;
             mainDataToSend.temp_type = temp_check == -1 ? "new" : "old"
+            mainDataToSend.tenant_id = tenant_id
 
             //(JSON.stringify(mainDataToSend));
             var form = new FormData();
@@ -1225,6 +1230,7 @@ $(document).ready(function () {
                     obj = {}
                     obj.template_name = template_name_retrain
                     obj.case_id = case_id;
+                    obj.tenant_id = tenant_id
                     var settings11 = {
                         "async": true,
                         "crossDomain": true,
@@ -1264,6 +1270,7 @@ $(document).ready(function () {
             mainDataToSend.retrain = retrain;
             mainDataToSend.user = user_name;
             mainDataToSend.temp_type = temp_check == -1 ? "new" : "old"
+            mainDataToSend.tenant_id = tenant_id
 
             //(mainDataToSend);
             var form = new FormData();
@@ -2203,6 +2210,7 @@ $(document).ready(function () {
         obj.field_data = fields;
         obj.width = width;
         obj.force_check = 'no';
+        obj.tenant_id = tenant_id
         var settings11 = {
             "async": true,
             "crossDomain": true,
@@ -2394,6 +2402,7 @@ $(document).ready(function () {
         obj = {}
         obj.case_id = case_id;
         obj.queue = 'Template Exceptions'
+        obj.tenant_id = tenant_id
 
         var settings11 = {
             "async": true,
