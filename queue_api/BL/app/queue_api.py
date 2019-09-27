@@ -1397,7 +1397,6 @@ def create_children(queue, queue_definition_record,list_):
 @cache.memoize(86400)
 def get_queues_cache(tenant_id=None):
     logging.info('First time. Caching.')
-    logging.debug(f'Username: {username}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
     db_config['tenant_id'] = tenant_id
