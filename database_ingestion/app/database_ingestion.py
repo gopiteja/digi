@@ -86,7 +86,7 @@ def database_upload():
         tenant_id = data.pop('tenant_id', None)
     except:
         tenant_id = None
-        
+
     db_config['tenant_id'] = tenant_id
     ingestion_db = DB('db_ingestion_data', **db_config)
     queues_db = DB('queues', **db_config)
@@ -136,10 +136,24 @@ def database_upload():
             'tenant_id': None,
             'type': 'database_ingestion'
         }
+        #
+        # topic = 'detection' # Get the first topic from message flow
+        #
+        # produce(topic, data)
+        query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
+        message_flow = kafka_db.execute(query, params=['database_ingestion'])
 
-        topic = 'detection' # Get the first topic from message flow
+        if message_flow.empty:
+            logging.error('`database_ingestion` is not configured in message flow table.')
+        else:
+            topic = list(message_flow.send_to_topic)[0]
 
-        produce(topic, data)
+            if topic is not None:
+                logging.info(f'Producing to topic {topic}')
+                produce(topic, data)
+            else:
+                logging.info(f'There is no topic to send to for `database_ingestion`. [{topic}]')
+
     except:
         logging.exception('')
         query = f"Update screen_shots set `processed` = 2 where Fax_unique_id = '{key}'"
