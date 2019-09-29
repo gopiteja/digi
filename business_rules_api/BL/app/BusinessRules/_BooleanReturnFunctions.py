@@ -29,26 +29,35 @@ def doCompareKeyValue(self, parameters):
             left_param_value = None
         if not right_param_value:
             right_param_value = None
+        
         # our own ==
         if operator == '==':
             processed_left_param_value = str(left_param_value).strip().lower()
             processed_right_param_value = str(right_param_value).strip().lower()
+            logging.debug(f"\n executing {processed_left_param_value} == {processed_right_param_value}\n")
             return  processed_left_param_value == processed_right_param_value
+        # our own !=
         if operator == '!=':
             processed_left_param_value = str(left_param_value).strip().lower()
             processed_right_param_value = str(right_param_value).strip().lower()
+            logging.debug(f"\n executing {processed_left_param_value} != {processed_right_param_value}\n")
             return  processed_left_param_value != processed_right_param_value
+        
+        # extend for more types and also values...for eg..>, >=, <, <=, if eval gives errors
+       
         # conversion requrired for the string types
         if type(left_param_value) == str:
             left_param_value = "'"+left_param_value+"'"
         if type(right_param_value) == str:
             right_param_value = "'"+right_param_value+"'"
-        logging.info(f"eval string is ")
-        logging.info(str(left_param_value) + " "+operator+ " "+ str(right_param_value))
-        logging.info(eval (str(left_param_value) + " "+operator+ " "+ str(right_param_value)))
+            
+        logging.info(f"\n evaluating the expression \n")
+        logging.info(str(left_param_value) + " "+operator+ " "+ str(right_param_value) + "\n")
+        logging.info(eval (str(left_param_value) + " "+operator+ " "+ str(right_param_value)) + "\n")
         return eval (str(left_param_value) + " "+operator+ " "+ str(right_param_value))
-    except:
+    except Exception as e:
         logging.debug(f"error in compare key value {left_param_value} {operator} {right_param_value}")
+        logging.debug(str(e))
         return False
 
 

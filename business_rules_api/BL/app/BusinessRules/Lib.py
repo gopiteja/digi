@@ -1,3 +1,5 @@
+# Please dont modify this without understanding
+# http://www.qtrac.eu/pyclassmulti.html or pdf saved in this folder.
 def add_methods_from(*modules):
     def decorator(Class):
         for module in modules:
