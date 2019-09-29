@@ -22,22 +22,20 @@ def http_transport(encoded_span):
 
 def produce(topic, data, broker_url='broker:9092'):
     logging.info(f'Sending to topic `{topic}`...')
-    with zipkin_span(service_name='button_functions', span_name='produce', 
-            transport_handler=http_transport, port=5007, sample_rate=0.5,):
-        try:
-            # Producer send data to a topic
-            producer = KafkaProducer(
-                bootstrap_servers=broker_url,
-                value_serializer=lambda value: json.dumps(value).encode(),
-                api_version=(0,10,1),
-                max_request_size= 9201912
-            )
+    try:
+        # Producer send data to a topic
+        producer = KafkaProducer(
+            bootstrap_servers=broker_url,
+            value_serializer=lambda value: json.dumps(value).encode(),
+            api_version=(0,10,1),
+            max_request_size= 9201912
+        )
 
-            producer.send(topic, value=data)
-            producer.flush()
-            logging.info(f'Sent to topic `{topic}` succesfully.')
-            logging.debug(f'Sent data: {data}')
-            return True
-        except:
-            logging.exception(f'Error sending to topic `{topic}`.')
-            return False
+        producer.send(topic, value=data)
+        producer.flush()
+        logging.info(f'Sent to topic `{topic}` succesfully.')
+        logging.debug(f'Sent data: {data}')
+        return True
+    except:
+        logging.exception(f'Error sending to topic `{topic}`.')
+        return False

@@ -34,6 +34,8 @@ class Logging(logging.Logger):
         logging.getLogger('kafka.producer.kafka').disabled = True
         logging.getLogger('kafka.producer.record_accumulator').disabled = True
         logging.getLogger('kafka.producer.sender').disabled = True
+        logging.getLogger('matplotlib').disabled = True
+        logging.getLogger('matplotlib.font_manager').disabled = True
         logging.getLogger('requests').disabled = True
         logging.getLogger('urllib3.connectionpool').disabled = True
         logging.getLogger('werkzeug').disabled = True

@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import pymysql
 import requests
+import pdfplumber
 import shutil
 import subprocess
 import sys
@@ -264,8 +265,13 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         if predicted_template == '':
             logging.warning('No matching template found. Updating queue to `Template Exceptions`.')
             # Mark for clustering
-            query = "UPDATE `process_queue` SET `queue`= 'Template Exceptions' WHERE `case_id` = %s;"
-            queue_db.execute(query, params=[case_id])
+            query = 'SELECT * FROM `queue_definition` WHERE `name`=%s'
+            move_to_queue_df = queue_db.execute(query, params=['Template Exceptions'])
+            move_to_queue = list(move_to_queue_df['unique_name'])[0]
+
+
+            query = "UPDATE `process_queue` SET `queue`= %s WHERE `case_id` = %s;"
+            queue_db.execute(query, params=[move_to_queue, case_id])
 
             # Updating in trace_info table  as well
             query = "UPDATE `trace_info` SET `queue_trace`= 'Template Exceptions',`last_updated_dates`=%s  WHERE " \
@@ -345,19 +351,46 @@ def abbyy_template_detection(data):
         model_path = parameters['model_path']
 
         logging.info(f'Processing file {original_file_name}')
+        try:
+            query = "SELECT id, ocr_data from ocr_info where case_id = %s"
+            logging.debug(f'Case ID: `{case_id}`')
+            case_id_process = list(queue_db.execute(query, params=[case_id]).ocr_data)[0]
+        except:
+            case_id_process = None
 
-        query = "SELECT id, ocr_data from ocr_info where case_id = %s"
-        logging.debug(f'Case ID: `{case_id}`')
-        case_id_process = list(queue_db.execute(query, params=[case_id]).ocr_data)[0]
         if case_id_process == '' or case_id_process is None:
             try:
+                logging.info('Detecting using Abbyy')
+
+                db = DB('io_configuration', **template_db_config)
+        
+                input_config = db.get_all('input_configuration')
+                output_config = db.get_all('output_configuration')
+
+                logging.debug(f'Input Config: {input_config.to_dict()}')
+                logging.debug(f'Output Config: {output_config.to_dict()}')
+
+                # Sanity checks
+                if (input_config.loc[input_config['type'] == 'Document'].empty
+                        or output_config.loc[input_config['type'] == 'Document'].empty):
+                    message = 'Input/Output not configured in DB.'
+                    logging.error(message)
+                else:
+                    input_path = input_config.iloc[0]['access_1']
+                    output_path = output_config.iloc[0]['access_1']
+
+                file_path = './input/'+ output_path + '/' + file_name
+
+                logging.info(file_path)
+
                 logging.info(' -> Trying PDF plumber...')
                 host = 'pdf_plumber_api'
                 port = parameters['pdf_plumber_port']
                 route = 'plumb'
                 data = {
                     'file_name': file_name,
-                    'tenant_id': tenant_id
+                    'tenant_id': tenant_id,
+                    'pdf' : pdfplumber.open(file_path)
                 }
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
                 pdf_response = response.json()
@@ -368,7 +401,7 @@ def abbyy_template_detection(data):
                 else:
                     pdf_data = None
             except:
-                logging.error('PDF plumbing failed.')
+                logging.exception('PDF plumbing failed.')
                 pdf_data = None
 
             if isListEmpty(pdf_data):
@@ -382,9 +415,7 @@ def abbyy_template_detection(data):
             # no matter what ....try..abbyyy....
             # if isListEmpty(pdf_data) or not pdf_working:
             try:
-                logging.info('Detecting using Abbyy')
-
-                file_path = './input/' + file_name
+                
 
                 # file_data = open(file_path, 'rb')
 
@@ -414,6 +445,7 @@ def abbyy_template_detection(data):
                 files_data = {'file': (file_name_, open(file_path, 'rb'))}
                 url = parameters['abbyy_url']
 
+                logging.debug(url)
                 response = requests.post(url, files=files_data)
 
                 logging.debug(type(response))
@@ -460,22 +492,17 @@ def abbyy_template_detection(data):
 
             # If OCR-ed successfully, insert into process_queue with status 1 (success)
             # else insert with status 0 (failed)
-            # print("pdf_data", pdf_data)
+            print("pdf_data", pdf_data)
             # print("saving ocr data")
-            if xml_string is None and isListEmpty(pdf_data):
-                query = "UPDATE `process_queue` SET `ocr_status`=0, `queue`='Failed' WHERE `case_id`=%s"
-                queue_db.execute(query, params=[case_id])
-                print(f'No OCR data for {file_name}. Continuing to next file.')
-                print('Updated OCR status in process_queue table to 0.')
-                continue
+            # if xml_string is None and isListEmpty(pdf_data):
+            #     query = "UPDATE `process_queue` SET `ocr_status`=0, `queue`='Failed' WHERE `case_id`=%s"
+            #     queue_db.execute(query, params=[case_id])
+            #     print(f'No OCR data for {file_name}. Continuing to next file.')
+            #     print('Updated OCR status in process_queue table to 0.')
+            #     continue
 
-                # if xml_string is not None or xml_string or not isListEmpty(pdf_data):
-                # if not isListEmpty(pdf_data) and pdf_working:
-                #     logging.debug("Using PDF data")
-                #     ocr_data = pdf_data
-                # else:
-                #     logging.debug("Using Abbyy data")
-                #     ocr_data = xml_parser_sdk.convert_to_json(xml_string)
+            if xml_string is not None or xml_string or not isListEmpty(pdf_data):
+                logging.debug('now the battle being')
                 try:
                     abbyy_ocr_data = xml_parser_sdk.convert_to_json(xml_string)
                 except Exception as e:
@@ -496,8 +523,8 @@ def abbyy_template_detection(data):
                     ocr_data = pdfplumber_ocr_data
 
                 ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
-                query = 'UPDATE `ocr_info` SET `ocr_text`=%s, `xml_data`=%s, `ocr_data`=%s WHERE `case_id`=%s'
-                params = [ocr_text, xml_string, json.dumps(ocr_data), case_id]
+                query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s%s, %s ,%s)'
+                params = [case_id, ocr_text, xml_string, json.dumps(ocr_data)]
                 queue_db.execute(query, params=params)
                 logging.debug('OCR data saved into ocr_info table.')
 

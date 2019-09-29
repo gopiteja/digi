@@ -1627,6 +1627,12 @@ def force_template():
             'tenant_id': tenant_id
         }
 
+        kafka_db = DB('kafka', **db_config)
+
+        message_flow = kafka_db.get_all('message_flow')
+        listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == 'train']
+        send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
+
         stats_db = DB('stats', **stats_db_config)
 
         fields = {'template_name': template_name, 'cluster': None, 'queue': 'Processing'}
@@ -1646,7 +1652,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce('extract', {'case_id': case_id})
+            produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id})
 
             return jsonify({'flag': True, 'message': 'Successfully extracting with new template. Please wait!'})
 
@@ -1664,7 +1670,7 @@ def force_template():
         stats_db.insert_dict(audit_data, 'audit')
 
         # Send case ID to extraction topic
-        produce('extract', {'case_id': case_id})
+        produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id})
 
         if cluster is not None:
             cluster_ids_query = "SELECT * from `process_queue` where `cluster` = %s"
@@ -1697,7 +1703,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce('extract', {'case_id': cluster_case_id})
+            produce(send_to_topic, {'case_id': cluster_case_id, 'tenant_id': tenant_id})
 
         return jsonify({'flag': True, 'message': 'Successfully extracted!'})
 
@@ -1904,6 +1910,7 @@ def test_fields():
 
         ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
 
+        checkboxes_all = {}
         if force_check == 'yes':
             template_name = data['template_name']
             trained_info_data = templates_db.get_all('trained_info')
@@ -1927,7 +1934,8 @@ def test_fields():
 
         value_extract_params = {"case_id": case_id,
                                 "field_data": trained_info,
-                                "checkbox_data": checkboxes_all
+                                "checkbox_data": checkboxes_all,
+                                "tenant_id" : tenant_id
                                 }
 
         host = 'extractionapi'
@@ -1996,6 +2004,8 @@ def train():
             'tenant_id': tenant_id
         }
         extraction_db = DB('extraction', **extarction_db_config)
+
+        kafka_db = DB('kafka', **db_config)
         # extraction_db = DB('extraction')
 
         stats_db_config = {
@@ -2187,7 +2197,7 @@ def train():
         move_to_queue_id = list(template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']['move_to'])[0]
         query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
         move_to_queue_df = queue_db.execute(query, params=[move_to_queue_id])
-        move_to_queue = list(move_to_queue_df['name'])[0]
+        move_to_queue = list(move_to_queue_df['unique_name'])[0]
         update = {'queue': move_to_queue, 'template_name': template_name}
         where = {'case_id': case_id}
         queue_db.update('process_queue', update=update, where=where)
@@ -2228,8 +2238,12 @@ def train():
             }
             stats_db.insert_dict(audit_data, 'audit')
 
+
+            message_flow = kafka_db.get_all('message_flow')
+            listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == 'train']
+            send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
             # Send case ID to extraction topic
-            produce('extract', {'case_id': cluster_case_id})
+            produce(send_to_topic, {'case_id': cluster_case_id, 'tenant_id': tenant_id})
 
         return jsonify({'flag': True, 'message': 'Training completed!'})
 

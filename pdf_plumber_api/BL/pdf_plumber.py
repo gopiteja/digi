@@ -67,7 +67,7 @@ def resize(result,resize_factor):
     return result[0]
 
 @zipkin_span(service_name='pdf_plumber_api', span_name='ocr')
-def ocr(file_path, default_img_width):
+def ocr(pdf, default_img_width):
     """
     Extracts embedded ocr from digitized pdf.
 
@@ -79,29 +79,28 @@ def ocr(file_path, default_img_width):
             ocr data as a list of dict
     """
     logging.info('Entering ocr')
-    with pdfplumber.open(file_path) as pdf:
-        ocr_data = []
-        for page in pdf.pages:
-            width = page.width
-            page_data = []
-            for word in page.extract_words():
-                new_word = {}
-                new_word['width'] = int(int(word['x1']) - int(word['x0']))
-                new_word['height'] = int(int(word['bottom']) - int(word['top']))
-                new_word['top'] = int(word['top'])
-                new_word['bottom'] = int(word['bottom'])
-                new_word['right'] = int(word['x1'])
-                new_word['left'] = int(word['x0'])
-                word = word['text'].replace("'",'').replace('"',"")
-                word = re.sub('[(][cid].*[)]','',word)
-                new_word['word'] = word
+    ocr_data = []
+    for page in pdf.pages:
+        width = page.width
+        page_data = []
+        for word in page.extract_words():
+            new_word = {}
+            new_word['width'] = int(int(word['x1']) - int(word['x0']))
+            new_word['height'] = int(int(word['bottom']) - int(word['top']))
+            new_word['top'] = int(word['top'])
+            new_word['bottom'] = int(word['bottom'])
+            new_word['right'] = int(word['x1'])
+            new_word['left'] = int(word['x0'])
+            word = word['text'].replace("'",'').replace('"',"")
+            word = re.sub('[(][cid].*[)]','',word)
+            new_word['word'] = word
 
-                new_word['confidence']  = 100
+            new_word['confidence']  = 100
 
-                resize_factor = float(default_img_width)/float(width)
-                new_word =  resize([new_word], resize_factor)
-                page_data.append(new_word)
-            ocr_data.append(page_data)
+            resize_factor = float(default_img_width)/float(width)
+            new_word =  resize([new_word], resize_factor)
+            page_data.append(new_word)
+        ocr_data.append(page_data)
     logging.info('Exiting ocr')
     return ocr_data
 
@@ -120,23 +119,19 @@ def plumb():
     """
     logging.info('Entering get_ocr route')
     result = request.json
-    if 'tenant_id' in result:
-        tenant_id = result['case_id'] 
-    else:
-        tenant_id = '' 
     with zipkin_span(service_name='pdf_plumber_api', span_name='plumb', 
             transport_handler=http_transport, port=5007, sample_rate=0.5,) as  zipkin_context:
-        zipkin_context.update_binary_annotations({'Tenant':tenant_id})
 
-        file_id = result['file_name']
-        source_folder = './invoice_files'
+        pdf = result['pdf']
+        # source_folder = './invoice_files'
 
-        file_path  = Path(source_folder) / file_id
+        # file_path  = Path(source_folder) / file_id
 
         try:
-            response = ocr(file_path, parameters['default_img_width'])
+            response = ocr(pdf, parameters['default_img_width'])
             return jsonify({'flag': True, 'data': response})
         except:
+            logging.exception('failed')
             return jsonify({'flag': False, 'message': 'PDF Plumbing failed.'})
 
 if __name__ == '__main__':

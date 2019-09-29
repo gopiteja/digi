@@ -356,7 +356,7 @@ def get_recon_data(queue_id, queue_name, tenant_id):
     if len(recon_definition_df) > 2:
         return {'flag' : 'False', 'msg' : 'Too many queues mapped in DB.'}
     to_return = {}
-    keys_ = {}  #for the UI to know which is primary and secondary table
+    keys_ = {} 
     for _, row in recon_definition_df.iterrows():
         table_column_mapping = recon_get_columns(row['table_unique_id'], 'karvy')
         
@@ -424,11 +424,9 @@ def get_recon_secondary_table():
                 select_columns_list.append(f'`{table}`.`{col_name}`')
         
         tables_list = [source for source in list(extraction_columns_df['source'].unique()) if source]
-        print(f'Tables to fetch from: {tables_list}')
         tables_list_ = []
         if primary_queue_table_name not in tables_list:
             tables_list_ = tables_list + [primary_queue_table_name]
-            print(tables_list_)
         else:
             tables_list_ = tables_list
         where_conditions_list = []
@@ -442,13 +440,11 @@ def get_recon_secondary_table():
         where_part = ' AND '.join(where_conditions_list)
         
         query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
-        print('query is ',query)
         query_result_df = extraction_db.execute_(query)
         try:
             query_result_list = query_result_df.to_dict('records')
         except:
             pass
-        print(f'Extraction data: {query_result_list}')
         
         rows_arr = []
         for _, row in query_result_df.iterrows():
@@ -470,13 +466,11 @@ def get_recon_table_data():
     queue_table_name = data['queue_table_name']
     columns_df = data['columns_df']
     columns = data['columns']
-    queue_id = data['queue_id'] #Need UI to send this 
+    queue_id = data['queue_id']
     queue_db = DB('queues', **db_config)
     extraction_db = DB('extraction', **db_config)
     query = f"SELECT `unique_name` FROM `queue_definition` where `id` = '{queue_id}'"
-    print(query)
     queue_unique_name = queue_db.execute_(query)
-    print(queue_unique_name)
     queue_unique_name  = list(queue_unique_name['unique_name'])[0]
     invoice_files_df = extraction_db.execute_(f"SELECT * from `{queue_table_name}` where `queue`= '{queue_unique_name}'")
     case_ids = list(invoice_files_df[unique_key].unique())
@@ -493,11 +487,9 @@ def get_recon_table_data():
                     select_columns_list.append(f'`{table}`.`{col_name}`')
             
             tables_list = [source for source in list(extraction_columns_df['source'].unique()) if source]
-            print(f'Tables to fetch from: {tables_list}')
             tables_list_ = []
             if queue_table_name not in tables_list:
                 tables_list_ = tables_list + [queue_table_name]
-                print(tables_list_)
             else:
                 tables_list_ = tables_list
             where_conditions_list = []
@@ -512,10 +504,8 @@ def get_recon_table_data():
 
 
             query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
-            print('query is ',query)
             query_result_df = extraction_db.execute_(query, params=case_ids)
             query_result_list = query_result_df.to_dict('records')
-            print(f'Extraction data: {query_result_list}')
             
             rows_arr = []
             for _, row in query_result_df.iterrows():
@@ -623,7 +613,7 @@ def get_queue(queue_id=None):
                 response_data['buttons'] = button_attributes
                 
                 return jsonify({'data':response_data, 'flag' : True})
-            # Get data related to the queue name from OCR table
+
             all_st = time()
             invoice_files_df = db.execute("SELECT * from `process_queue` where `queue`= %s ORDER by `failure_status` desc, `created_date` desc LIMIT %s, %s", params=[queue_uid, start_point, offset])
             total_files = list(db.execute("SELECT id, COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=[queue_uid])['COUNT(DISTINCT `case_id`)'])[0]
@@ -686,13 +676,7 @@ def get_queue(queue_id=None):
                     query_result_list = query_result.to_dict('records')
                     logging.debug(f'Extraction data: {query_result_list}')
                 
-                    for document in files:
-                        try:
-                            document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
-                        except:
-                            logging.debug(f'Could not parse created date value. `created_date` might not be mapped for the queue `{queue_name}`.')
-                            pass
-                        
+                    for document in files:                       
                         try:
                             percentage_done = str(int((document['completed_processes']/document['total_processes'])*100))
                         except:
@@ -724,12 +708,14 @@ def get_queue(queue_id=None):
                                     document[col] = val
                                     continue
 
-                        query = "select column_name from column_definition where data = 1"
-                        columns_to_change = list(db.execute(query).column_name)
+                        query = "select column_name from column_definition where date = 1"
+                        columns_to_change = list(db.execute_(query).column_name)
 
                         for column in columns_to_change:
                             try:
                                 document[column] = (document[column]).strftime(r'%B %d, %Y %I:%M %p')
+                            except ValueError:
+                                document[column] = ''
                             except:
                                 logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
                                 pass
@@ -1013,20 +999,16 @@ def get_fields(case_id=None):
         queue_name = list(case_files['queue'])[0]
         queue_definition = queue_db.get_all('queue_definition')
         queue_info = queue_definition.loc[queue_definition['unique_name'] == queue_name]
-        print("queue_name", queue_name)
         queue_id = queue_definition.index[queue_definition['unique_name'] == queue_name].tolist()[0]
         logging.debug(f'Time taken for getting qid basis exception type {time()-qid_st}')
 
         logging.debug(f'Getting queue field mapping info for case `{case_id}`')
-        # Get field related to case ID from queue_field_mapping
 
         dropdown, field_definition, field_ids = get_dropdown(queue_id, tenant_id)
-
         fields_df = field_definition.ix[field_ids] # Get field names using the unique field IDs
-        print("Get field names",fields_df)
+
         logging.debug(f'Getting highlights for case `{case_id}`')
-        # Get higlights
-        query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date limit 1"
+        query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date desc limit 1"
         case_id_ocr = extraction_db.execute(query, params=[case_id])
         try:
             highlight = json.loads(list(case_id_ocr['highlight'])[0])
@@ -1040,10 +1022,8 @@ def get_fields(case_id=None):
         except:
             table = '[]'
 
-        # Renaming of fields
         renamed_fields = {}
         renamed_higlight = {}
-
         field_source_data = {}
 
         logging.debug(f'Renaming fields for case `{case_id}`')
@@ -1057,7 +1037,6 @@ def get_fields(case_id=None):
             display_name = row['display_name']
             unique_name = row['unique_name']
 
-            # Check if such table exists. If not then skip tab
             try:
                 if table_name not in field_source_data:
                     get_fieldsinfo_q = f"SELECT * FROM `{table_name}` WHERE case_id=%s"
@@ -1079,9 +1058,8 @@ def get_fields(case_id=None):
                 logging.exception('Exception in getting table fields')
                 continue
 
-            # case_files_filtered = case_tab_files.loc[:, 'created_date':] # created_date column will be included
-            fields_df = case_tab_files.drop(columns='created_date') # Drop created_date column
-            table_fields_ = fields_df.to_dict(orient='records')[0] # Get corresponding table fields
+            fields_df = case_tab_files.drop(columns='created_date')
+            table_fields_ = fields_df.to_dict(orient='records')[0] 
 
             if display_name in table_fields_:
                 renamed_fields[unique_name] = table_fields_[display_name]
@@ -1151,7 +1129,8 @@ def get_fields(case_id=None):
             'ocr_data': ocr_data,
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
-            'pdf_type': pdf_type
+            'pdf_type': pdf_type,
+            'failures' : failure_msgs_data
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
@@ -1189,7 +1168,6 @@ def refresh_fields(case_id=None):
 
         extraction_db = DB('extraction', **db_config)
 
-        # Get tab definition
         tab_definition = queue_db.get_all('tab_definition')
 
         logging.debug(f'Getting case info from process queue for case `{case_id}`...')
@@ -1209,11 +1187,9 @@ def refresh_fields(case_id=None):
         query = f"SELECT id FROM field_definition WHERE FIND_IN_SET({queue_id},queue_field_mapping) > 0"
         field_ids = list(queue_db.execute_(query).id)
         field_definition = queue_db.get_all('field_definition')
-
-        fields_df = field_definition.ix[field_ids] # Get field names using the unique field IDs
+        fields_df = field_definition.ix[field_ids]  
 
         logging.debug(f'Renaming fields for case `{case_id}`')
-        # Renaming of fields
         renamed_fields = {}
         for index, row in fields_df.iterrows():
             tab_id = row['tab_id']
@@ -1230,9 +1206,9 @@ def refresh_fields(case_id=None):
                 message = f' - No such case ID `{case_id}` in `{table_name}`.'
                 logging.error(message)
                 continue
-            case_files_filtered = case_tab_files.loc[:, 'created_date':] # created_date column will be included
-            fields_df = case_files_filtered.drop(columns='created_date') # Drop created_date column
-            table_fields_ = fields_df.to_dict(orient='records')[0] # Get corresponding table fields
+            case_files_filtered = case_tab_files.loc[:, 'created_date':] 
+            fields_df = case_files_filtered.drop(columns='created_date') 
+            table_fields_ = fields_df.to_dict(orient='records')[0] 
 
             if display_name in table_fields_:
                 renamed_fields[unique_name] = table_fields_[display_name]
@@ -1271,7 +1247,6 @@ def unlock_case():
         data = request.json
 
         logging.info(f'Request data: {data}')
-        # case_id = data.pop('case_id', None)
         operator = data.pop('username', None)
         tenant_id = data.pop('tenant_id', None)
 
@@ -1283,8 +1258,6 @@ def unlock_case():
         db_config['tenant_id'] = tenant_id
         queue_db = DB('queues', **db_config)
 
-        # logging.debug('Unlock case and update time spent')
-        # Update the time spent on the particular file
         update = {
             'operator': None,
             'last_updated_by': operator
@@ -1294,14 +1267,6 @@ def unlock_case():
         }
         queue_db.update('process_queue', update=update, where=where)
 
-        # logging.debug('Unlock case in same cluster')
-        # Update the operator to None on the files in the same cluster
-        # update = {
-        #     'operator': None
-        # }
-        # where = {
-        #     'cluster': list(case_files.cluster)[0]
-        # }
         queue_db.update('process_queue', update=update, where=where)
 
         logging.info('Unlocked file(s).')
@@ -1347,7 +1312,6 @@ def get_ocr_data():
             logging.warning(f'Error getting mandatory fields: {e}')
             mandatory_fields = []
 
-        # Get data related to the case from invoice table
         query = "Select * from process_queue where case_id = %s"
 
         case_files = db.execute(query,params=[case_id])
@@ -1374,7 +1338,6 @@ def get_ocr_data():
             trained_info = trained_info.loc[trained_info['template_name'] == template_name]
             field_data = json.loads(list(trained_info.field_data)[0])
             
-            # Fetch Table train info from database
             table_train_info = table_db.get_all('table_info')
             table_train_info = table_train_info.loc[table_train_info['template_name'] == template_name]
             try:
@@ -1429,9 +1392,8 @@ def create_children(queue, queue_definition_record,list_):
     return queue
 
 @cache.memoize(86400)
-def get_queues_cache(username, tenant_id=None):
+def get_queues_cache(tenant_id=None):
     logging.info('First time. Caching.')
-    logging.debug(f'Username: {username}')
     logging.debug(f'Tenant ID: {tenant_id}')
 
     db_config['tenant_id'] = tenant_id
@@ -1472,8 +1434,6 @@ def get_queues_cache(username, tenant_id=None):
         except:
             user_info[name] = {attribute_name: attribute_value}
     
-
-    # Optimize below   
     group_dict = {}
     for k, v in user_info.items():
         group_list = []
@@ -1520,7 +1480,6 @@ def get_queues_cache(username, tenant_id=None):
                 queue = {}
                 queue['name'] = definition['name']
                 tokens = definition['unique_name'].split()
-                # queue['path'] = tokens[0].lower() + ''.join(x.title() for x in tokens[1:]) if len(tokens) > 1 else tokens[0].lower()
                 queue['path'] = definition['unique_name'].replace(' ','')
                 queue['pathId'] = definition['id']
                 queue['type'] = definition['type']
@@ -1530,7 +1489,7 @@ def get_queues_cache(username, tenant_id=None):
                 
         user_queues[user] = queues
 
-    return user_queues[username]
+    return user_queues
 
 @app.route('/get_queues', methods=['POST', 'GET'])
 def get_queues():
@@ -1546,13 +1505,12 @@ def get_queues():
         username = data.pop('username', None)
         tenant_id = data.pop('tenant_id', None)
 
-        logging.debug('Getting queues')
-
-        queues = get_queues_cache(username, tenant_id)
 
         if not username:
             return jsonify({'flag': False, 'message': 'logout'})
 
+        logging.debug('Getting queues')
+        queues = get_queues_cache(tenant_id)[username]
         if not queues:
             message = f'No queues available for role `{username}`.'
             logging.error(message)
@@ -1572,10 +1530,7 @@ def fix_JSON(json_message=None):
     try:
         result = json.loads(json_message)
     except Exception as e:
-        # Find the offending character index:
         idx_to_replace = int(str(e).split(' ')[-1].replace(')',''))
-
-        # Remove the offending character:
         json_message = list(json_message)
         json_message[idx_to_replace] = ' '
         new_message = ''.join(json_message)
@@ -1600,7 +1555,6 @@ def move_to_verify():
         extraction_db = DB('extraction', **db_config)
         stats_db = DB('stats', **db_config)
 
-        # Step 1: Change queue to Verify, Update Source of Invoice, Reference Number
         query = "SELECT id, created_date FROM process_queue WHERE case_id = %s"
         created_date = str(list(db.execute(query, params = [case_id]).created_date)[0])
         batch_id = created_date[:4] + created_date[5:6].replace('0','') + created_date[6:10].replace('-','') + '0'
@@ -1622,7 +1576,6 @@ def move_to_verify():
             }
         stats_db.insert_dict(audit_data, 'audit')
 
-        # Step 2: Update extraction table
         logging.debug(f'Inserting to OCR')
         query = "INSERT into ocr (`case_id`, `highlight`) VALUES (%s,%s)"
         extraction_db.execute(query, params=[case_id, '{}'])

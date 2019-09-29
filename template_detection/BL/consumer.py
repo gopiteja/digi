@@ -145,6 +145,7 @@ def consume(broker_url='broker:9092'):
                 try:
                     case_id = data['case_id']
                     ingestion_type = data['type']
+                    logging.info(f'case_id - {case_id}')
                     query = "SELECT * from process_queue where case_id = %s"
                     case_id_process = queue_db.execute(query, params=[case_id])
                     current_queue = 'Old file' if case_id_process.empty else list(case_id_process.queue)[0]
@@ -175,10 +176,10 @@ def consume(broker_url='broker:9092'):
                     else:
                         logging.info("Consuming old message.")
                 except Exception as e:
-                    logging.warning(f"Error. Moving to next message. [{e}]")
+                    logging.exception(f"Error. Moving to next message. [{e}]")
                 consumer.commit()
     except:
-        logging.warning('Something went wrong in consumer. Check trace.')
+        logging.exception('Something went wrong in consumer. Check trace.')
 
 
 if __name__ == '__main__':
