@@ -379,7 +379,7 @@ def abbyy_template_detection(data):
                     input_path = input_config.iloc[0]['access_1']
                     output_path = output_config.iloc[0]['access_1']
 
-                file_path = './input/'+ output_path + '/' + file_name
+                file_path = output_path + '/' + file_name
 
                 logging.info(file_path)
 
@@ -388,7 +388,7 @@ def abbyy_template_detection(data):
                 port = parameters['pdf_plumber_port']
                 route = 'plumb'
                 data = {
-                    'file_name': file_name,
+                    'file_name': file_path,
                     'tenant_id': tenant_id
                 }
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
