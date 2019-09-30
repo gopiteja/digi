@@ -131,6 +131,7 @@ $(document).ready(function () {
         $.ajax(settings11).done(function (msg) {
             // console.log(msg);
             if (msg.flag) {
+                file_id = msg.file_name;
                 mandatoryFields = msg.mandatory_fields;
                 idx = mandatoryFields.indexOf('Vendor Name');
                 mandatoryFields.splice(idx, 1)
