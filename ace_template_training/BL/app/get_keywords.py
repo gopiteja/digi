@@ -604,7 +604,7 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, fiel
         quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
     if case_id:
-        page_dimensions = get_page_dimension(case_id, standard_width, tenant_id=tenant_id)
+        page_dimensions = get_page_dimension(case_id, standard_width=standard_width, tenant_id=tenant_id)
     else:
         page_dimensions = {}
 
