@@ -2317,8 +2317,8 @@ def get_ocr_data():
         char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
         pre_processed_char.append([char_index_list, haystack])
 
-    file_name = list(case_files['file_name'])[0]
     pdf_type = list(case_files.document_type)[0]
+    file_name = list(case_files['file_name'])[0]
 
     quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
@@ -2387,7 +2387,7 @@ def get_ocr_data():
 
     return jsonify(
         {'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list),
-         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': pdf_type})
+         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': pdf_type, 'file_name': file_name})
 
 
 if __name__ == '__main__':
