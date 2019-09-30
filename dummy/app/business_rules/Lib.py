@@ -1,5 +1,6 @@
 # Please dont modify this without understanding
 # http://www.qtrac.eu/pyclassmulti.html
+def add_methods_from(*modules):
     def decorator(Class):
         for module in modules:
             for method in getattr(module, "__methods__"):
