@@ -2325,7 +2325,7 @@ def get_ocr_data():
 
     ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
 
-    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'])
+    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
 
     print('ocr_field_keyword- ', ocr_field_keyword)
     # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
