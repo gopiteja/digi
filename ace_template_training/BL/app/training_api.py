@@ -1464,7 +1464,7 @@ def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char,
 
     field_with_variation = get_field_dict(tenant_id=tenant_id)
 
-    _, ocr_field_keyword = get_keywords(ocr_data, field_with_variation, pre_processed_char, field_with_variation)
+    _, ocr_field_keyword = get_keywords(ocr_data, field_with_variation, pre_processed_char, field_with_variation=field_with_variation , tenant_id=tenant_id)
 
     field_neighbourhood = prepare_neighbours(ocr_field_keyword, trained_info)
     # ocr_keywords = covert_keyword_to_trianed_info(ocr_keywords)
@@ -2321,7 +2321,7 @@ def get_ocr_data():
 
     quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
-    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id)
+    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id, tenant_id=tenant_id)
 
     ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
 
