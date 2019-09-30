@@ -91,6 +91,7 @@ def folder_monitor():
         data = request.json
 
         tenant_id = data.get('tenant_id', None)
+        logging.debug(f'Connecting to tenant {tenant_id}')
 
         db = DB('io_configuration', tenant_id=tenant_id, **db_config)
         
