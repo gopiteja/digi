@@ -389,8 +389,7 @@ def abbyy_template_detection(data):
                 route = 'plumb'
                 data = {
                     'file_name': file_name,
-                    'tenant_id': tenant_id,
-                    'pdf' : pdfplumber.open(file_path)
+                    'tenant_id': tenant_id
                 }
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
                 pdf_response = response.json()

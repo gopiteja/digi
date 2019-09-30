@@ -52,7 +52,7 @@ services:
       - LOCAL_DB_USER=${LOCAL_DB_USER}
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
     volumes:
-      - file_output:/var/www/table_api/app/invoice_files
+      - file_output:/app/invoice_files
     depends_on:
       - apache_base
     # logging:
