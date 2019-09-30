@@ -397,7 +397,7 @@ def get_page_dimension(case_id, standard_width=670, tenant_id=None):
         'tenant_id': tenant_id
     }
 
-    db = DB('io_configuration', **template_db_config)
+    db = DB('io_configuration', **db_config)
         
     input_config = db.get_all('input_configuration')
     output_config = db.get_all('output_configuration')
