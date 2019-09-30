@@ -522,7 +522,7 @@ def abbyy_template_detection(data):
                     ocr_data = pdfplumber_ocr_data
 
                 ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
-                query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s%s, %s ,%s)'
+                query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s, %s, %s ,%s)'
                 params = [case_id, ocr_text, xml_string, json.dumps(ocr_data)]
                 queue_db.execute(query, params=params)
                 logging.debug('OCR data saved into ocr_info table.')
