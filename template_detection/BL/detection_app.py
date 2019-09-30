@@ -379,7 +379,7 @@ def abbyy_template_detection(data):
                     input_path = input_config.iloc[0]['access_1']
                     output_path = output_config.iloc[0]['access_1']
 
-                file_path = './input/'+ output_path + '/' + file_name
+                file_path = output_path + '/' + file_name
 
                 logging.info(file_path)
 
@@ -388,9 +388,8 @@ def abbyy_template_detection(data):
                 port = parameters['pdf_plumber_port']
                 route = 'plumb'
                 data = {
-                    'file_name': file_name,
-                    'tenant_id': tenant_id,
-                    'pdf' : pdfplumber.open(file_path)
+                    'file_name': file_path,
+                    'tenant_id': tenant_id
                 }
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
                 pdf_response = response.json()
@@ -502,7 +501,7 @@ def abbyy_template_detection(data):
             #     continue
 
             if xml_string is not None or xml_string or not isListEmpty(pdf_data):
-                logging.debug('now the battle being')
+                logging.debug('now the battle begins')
                 try:
                     abbyy_ocr_data = xml_parser_sdk.convert_to_json(xml_string)
                 except Exception as e:
@@ -523,7 +522,7 @@ def abbyy_template_detection(data):
                     ocr_data = pdfplumber_ocr_data
 
                 ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
-                query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s%s, %s ,%s)'
+                query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s, %s, %s ,%s)'
                 params = [case_id, ocr_text, xml_string, json.dumps(ocr_data)]
                 queue_db.execute(query, params=params)
                 logging.debug('OCR data saved into ocr_info table.')

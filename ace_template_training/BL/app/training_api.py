@@ -25,7 +25,7 @@ from ace_logger import Logging
 try:
     # from app.producer import produce
     from app.extracto_utils import *
-    from app.testing_extract import *
+    # from app.testing_extract import *
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
     from app.smart_training.key_value_method_key_prediction import kv_values_prediction
@@ -40,7 +40,7 @@ try:
 except:
     from producer import produce
     from extracto_utils import *
-    from testing_extract import *
+    # from testing_extract import *
     from automatic_training import cluster_similar_words
     from smart_training.predict_keywords import predict_keywords
     from smart_training.key_value_method_key_prediction import kv_values_prediction
@@ -1464,7 +1464,7 @@ def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char,
 
     field_with_variation = get_field_dict(tenant_id=tenant_id)
 
-    _, ocr_field_keyword = get_keywords(ocr_data, field_with_variation, pre_processed_char, field_with_variation)
+    _, ocr_field_keyword = get_keywords(ocr_data, field_with_variation, pre_processed_char, field_with_variation=field_with_variation , tenant_id=tenant_id)
 
     field_neighbourhood = prepare_neighbours(ocr_field_keyword, trained_info)
     # ocr_keywords = covert_keyword_to_trianed_info(ocr_keywords)
@@ -2266,18 +2266,16 @@ def get_ocr_data():
         'tenant_id': tenant_id
     }
     db = DB('queues', **db_config)
-    # db = DB('queues')
 
-    trained_db_config = {
-        'host': os.environ['HOST_IP'],
-        'user': os.environ['LOCAL_DB_USER'],
-        'password': os.environ['LOCAL_DB_PASSWORD'],
-        'port': os.environ['LOCAL_DB_PORT'],
-        'tenant_id': tenant_id
-    }
-    trained_db = DB('template_db', **trained_db_config)
+    trained_db = DB('template_db', **db_config)
 
-    # print("Case ID:", case_id)
+    try:
+        io_db = DB('io_configuration', **db_config)
+        query = "SELECT * FROM `output_configuration`"
+        file_parent = list(io_db.execute(query).access_1)[0] + '/'
+    except:
+        file_parent = ''
+        logging.info('No output folder defined')
 
     # Get all OCR mandatory fields
     try:
@@ -2317,15 +2315,16 @@ def get_ocr_data():
         char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
         pre_processed_char.append([char_index_list, haystack])
 
-    file_name = list(case_files['file_name'])[0]
+    pdf_type = list(case_files.document_type)[0]
+    file_name = file_parent + list(case_files['file_name'])[0]
 
     quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
-    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id)
+    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id, tenant_id=tenant_id)
 
     ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
 
-    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'])
+    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
 
     print('ocr_field_keyword- ', ocr_field_keyword)
     # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
@@ -2337,7 +2336,7 @@ def get_ocr_data():
     vendor_list = list(trained_db.get_all('vendor_list').vendor_name)
     template_list = list(trained_db.get_all('trained_info').template_name)
 
-    ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char)
+    ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenant_id=tenant_id)
     all_values = remove_keys(ocr_data, ocr_keywords)
 
     field_validations = get_field_validations(tenant_id)
@@ -2386,7 +2385,7 @@ def get_ocr_data():
 
     return jsonify(
         {'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list),
-         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': 'blob'})
+         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': pdf_type, 'file_name': file_name})
 
 
 if __name__ == '__main__':

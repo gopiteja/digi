@@ -52,7 +52,7 @@ services:
       - LOCAL_DB_USER=${LOCAL_DB_USER}
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
     volumes:
-      - file_output:/var/www/table_api/app/invoice_files
+      - file_output:/app/invoice_files
     depends_on:
       - apache_base
     # logging:
@@ -318,7 +318,6 @@ services:
       - file_input:/app/input
       - file_output:/app/output
       - angular_images:/app/angular
-      - ui_images:/app/training_ui
     networks:
       service_bridge:
         aliases:
@@ -437,6 +436,7 @@ services:
     volumes:
       - ui_files:/usr/local/apache2/htdocs/training/
       - ui_files_decision_tree:/usr/local/apache2/htdocs/decision/
+      - file_output:/usr/local/apache2/htdocs/training/images/invoices/
     ports:
       - '5021:80'
     networks:
@@ -607,14 +607,6 @@ volumes:
       type: 'none'
       o: 'bind'
       device: ${PWD}/training_ui/BL/decision
-
-  ui_images:
-    driver: local
-    name: ui_images
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: ${PWD}/training_ui/BL/training/images/invoices
 
   # Angular Images
   angular_images:

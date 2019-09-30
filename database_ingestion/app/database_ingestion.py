@@ -19,9 +19,10 @@ from flask_cors import CORS
 from PyPDF2 import PdfFileReader
 from ace_logger import Logging
 from db_utils import DB
-
+import argparse
+from producer import produce
 import app.xml_parser_sdk as xml_parser
-from app.producer import produce
+# from app.producer import produce
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -33,11 +34,6 @@ except:
 
 
 logging = Logging()
-logging_config = {
-        'level': logging.DEBUG,
-        'format': '%(asctime)s - %(levelname)s - %(filename)s @%(lineno)d : %(funcName)s() - %(message)s'
-    }
-logging.basicConfig(**logging_config)
 
 db_config = {
     'host': os.environ['HOST_IP'],
@@ -82,84 +78,101 @@ def database_upload():
     if not data:
        data = {}
     try:
-
         tenant_id = data.pop('tenant_id', None)
     except:
         tenant_id = None
 
     db_config['tenant_id'] = tenant_id
-    ingestion_db = DB('db_ingestion_data', **db_config)
-    queues_db = DB('queues', **db_config)
+    queue_db = DB('queues', **db_config)
 
-    try:
-        if case_id_process.empty:
-            logging.info("Calling Abbyy")
-            host = os.environ['HOST_IP']
-            port = 5555
-            route = 'database_ocr'
+    query = "Select * from merged_blob where processed = 0"
+    query_dict = queue_db.execute(query).to_dict(orient='records')
+
+    case_id_dict = {}
+    for i in query_dict:
+        print('i', i)
+        try:
+            case_id_dict[i['case_id']].append(i['merged_blob'])
+        except:
+            case_id_dict[i['case_id']] = [i['merged_blob']]
+
+    for key, val in case_id_dict.items():
+        try:
+            query = "SELECT * from ocr_info where case_id = %s"
+            case_id_process = queue_db.execute(query,params=[key])
+            if case_id_process.empty:
+                logging.info("Calling Abbyy")
+                host = os.environ['HOST_IP']
+                port = 5555
+                route = 'database_ocr'
+                data = {
+                    'case_id': key
+                }
+                logging.info ("calling the bloblby")
+                response = requests.post(f'http://{host}:{port}/{route}', json=data)
+
+                xml_string = response.json()['xml_string']
+
+                ocr_data = xml_parser.convert_to_json(xml_string)
+
+                ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
+
+                ocr_data_s = json.dumps(ocr_data)
+
+                insert_query = f"INSERT INTO `ocr_info`( `case_id`, `xml_data`, `ocr_text`, `ocr_data`) VALUES (%s,%s,%s,%s)"
+                queue_db.execute(insert_query, params=[key,xml_string,ocr_text,ocr_data_s])
+
+            query = "SELECT * from process_queue where case_id = %s"
+            case_id_process = queue_db.execute(query,params=[key])
+
+
+            if case_id_process.empty:
+                insert_query = ('INSERT INTO `process_queue` (`case_id`) '
+                    'VALUES (%s)')
+                params = [key]
+                queue_db.execute(insert_query, params=params)
+                logging.info(f' - {key} inserted successfully into the database')
+
+            # Produce message to detection
+
             data = {
-                'case_id': key
+                'case_id': key,
+                'tenant_id': None,
+                'type': 'database_ingestion'
             }
-            logging.info ("calling the bloblby")
-            response = requests.post(f'http://{host}:{port}/{route}', json=data)
+            #
+            # topic = 'detection' # Get the first topic from message flow
+            #
+            # produce(topic, data)
+            kafka_db = DB('kafka', **db_config)
+            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
+            message_flow = kafka_db.execute(query, params=['database_ingestion'])
 
-            xml_string = response.json()['xml_string']
-
-            ocr_data = xml_parser.convert_to_json(xml_string)
-
-            ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
-
-            ocr_data_s = json.dumps(ocr_data)
-
-            insert_query = f"INSERT INTO `ocr_info`( `case_id`, `xml_data`, `ocr_text`, `ocr_data`) VALUES (%s,%s,%s,%s)"
-            queues_db.execute(insert_query, params=[key,xml_string,ocr_text,ocr_data_s])
-
-        query = "SELECT * from process_queue where case_id = %s"
-        case_id_process = queues_db.execute(query,params=[key])
-
-        query = "SELECT id, Agent, Communication_date, History from screen_shots where Fax_unique_id = %s"
-        agent = list(ingestion_db.execute(query,params=[key]).Agent)[0]
-        com_date = list(ingestion_db.execute(query,params=[key]).Communication_date)[0]
-        history = list(ingestion_db.execute(query,params=[key]).History)[0]
-
-        if case_id_process.empty:
-            insert_query = ('INSERT INTO `process_queue` (`case_id`, `agent`,`source_of_invoice`, `Fax_unique_id`, `communication_date_time`, `communication_date_time_bot`) '
-                'VALUES (%s, %s, %s, %s, %s, %s)')
-            params = [key, agent, 'database', key, com_date, history]
-            queues_db.execute(insert_query, params=params)
-            logging.info(f' - {key} inserted successfully into the database')
-
-        # Produce message to detection
-
-        data = {
-            'case_id': key,
-            'tenant_id': None,
-            'type': 'database_ingestion'
-        }
-        #
-        # topic = 'detection' # Get the first topic from message flow
-        #
-        # produce(topic, data)
-        query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
-        message_flow = kafka_db.execute(query, params=['database_ingestion'])
-
-        if message_flow.empty:
-            logging.error('`database_ingestion` is not configured in message flow table.')
-        else:
-            topic = list(message_flow.send_to_topic)[0]
-
-            if topic is not None:
-                logging.info(f'Producing to topic {topic}')
-                produce(topic, data)
+            if message_flow.empty:
+                logging.error('`database_ingestion` is not configured in message flow table.')
             else:
-                logging.info(f'There is no topic to send to for `database_ingestion`. [{topic}]')
+                topic = list(message_flow.send_to_topic)[0]
 
-    except:
-        logging.exception('')
-        query = f"Update screen_shots set `processed` = 2 where Fax_unique_id = '{key}'"
-        ingestion_db.execute(query)
-        query = f"delete from merged_blob where case_id = '{key}'"
-        queues_db.execute(query)
+                if topic is not None:
+                    logging.info(f'Producing to topic {topic}')
+                    produce(topic, data)
+                else:
+                    logging.info(f'There is no topic to send to for `database_ingestion`. [{topic}]')
+        except:
+            logging.exception('')
+            query = f"delete from merged_blob where case_id = '{key}'"
+            queue_db.execute(query)
 
 
     return jsonify({"flag": True, "message": "Files sent to Template Detection"})
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', type=int, help='Port Number', default=5012)
+    parser.add_argument('--host', type=str, help='Host', default='0.0.0.0')
+    args = parser.parse_args()
+
+    host = args.host
+    port = args.port
+
+    app.run(host=host, port=port, debug=False)

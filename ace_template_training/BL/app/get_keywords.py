@@ -329,7 +329,7 @@ def get_key_list_coord(keywords_list, keyCords_list, inp):
     return keyList, keyCords
 
 
-def get_field_dict(for_update=False, tenant_id=None):
+def get_field_dict(tenant_id, for_update=False):
     """
     :return field_dict from db
     """
@@ -357,7 +357,7 @@ def get_field_dict(for_update=False, tenant_id=None):
     return fields
 
 
-def get_quadrant_dict(for_update=False, tenant_id=None):
+def get_quadrant_dict(tenant_id, for_update=False ):
     """
     :return field_dict from db
     """
@@ -385,7 +385,7 @@ def get_quadrant_dict(for_update=False, tenant_id=None):
     return fields
 
 
-def get_page_dimension(case_id, standard_width=670, tenant_id=None):
+def get_page_dimension(case_id, tenant_id, standard_width=670):
     """
     Author : Akshat Goyal
     """
@@ -397,6 +397,19 @@ def get_page_dimension(case_id, standard_width=670, tenant_id=None):
         'tenant_id': tenant_id
     }
 
+    db = DB('io_configuration', **db_config)
+        
+    input_config = db.get_all('input_configuration')
+    output_config = db.get_all('output_configuration')
+
+    if (input_config.loc[input_config['type'] == 'Document'].empty
+                        or output_config.loc[input_config['type'] == 'Document'].empty):
+        message = 'Input/Output not configured in DB.'
+        logging.error(message)
+    else:
+        input_path = input_config.iloc[0]['access_1']
+        output_path = output_config.iloc[0]['access_1']
+
     queue_db = DB('queues', **db_config)
 
     page_dimensions = {}
@@ -405,7 +418,9 @@ def get_page_dimension(case_id, standard_width=670, tenant_id=None):
         source_folder = parameters['ui_folder']
 
         query = f'select id, file_name from process_queue where case_id = "{case_id}"'
-        file_name = list(queue_db.execute(query)['merged_blob'])[0]
+        file_name = list(queue_db.execute(query)['file_name'])[0]
+
+        file_name = output_path + '/' + file_name
         file_path = Path(source_folder) / file_name
         try:
             with open(file_path, 'rb') as file_blob:
@@ -530,7 +545,7 @@ def check_keyword_present(keyword, old_keywords):
     return False
 
 
-def get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=670, tenant_id=None):
+def get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, tenant_id, standard_width=670):
     """
     Author : Akshat Goyal
     """
@@ -577,8 +592,8 @@ def get_keywords_max_length(mandatory_fields, ocr_field_keyword):
     return max_ocr_field_keyword
 
 
-def get_keywords(ocr_data, mandatory_fields, pre_processed_char, field_with_variation={}, quadrant_dict={}, case_id='',
-                 standard_width=670, tenant_id=None):
+def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, field_with_variation={}, quadrant_dict={}, case_id='',
+                 standard_width=670):
     """
     Author : Akshat Goyal
     """
@@ -589,7 +604,7 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, field_with_vari
         quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
     if case_id:
-        page_dimensions = get_page_dimension(case_id, standard_width, tenant_id=tenant_id)
+        page_dimensions = get_page_dimension(case_id, standard_width=standard_width, tenant_id=tenant_id)
     else:
         page_dimensions = {}
 
@@ -632,8 +647,8 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, field_with_vari
     return ocr_keywords, ocr_field_keyword
 
 
-def get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, field_with_variation={}, quadrant_dict={},
-                           case_id='', tenant_id=None):
+def get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenant_id, field_with_variation={}, quadrant_dict={},
+                           case_id=''):
     """
     Author : Akshat Goyal
     """
