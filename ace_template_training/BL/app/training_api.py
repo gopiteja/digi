@@ -25,7 +25,7 @@ from ace_logger import Logging
 try:
     # from app.producer import produce
     from app.extracto_utils import *
-    from app.testing_extract import *
+    # from app.testing_extract import *
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
     from app.smart_training.key_value_method_key_prediction import kv_values_prediction
@@ -40,7 +40,7 @@ try:
 except:
     from producer import produce
     from extracto_utils import *
-    from testing_extract import *
+    # from testing_extract import *
     from automatic_training import cluster_similar_words
     from smart_training.predict_keywords import predict_keywords
     from smart_training.key_value_method_key_prediction import kv_values_prediction

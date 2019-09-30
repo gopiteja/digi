@@ -502,10 +502,10 @@ def value_extract(result, api=False, retrained=False):
     logging.info(f'Output: {output}')
     logging.info(f'Output_: {output_}')
     logging.info(f'word_highlight: `{word_highlights}`')
-    try:
-        word_highlights, output_ = checkbox_selector(case_id, checkbox_data, ocr_data, word_highlights, output, output_)
-    except Exception as e:
-        pass
+    # try:
+    #     word_highlights, output_ = checkbox_selector(case_id, checkbox_data, ocr_data, word_highlights, output, output_)
+    # except Exception as e:
+    #     pass
 
     # Check if there are any suspicious value
     if 'suspicious' in json.dumps(output_):
