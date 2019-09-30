@@ -329,7 +329,7 @@ def get_key_list_coord(keywords_list, keyCords_list, inp):
     return keyList, keyCords
 
 
-def get_field_dict(for_update=False, tenant_id=None):
+def get_field_dict(tenant_id, for_update=False):
     """
     :return field_dict from db
     """
@@ -357,7 +357,7 @@ def get_field_dict(for_update=False, tenant_id=None):
     return fields
 
 
-def get_quadrant_dict(for_update=False, tenant_id=None):
+def get_quadrant_dict(tenant_id, for_update=False ):
     """
     :return field_dict from db
     """
@@ -385,7 +385,7 @@ def get_quadrant_dict(for_update=False, tenant_id=None):
     return fields
 
 
-def get_page_dimension(case_id, standard_width=670, tenant_id=None):
+def get_page_dimension(case_id, tenant_id, standard_width=670):
     """
     Author : Akshat Goyal
     """
@@ -545,7 +545,7 @@ def check_keyword_present(keyword, old_keywords):
     return False
 
 
-def get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=670, tenant_id=None):
+def get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, tenant_id, standard_width=670):
     """
     Author : Akshat Goyal
     """
@@ -592,8 +592,8 @@ def get_keywords_max_length(mandatory_fields, ocr_field_keyword):
     return max_ocr_field_keyword
 
 
-def get_keywords(ocr_data, mandatory_fields, pre_processed_char, field_with_variation={}, quadrant_dict={}, case_id='',
-                 standard_width=670, tenant_id=None):
+def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, field_with_variation={}, quadrant_dict={}, case_id='',
+                 standard_width=670):
     """
     Author : Akshat Goyal
     """
@@ -647,8 +647,8 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, field_with_vari
     return ocr_keywords, ocr_field_keyword
 
 
-def get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, field_with_variation={}, quadrant_dict={},
-                           case_id='', tenant_id=None):
+def get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenant_id, field_with_variation={}, quadrant_dict={},
+                           case_id=''):
     """
     Author : Akshat Goyal
     """
