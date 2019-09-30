@@ -24,10 +24,37 @@ logging = Logging()
 
 
 
+import BusinessRules
+import json
 
 
 
+
+
+def run_business_rule(case_id, function_params, tenant_id):
+    """Run the business rules based on the stage in function params and tenant_id
+    Args:
+        case_id: Unique id that we pass
+        function_params: Parameters that we get from the configurations
+        tenant_id: Tenant on which we have to apply the rules
+    Returns:
+
+    """
+    try:
+        # get the stage wise rules
+        stage = function_params['stage'][0]
+        rules = get_rules(stage, tenant_id)
+        # apply business rules
         
+        # update in the database, the changed fields eventually when all the stage rules were got
+        
+        #  return the updates for viewing
+        return {'flag': True, 'message': 'Applied business rules successfully.', 'updates':updates}
+    except Exception as e:
+        logging.exception('Something went wrong while applying business rules. Check trace.')
+        return {'flag': False, 'message': 'Something went wrong saving changes. Check logs.', 'error':str(e)}
+
+
         
 def run_business_rule_consumer_(data, function_params):
     print ("GOT THE PARAMTERTES", data, function_params)
@@ -68,6 +95,8 @@ def run_business_rule_consumer_(data, function_params):
             }
         updates = apply_field_validations(case_id, stage, db_tables)
         return {'flag': True, 'message': 'Completed runninig validation business rules.', 'updates': updates}
+    
+    
     if not bot_message:
         # updates = apply_field_validations(case_id)
         updates = None
@@ -82,6 +111,344 @@ def run_business_rule_consumer_(data, function_params):
     
     return {'flag': True, 'message': 'Completed runninig business rules.', 'updates': updates}
      
+    
+
+def run_business_rule_consumer(data):
+    
+    queue_db_config = {
+        'host': '172.31.45.112',
+        'user': 'root',
+        'password': 'AlgoTeam123',
+        'port': '3306'
+    }
+    queue_db = DB('queues', **queue_db_config)
+
+    print("Submit data", data)
+    if 'case_id' not in data:
+        message = f'`case_id` key not provided.'
+        print(message)
+        return {'flag': False, 'message': message}
+
+    case_id = data['case_id']
+
+    initialize_rules()
+
+    tables = {
+        "extraction" : ["business_rule","ocr","sap","validation"],
+        "queues" : ["ocr_info", "process_queue"]
+        }
+
+    table_data = get_tables_data(tables, case_id)
+    table_data['update'] = {}
+
+    if 'stage' not in data:
+        message = f'`{case_id}` key not provided. Running all stages...'
+        print(message)
+
+        stages = ['One']
+
+        for stage in stages:
+            starting_time = time()
+            data = apply_business_rules(api=True, table_data= table_data,stage=stage, case_id=case_id)
+            print("time taken - ",time() - starting_time)
+
+            if not data['flag'] and stage == 'One':
+                DAO.update_error_msg(data['message'], case_id)
+
+        update_values = update_table(table_data, case_id, tables)
+
+        if data['flag']:
+            return {'flag': data['flag'], 'message': 'Applied all business rules.', 'updates': update_values}
+        else:
+            return {'flag': data['flag'], 'message': 'Something failed.', 'updates': update_values}
+
+    stages = data['stage']
+    starting_time = time()
+    if type(stages) is str:
+
+        data = apply_business_rules(api=True, table_data = table_data,**data)
+        time_taken = time() - starting_time
+        data['time_taken'] = time_taken
+        # print("time takne - ",time_taken)
+        update_values = update_table(table_data, case_id, tables)
+        data['updates'] = update_values
+
+        if not data['flag'] and stages == 'One':
+            DAO.update_error_msg(data['message'], case_id)
+
+        return data
+    elif type(stages) is list:
+        for stage in stages:
+            # starting_time = time()
+
+            rule_response = apply_business_rules(api=True, table_data= table_data,stage=stage, case_id=case_id)
+
+            if not rule_response['flag'] and stage == 'One':
+                try:
+                    messsage = rule_response['message']
+                except:
+                    messsage = 'Validation Failed due to execution error in business rules.'
+                DAO.update_error_msg(message, case_id)
+
+            if not rule_response['flag']:
+                message = f'Something went wrong running stage at `{stage}`. Skipping other rules.'
+                print(message)
+                update_values = update_table(table_data, case_id, tables)
+
+                return {'flag': False, 'message': message, 'updates':update_values}
+
+    update_values = update_table(table_data, case_id, tables)
+
+    print("time takne - ",time() - starting_time)
+    if rule_response['flag']:
+        return {'flag': rule_response['flag'], 'message': 'Completed runninig business rules.', 'updates': update_values}
+    else:
+        return {'flag': rule_response['flag'], 'message': 'Something wrong happened.', 'updates': update_values}
+
+def consume(broker_url='broker:9092'):
+    try:
+        route = 'run_business_rule'
+
+        common_db_config = {
+            'host': 'common_db',
+            'port': '3306',
+            'user': 'root',
+            'password': 'root'
+        }
+        kafka_db = DB('kafka', **common_db_config)
+        # kafka_db = DB('kafka')
+
+        queue_db_config = {
+            'host': 'queue_db',
+            'port': '3306',
+            'user': 'root',
+            'password': ''
+        }
+        queue_db = DB('queues', **queue_db_config)
+        # queue_db = DB('queues')
+
+        message_flow = kafka_db.get_all('grouped_message_flow')
+
+        print(f'Listening to topic `{route}`...')
+        consumer = KafkaConsumer(
+            bootstrap_servers=broker_url,
+            value_deserializer=lambda value: json.loads(value.decode()),
+            auto_offset_reset='earliest',
+            group_id='run_business_rule',
+            api_version=(0,10,1),
+            enable_auto_commit=False,
+            session_timeout_ms=800001,
+            request_timeout_ms=800002
+        )
+        print('Consumer object created.')
+
+        parts = consumer.partitions_for_topic(route)
+        if parts is None:
+            logging.warning(f'No partitions for topic `{route}`')
+            logging.debug(f'Creating Topic: {route}')
+            produce(route, {})
+            print(f'Listening to topic `{route}`...')
+            while parts is None:
+                consumer = KafkaConsumer(
+                    bootstrap_servers=broker_url,
+                    value_deserializer=lambda value: json.loads(value.decode()),
+                    auto_offset_reset='earliest',
+                    group_id='sap_portal',
+                    api_version=(0,10,1),
+                    enable_auto_commit=False,
+                    session_timeout_ms=800001,
+                    request_timeout_ms=800002
+                )
+                parts = consumer.partitions_for_topic(route)
+                logging.warning("No partition. In while loop. Make it stop")
+
+        partitions = [TopicPartition(route, p) for p in parts]
+        consumer.assign(partitions)
+
+        query = 'SELECT * FROM `button_functions` WHERE `route`=%s'
+        function_info = queue_db.execute(query, params=[route])
+        in_progress_message = list(function_info['in_progress_message'])[0]
+        failure_message = list(function_info['failure_message'])[0]
+        success_message = list(function_info['success_message'])[0]
+
+        for message in consumer:
+            data = message.value
+            try:
+                case_id = data['case_id']
+                functions = data['functions']
+            except Exception as e:
+                print(f'Recieved unknown data. [{data}] [{e}]')
+                consumer.commit()
+                continue
+            function_params = {}
+
+            # coming from bot_watcher .... not button function
+            print ("CHECKING FOR THE IS BUTTON", data,data.get('is_button', True))
+            if 'is_button' in data.keys():
+            # if not data.get('is_button', False):
+                try:
+                    result = run_business_rule_consumer_(data, function_params)
+                except Exception as e:
+                    print (f"Error runnign the business_rules {e}")
+                    print (str(e))
+                    query = 'UPDATE `process_queue` SET `queue`=%s, `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
+                    queue_db.execute(query, params=['GHI678', failure_message, case_id])
+                    consumer.commit()
+
+                # # Get which button (group in kafka table) this function was called from
+                # group = data['group']
+
+                # # Get message group functions
+                # group_messages = message_flow.loc[message_flow['message_group'] == group]
+
+                # # If its the first function the update the progress count
+                # first_flow = group_messages.head(1)
+                # first_topic = first_flow.loc[first_flow['listen_to_topic'] == route]
+
+                # query = 'UPDATE `process_queue` SET `status`=%s, `total_processes`=%s WHERE `case_id`=%s'
+                # if not first_topic.empty:
+                #     if list(first_flow['send_to_topic'])[0] is None:
+                #         queue_db.execute(query, params=[in_progress_message, len(group_messages), case_id])
+                #     else:
+                #         queue_db.execute(query, params=[in_progress_message, len(group_messages) + 1, case_id])
+
+                # # Getting the correct data for the functions. This data will be passed through
+                # # rest of the chained functions.
+                # function_params = {}
+                # for function in functions:
+                #     if function['route'] == route:
+                #         function_params = function['parameters']
+                #         break
+                    
+                # if result['flag']:
+                #     # If there is only function for the group, unlock case.
+                #     if not first_topic.empty:
+                #         if list(first_flow['send_to_topic'])[0] is None:
+                #             # It is the last message. So update file status to completed.
+                #             print("\n CASE IS UNLOCKED \n")
+                #             query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                #             queue_db.execute(query, params=[success_message, case_id])
+                #             consumer.commit()
+                #             continue
+
+                #     last_topic = group_messages.tail(
+                #         1).loc[group_messages['send_to_topic'] == route]
+
+                #     # If it is not the last message, then produce to next function else just unlock case.
+                #     if last_topic.empty:
+                #         # Get next function name
+                #         print ("\n CHECKING FOR THE DATA \n")
+                #         print (data)
+                #         next_topic = list(
+                #             group_messages.loc[group_messages['listen_to_topic'] == route]['send_to_topic'])[0]
+
+                #         if next_topic is not None:
+                #             produce(next_topic, data)
+
+                #         # Update the progress count by 1
+                #         query = 'UPDATE `process_queue` SET `status`=%s, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                #         queue_db.execute(query, params=[success_message, case_id])
+                #         consumer.commit()
+                #     else:
+                #         # It is the last message. So update file status to completed.
+                #         query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                #         queue_db.execute(query, params=[success_message, case_id])
+                #         consumer.commit()
+                # else:
+                #     # Unlock the case.
+                #     query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
+                #     queue_db.execute(query, params=[failure_message, case_id])
+                #     consumer.commit()
+
+
+
+
+                continue
+
+            
+            
+            # Get which button (group in kafka table) this function was called from
+            group = data['group']
+
+            # Get message group functions
+            group_messages = message_flow.loc[message_flow['message_group'] == group]
+
+            # If its the first function the update the progress count
+            first_flow = group_messages.head(1)
+            first_topic = first_flow.loc[first_flow['listen_to_topic'] == route]
+
+            query = 'UPDATE `process_queue` SET `status`=%s, `total_processes`=%s WHERE `case_id`=%s'
+            if not first_topic.empty:
+                if list(first_flow['send_to_topic'])[0] is None:
+                    queue_db.execute(query, params=[in_progress_message, len(group_messages), case_id])
+                else:
+                    queue_db.execute(query, params=[in_progress_message, len(group_messages) + 1, case_id])
+
+            # Getting the correct data for the functions. This data will be passed through
+            # rest of the chained functions.
+            function_params = {}
+            for function in functions:
+                if function['route'] == route:
+                    function_params = function['parameters']
+                    break
+
+            # Call save changes function
+            try:
+                print (f"\n the data got is \n {data} \n")
+                result = run_business_rule_consumer_(data, function_params)
+                # return {'flag': True, 'message': 'Completed runninig business rules.', 'updates': None}
+
+            except Exception as e:
+                # Unlock the case.
+                logging.error(e)
+                query = 'UPDATE `process_queue` SET `queue`=%s, `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
+                queue_db.execute(query, params=['Maker', failure_message, case_id])
+
+                consumer.commit()
+                continue
+
+            # Check if function was succesfully executed
+            if result['flag']:
+                # If there is only function for the group, unlock case.
+                if not first_topic.empty:
+                    if list(first_flow['send_to_topic'])[0] is None:
+                        # It is the last message. So update file status to completed.
+                        print("\n CASE IS UNLOCKED \n")
+                        query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                        queue_db.execute(query, params=[success_message, case_id])
+                        consumer.commit()
+                        continue
+
+                last_topic = group_messages.tail(
+                    1).loc[group_messages['send_to_topic'] == route]
+
+                # If it is not the last message, then produce to next function else just unlock case.
+                if last_topic.empty:
+                    # Get next function name
+                    print ("\n CHECKING FOR THE DATA \n")
+                    print (data)
+                    next_topic = list(
+                        group_messages.loc[group_messages['listen_to_topic'] == route]['send_to_topic'])[0]
+
+                    if next_topic is not None:
+                        produce(next_topic, data)
+
+                    # Update the progress count by 1
+                    query = 'UPDATE `process_queue` SET `status`=%s, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                    queue_db.execute(query, params=[success_message, case_id])
+                    consumer.commit()
+                else:
+                    # It is the last message. So update file status to completed.
+                    query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `completed_processes`=`completed_processes`+1 WHERE `case_id`=%s'
+                    queue_db.execute(query, params=[success_message, case_id])
+                    consumer.commit()
+            else:
+                # Unlock the case.
+                query = 'UPDATE `process_queue` SET `status`=%s, `case_lock`=0, `failure_status`=1 WHERE `case_id`=%s'
+                queue_db.execute(query, params=[failure_message, case_id])
+                consumer.commit()
+    except:
+        logging.exception('Something went wrong in consumer. Check trace.')
 
 if __name__ == '__main__':
     consume()
