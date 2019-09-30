@@ -19,8 +19,10 @@ class BusinessRules():
         self.case_id = case_id
         self.rules = rules
         self.data_source = table_data
-        self.changed_fields = {}
         self.is_decision = decision
+
+        # fields which we are maintaining
+        self.changed_fields = {}
         self.params_data = {}
         self.params_data['input'] = []
 
@@ -138,7 +140,7 @@ class BusinessRules():
             return self.evaluate_rule(param_value)
         if param_source == 'input':
             param_value = param_object['value']
-            param_value = param_value.strip()
+            param_value = str(param_value).strip() # converting into strings..need to check
             return  param_value
  
 

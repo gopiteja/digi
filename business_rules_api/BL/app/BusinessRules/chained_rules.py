@@ -180,7 +180,7 @@ def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=Fal
     # get the chained rules 
     chain_rules = get_chain_rules('business_rules', 'sequence_rule_data')
 
-    # get the mapping of the rules...basically a rule_id maps to a rule
+    # get the mapping of the rules...basically a rule_id maps to a rule.
     rule_id_mapping = {}
     for ind, rule in chain_rules.iterrows():
         rule_id_mapping[rule['rule_id']] = [rule['rule_string'], rule['next_if_sucess'], rule['next_if_failure'], rule['stage'], rule['description'], rule['data_source']]
@@ -206,6 +206,7 @@ def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=Fal
 
 
     print (start_rule_id)
+    
     try:
         trace_exec = json.loads(list(df['trace_data'])[0])
         print (f"trace exec is {trace_exec}")
@@ -222,6 +223,7 @@ def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=Fal
         kafka_data['rule_params'] = {}
 
     kafka_data['trace_exec'].append(str(start_rule_id))
+   
     db_tables = {
                     "extraction" : ["ocr"],
                     "queues":["process_queue"]
