@@ -318,7 +318,6 @@ services:
       - file_input:/app/input
       - file_output:/app/output
       - angular_images:/app/angular
-      - ui_images:/app/training_ui
     networks:
       service_bridge:
         aliases:
@@ -608,14 +607,6 @@ volumes:
       type: 'none'
       o: 'bind'
       device: ${PWD}/training_ui/BL/decision
-
-  ui_images:
-    driver: local
-    name: ui_images
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: ${PWD}/training_ui/BL/training/images/invoices
 
   # Angular Images
   angular_images:
