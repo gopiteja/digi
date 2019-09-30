@@ -1320,6 +1320,8 @@ def get_ocr_data():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
+        pdf_type = list(case_files.document_type)[0]
+
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = db.execute(query, params=params)
@@ -1360,7 +1362,7 @@ def get_ocr_data():
                 'template_list': sorted(template_list),
                 'mandatory_fields': mandatory_fields,
                 'fields': fields_list,
-                'type': 'blob'})
+                'type': pdf_type})
 
         return jsonify({'flag': True, 'data': ocr_data, 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields,'fields': fields_list, 'type': 'blob'})
     except Exception as e:
