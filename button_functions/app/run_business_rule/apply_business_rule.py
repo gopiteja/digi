@@ -7,6 +7,8 @@ import json
 import os
 from db_utils import DB 
 
+
+
 # one configuration
 db_config = {
     'host': os.environ['HOST_IP'],
@@ -61,8 +63,6 @@ def get_data_sources(tenant_id, case_id):
     
     return data
                 
-    
-            
 def get_rules(tenant_id, group):
     """Get the rules based on the stage, tenant_id"""
     business_rules_db = DB('business_rules', tenant_id=tenant_id, **db_config)
@@ -84,7 +84,9 @@ def apply_business_rule(case_id, function_params, tenant_id):
     try:
         # get the stage from the function_parameters...As of now its first ele..
         # need to make generic or key-value pairs
+        logging.info(f"\n case_id {case_id} \nfunction_params {function_params} \ntenant_id {tenant_id}\n")
         stage = function_params['stage'][0]
+        
         
         # get the rules
         rules = get_rules(tenant_id, stage)
@@ -107,6 +109,7 @@ def apply_business_rule(case_id, function_params, tenant_id):
         # get the master data if needed
         
         # apply business rules
+        
         
         # update in the database, the changed fields eventually when all the stage rules were got
         

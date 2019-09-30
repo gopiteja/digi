@@ -26,6 +26,8 @@ def http_transport(encoded_span):
 
 import time
 from db_utils import DB
+
+
 def get_column_vaue(database, table, column, unique_column, unique_column_value):
     db = DB(database)
     df = db.execute(f"SELECT `id`,`{column}` from `{table}` WHERE `{unique_column}`= '{unique_column_value}'")
@@ -55,7 +57,6 @@ def bot_watcher(unique_id, next_rule_id=None):
 
     print (f"\n NEXT RULE ID IS {next_rule_id} \n")
     return unique_id, next_rule_id, True, column_value
-
 
 def consume(broker_url='broker:9092'):
     try:
@@ -168,18 +169,6 @@ def consume(broker_url='broker:9092'):
                 except Exception as e:
                     print (e)
                     print ("BOT WATECHER FAILED")
-                # validation_df = extraction_db.get_all('validation')
-                # case_id_validation = validation_df.loc[validation_df['case_id'] == case_id]
-                # if case_id_validation.empty or overwrite:
-                #     file_name = data.pop('file_name', None)
-                #     response_data = is_pdf_signed(case_id, file_name)
-                #     if response_data['flag'] == True:
-                #         produce(send_to_topic, data)
-                #         logging.info('Message commited!')
-                #     else:
-                #         logging.warning('Message not consumed. Some error must have occured. Will try again!')
-                # else:
-                #     logging.debug("Consuming old message.")
                 consumer.commit()
     except:
         logging.exception('Something went wrong in consumer. Check trace.')
