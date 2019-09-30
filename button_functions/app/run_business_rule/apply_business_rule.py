@@ -1,8 +1,14 @@
-# import logging # uncomment for local testing
-
 # comment below two for local testing
 from ace_logger import Logging
 logging = Logging()
+
+# uncomment these below lines for local testing
+# import logging 
+# logger=logging.getLogger() 
+# logger.setLevel(logging.DEBUG) 
+
+
+
 import json
 import os
 from db_utils import DB 
@@ -101,20 +107,27 @@ def apply_business_rule(case_id, function_params, tenant_id):
         
         logging.info(f"\ndata got from the tables is\n")
         logging.info(data_tables)
-        # get the master data if needed
-        
         # apply business rules
         if is_chain_rule:
             # updates = run_chained_rules()
             pass
         else:
+            print ('rules', rules)
             updates = run_group_rules(case_id, rules, data_tables)
             
         
         # update in the database, the changed fields eventually when all the stage rules were got
+        extraction_db = DB('extraction', tenant_id=tenant_id, **db_config) # only in ocr or process_queue we are updating
+        queue_db = DB('queues', tenant_id=tenant_id, **db_config) # only in ocr or process_queue we are updating
+        
+        for table, colum_values in updates.items():
+            if table == 'ocr':
+                extraction_db.update(table, update=colum_values, where={'case_id':case_id})
+            if table == 'process_queue':
+                queue_db.update(table, update=colum_values, where={'case_id':case_id})
         
         #  return the updates for viewing
         return {'flag': True, 'message': 'Applied business rules successfully.', 'updates':updates}
     except Exception as e:
         logging.exception('Something went wrong while applying business rules. Check trace.')
-        return {'flag': False, 'message': 'Something went wrong saving changes. Check logs.', 'error':str(e)}
+        return {'flag': False, 'message': 'Something went wrong while applying business rules. Check logs.', 'error':str(e)}
