@@ -37,7 +37,7 @@
     "validation_queue": "validation"
   },
   "handwritten_engine": "vision",
-  "ui_folder": "./files/",
+  "ui_folder": "./app/files/",
   "keyword_THRESHOLD_MATCH_PERCENT" : 5,
   "distance_multiplier" : 2,
   "SAME_LINE_THRESHOLD" : 20,
