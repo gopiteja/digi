@@ -40,7 +40,7 @@ def get_data_sources(tenant_id, case_id):
     business_rules_db = DB('business_rules', tenant_id=tenant_id, **db_config)
     data_sources = business_rules_db.execute(get_datasources_query)
 
-    # 
+    # case_id based
     case_id_based_sources = json.loads(list(data_sources['case_id_based'])[0])
     
     data = {}
@@ -54,6 +54,11 @@ def get_data_sources(tenant_id, case_id):
                 data[table] = df.to_dict(orient='records')[0]
             else:
                 data[table] = {}
+    
+    
+    case_id_based_sources = json.loads(list(data_sources['case_id_based'])[0])
+    
+    return data
                 
     
             
@@ -96,6 +101,8 @@ def apply_business_rule(case_id, function_params, tenant_id):
         # get the required table data on which we will be applying business_rules  
         data_tables = get_data_sources(tenant_id, case_id) 
         
+        logging.info(f"\ndata got from the tables is\n")
+        logging.info(data_tables)
         # get the master data if needed
         
         # apply business rules
