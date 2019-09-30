@@ -2266,18 +2266,16 @@ def get_ocr_data():
         'tenant_id': tenant_id
     }
     db = DB('queues', **db_config)
-    # db = DB('queues')
 
-    trained_db_config = {
-        'host': os.environ['HOST_IP'],
-        'user': os.environ['LOCAL_DB_USER'],
-        'password': os.environ['LOCAL_DB_PASSWORD'],
-        'port': os.environ['LOCAL_DB_PORT'],
-        'tenant_id': tenant_id
-    }
-    trained_db = DB('template_db', **trained_db_config)
+    trained_db = DB('template_db', **db_config)
 
-    # print("Case ID:", case_id)
+    try:
+        io_db = DB('io_configuration', **db_config)
+        query = "SELECT * FROM `output_configuration`"
+        file_parent = list(io_db.execute(query).access_1)[0] + '/'
+    except:
+        file_parent = ''
+        logging.info('No output folder defined')
 
     # Get all OCR mandatory fields
     try:
@@ -2318,7 +2316,7 @@ def get_ocr_data():
         pre_processed_char.append([char_index_list, haystack])
 
     pdf_type = list(case_files.document_type)[0]
-    file_name = list(case_files['file_name'])[0]
+    file_name = file_parent + list(case_files['file_name'])[0]
 
     quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
