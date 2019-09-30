@@ -105,7 +105,7 @@ $(document).ready(function () {
     })
 
     // var file_name___
-    if (nullCheck(file_name)) {
+    if (nullCheck(case_id)) {
         sendObj = {};
         sendObj.file_name = file_id;
         sendObj.case_id = case_id;
