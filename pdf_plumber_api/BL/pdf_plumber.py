@@ -120,15 +120,12 @@ def plumb():
     """
     logging.info('Entering get_ocr route')
     result = request.json
-    if 'tenant_id' in result:
-        tenant_id = result['case_id'] 
-    else:
-        tenant_id = '' 
     with zipkin_span(service_name='pdf_plumber_api', span_name='plumb', 
             transport_handler=http_transport, port=5007, sample_rate=0.5,) as  zipkin_context:
-        zipkin_context.update_binary_annotations({'Tenant':tenant_id})
 
+        # pdf = result['pdf']
         file_id = result['file_name']
+        
         source_folder = './invoice_files'
 
         file_path  = Path(source_folder) / file_id
@@ -137,6 +134,7 @@ def plumb():
             response = ocr(file_path, parameters['default_img_width'])
             return jsonify({'flag': True, 'data': response})
         except:
+            logging.exception('failed')
             return jsonify({'flag': False, 'message': 'PDF Plumbing failed.'})
 
 if __name__ == '__main__':

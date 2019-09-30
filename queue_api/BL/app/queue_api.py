@@ -676,13 +676,7 @@ def get_queue(queue_id=None):
                     query_result_list = query_result.to_dict('records')
                     logging.debug(f'Extraction data: {query_result_list}')
                 
-                    for document in files:
-                        try:
-                            document['created_date'] = (document['created_date']).strftime(r'%B %d, %Y %I:%M %p')
-                        except:
-                            logging.debug(f'Could not parse created date value. `created_date` might not be mapped for the queue `{queue_name}`.')
-                            pass
-                        
+                    for document in files:                       
                         try:
                             percentage_done = str(int((document['completed_processes']/document['total_processes'])*100))
                         except:
@@ -714,12 +708,14 @@ def get_queue(queue_id=None):
                                     document[col] = val
                                     continue
 
-                        query = "select column_name from column_definition where data = 1"
-                        columns_to_change = list(db.execute(query).column_name)
+                        query = "select column_name from column_definition where date = 1"
+                        columns_to_change = list(db.execute_(query).column_name)
 
                         for column in columns_to_change:
                             try:
                                 document[column] = (document[column]).strftime(r'%B %d, %Y %I:%M %p')
+                            except ValueError:
+                                document[column] = ''
                             except:
                                 logging.exception(f'Could not parse {column} value. `{column}` might not be mapped for the queue `{queue_name}`.')
                                 pass
@@ -1012,7 +1008,7 @@ def get_fields(case_id=None):
         fields_df = field_definition.ix[field_ids] # Get field names using the unique field IDs
 
         logging.debug(f'Getting highlights for case `{case_id}`')
-        query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date limit 1"
+        query = "SELECT * FROM ocr WHERE case_id= %s ORDER BY created_date desc limit 1"
         case_id_ocr = extraction_db.execute(query, params=[case_id])
         try:
             highlight = json.loads(list(case_id_ocr['highlight'])[0])
@@ -1133,7 +1129,8 @@ def get_fields(case_id=None):
             'ocr_data': ocr_data,
             'template_name': list(case_files.template_name)[0],
             'template_list': template_list,
-            'pdf_type': pdf_type
+            'pdf_type': pdf_type,
+            'failures' : failure_msgs_data
         }
 
         logging.info(f'Locking case `{case_id}` by operator `{operator}`')
@@ -1323,6 +1320,8 @@ def get_ocr_data():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
+        pdf_type = list(case_files.document_type)[0]
+
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = db.execute(query, params=params)
@@ -1363,7 +1362,7 @@ def get_ocr_data():
                 'template_list': sorted(template_list),
                 'mandatory_fields': mandatory_fields,
                 'fields': fields_list,
-                'type': 'blob'})
+                'type': pdf_type})
 
         return jsonify({'flag': True, 'data': ocr_data, 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields,'fields': fields_list, 'type': 'blob'})
     except Exception as e:

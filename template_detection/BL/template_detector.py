@@ -17,6 +17,12 @@ except:
 
 logging = Logging()
 
+db_config = {
+        'host': os.environ['HOST_IP'],
+        'user': os.environ['LOCAL_DB_USER'],
+        'password': os.environ['LOCAL_DB_PASSWORD'],
+        'port': os.environ['LOCAL_DB_PORT']
+    }
 
 def get_parameters():
     with open('configs/template_detection_params.json') as f:
@@ -30,41 +36,27 @@ machines = parameters['platform']
 
 def load_trained_info(tenant_id):
     query = "SELECT * from trained_info"
-    db_config = {
-        'host': os.environ['HOST_IP'],
-        'user': os.environ['LOCAL_DB_USER'],
-        'password': os.environ['LOCAL_DB_PASSWORD'],
-        'port': os.environ['LOCAL_DB_PORT'],
-        'tenant_id': tenant_id
-    }
-    queue_db = DB('queues', **db_config)
-    trained_info_data = queue_db.execute(query)
+    template_db = DB('template_db', tenant_id=tenant_id, **db_config)
+    trained_info_data = template_db.execute(query).to_dict(orient='records')
 
     trained_info = {}
     for i in trained_info_data:
-        trained_info[i[1]] = {
-            'header_ocr': i[3],
-            'footer_ocr': i[4],
-            'address_ocr': i[5],
-            'unique_fields': i[6],
-            'condition': i[7],
-            'ad_trained_info': i[12]
+        trained_info[i['template_name']] = {
+            'header_ocr': i['header_ocr'],
+            'footer_ocr': i['footer_ocr'],
+            'address_ocr': i['address_ocr'],
+            'unique_fields': i['unique_fields'],
+            'condition': i['operator'],
+            'ad_trained_info': i['ad_train_info']
         }
     return trained_info
 
 
 def get_trained_templates(tenant_id, lower=False):
     query = "SELECT `template_name` FROM trained_info"
-    db_config = {
-        'host': os.environ['HOST_IP'],
-        'user': os.environ['LOCAL_DB_USER'],
-        'password': os.environ['LOCAL_DB_PASSWORD'],
-        'port': os.environ['LOCAL_DB_PORT'],
-        'tenant_id': tenant_id
-    }
-    queue_db = DB('queues', **db_config)
+    template_db = DB('template_db', tenant_id=tenant_id, **db_config)
 
-    query_result = queue_db.execute(query)
+    query_result = template_db.execute(query)
 
     if query_result:
         if lower:

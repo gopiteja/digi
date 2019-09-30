@@ -81,9 +81,6 @@ def get_validation_rules(data_base, group=None):
         df = business_rule_db.execute(f"SELECT `id`,`rule_string` from `sequence_rule_data` WHERE `group`= '{group}'")
     else:
         df = business_rule_db.execute(f"SELECT `id`,`rule_string` from `sequence_rule_data`")
-#     print (df.to_dict(orient='records'))
-    chained_rules = [e['rule_string'] for e in df.to_dict(orient='records')]
-    return chained_rules
 
 def apply_field_validations(unique_id, stage='validation', db_tables = {
                 "extraction" : ["ocr"],

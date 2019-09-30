@@ -622,12 +622,28 @@ def value_extract(result, api=False, retrained=False):
         logging.info('Its API fields')
         output_.pop('method_used', 0)
         return output_
-    else:
-        output_['Vendor Name'] = template_name
 
     # Update queue of the file. Field exceptions if there are any suspicious value else Verify queue.
     is_field_exception = False
-    updated_queue = 'Field Exceptions' if is_field_exception else 'Verify'
+
+    query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
+                '`workflow_definition`.`queue_id`=`queue_definition`.`id` '
+    template_exc_wf = queues_db.execute(query)
+    workflow_frame = template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']
+
+    queue_id = list(workflow_frame['queue_id'])[0]
+    move_to_queue_id = list(workflow_frame['move_to'])[0]
+    
+    query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
+    move_to_queue_df = queues_db.execute(query, params=[move_to_queue_id])
+    move_to_queue = list(move_to_queue_df['unique_name'])[0]
+
+    query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
+    queue_df = queues_db.execute(query, params=[queue_id])
+    queue_unique_name = list(move_to_queue_df['unique_name'])[0]
+
+
+    updated_queue = queue_unique_name if is_field_exception else move_to_queue
     query = "UPDATE `process_queue` SET `queue`=%s WHERE `case_id`=%s"
     params = [updated_queue, case_id]
     queues_db.execute(query, params=params)
@@ -639,7 +655,7 @@ def value_extract(result, api=False, retrained=False):
     stats_db.insert_dict(audit_data, 'audit')
     logging.debug(f'Updated queue of case ID `{case_id}` to `{updated_queue}`')
 
-    update_queue_trace(queues_db, case_id, 'Verify')
+    update_queue_trace(queues_db, case_id, updated_queue)
 
     # * Add the fields to the OCR table of extraction DB
     logging.debug('Adding extracted data to the database')
@@ -1374,7 +1390,7 @@ def keyword_selector_cluster_method(ocr_data, keyword, inp, field_data, page, co
     char_index_list, haystack = get_pre_process_char(pre_process_char, ocr_data, page_no)
 
     # Search OCR for the key pattern
-    print('keywords - ', keyList)
+    # print('keywords - ', keyList)
     ori_keyList = keyList
 
     keyCords_list, keywords_list, counter = compute_all_key_list_coord(keyList, char_index_list, haystack)
@@ -1384,8 +1400,8 @@ def keyword_selector_cluster_method(ocr_data, keyword, inp, field_data, page, co
 
         keyList = ' '.join(keyList)
 
-        print(keyList)
-        print(keyCords)
+        # print(keyList)
+        # print(keyCords)
         box_top = keyCords['top'] + rel_top
         box_bottom = keyCords['bottom'] + rel_bottom
         box_left = keyCords['left'] + rel_left

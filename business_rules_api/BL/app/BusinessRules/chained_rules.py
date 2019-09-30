@@ -29,8 +29,6 @@ def insert_if_not_update_ruleparams(rule_params, unique_id):
     business_rules_db.execute(query, params=params)
     return "UPDATE/INSERT INTO RULE_DATA IS DONE"
 
-
-
 def insert_if_not_update_trace_exec(trace_exec, unique_id):
     query=f"INSERT INTO `rule_data`(`id`, `case_id`, `trace_data`) VALUES ('NULL','{unique_id}',%s) ON DUPLICATE KEY UPDATE `trace_data`=%s"
     config={'host':os.environ['HOST_IP'],
@@ -43,7 +41,6 @@ def insert_if_not_update_trace_exec(trace_exec, unique_id):
     params = params = [str(trace_exec), str(trace_exec)]
     business_rules_db.execute(query, params=params)
     return "UPDATE/INSERT INTO RULE_DATA...TRACE DATA IS DONE"
-
 
 def get_chain_rules(data_base, table='sequence_data', group='chain'):
     """
@@ -127,6 +124,54 @@ def update(table_updates, unique_id):
             db = 'extraction'
             update_table(table, column_values, 'case_id', unique_id,  db)
     return "UPDATE SUCCESSFULLY"
+
+def trace_dict_transform(parameters, data_source):
+    data_source_dict = {}
+    for table, column_list in parameters.items():
+        table_temp = {}
+        if table == 'master':
+            master_df = pd.DataFrame.from_dict(data_source[table])
+            try:
+                temp_df = master_df[column_list]
+                temp_df = temp_df[temp_df['CPT_Code'].isin(['P9604', '21011']) & temp_df['State'].isin(['TX'])]
+            except:
+                traceback.print_exc()
+                print(f"Skipped inserting {table} {column_list}")
+                temp_df = pd.DataFrame()
+            data_source_dict[table] = temp_df.to_dict(orient= 'records')
+        else:
+            for column in column_list:
+                try:
+                    table_temp = {**table_temp, **{column : data_source[table][column]}}
+                except:
+                    traceback.print_exc()
+                    print(f"Skipped inserting {table} {column}")
+            data_source_dict[table] = [table_temp]
+    #    print(data_source_dict)
+    return data_source_dict
+
+def to_DT_data(parameters):
+    output = []
+    try:
+        for param_dict in parameters:
+            print(param_dict)    
+            if param_dict['column'] == 'Add_on_Table':
+                output.append({'table': param_dict['table'],'column': param_dict['column'],'value': param_dict['value']})
+                # Need to add a function to show this or tell Kamal check if its addon table and parse accordingly
+            else:                
+                output.append({'table': param_dict['table'],'column': param_dict['column'],'value': param_dict['value']})
+    except:
+        print("Error in to_DT_data()")
+        traceback.print_exc()
+        return []
+    try:
+        output = [dict(t) for t in {tuple(d.items()) for d in output}]
+    except:
+        print("Error in removing duplicate dictionaries in list")
+        traceback.print_exc()
+        pass
+    return output
+
 
 def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=False, bot_status=None):
     
@@ -413,49 +458,3 @@ def run_chained_rules(unique_id,kafka_data, start_rule_id=None, bot_finished=Fal
         print ("excepitn iin inserting the trace data")
         print (e)
    
-def trace_dict_transform(parameters, data_source):
-    data_source_dict = {}
-    for table, column_list in parameters.items():
-        table_temp = {}
-        if table == 'master':
-            master_df = pd.DataFrame.from_dict(data_source[table])
-            try:
-                temp_df = master_df[column_list]
-                temp_df = temp_df[temp_df['CPT_Code'].isin(['P9604', '21011']) & temp_df['State'].isin(['TX'])]
-            except:
-                traceback.print_exc()
-                print(f"Skipped inserting {table} {column_list}")
-                temp_df = pd.DataFrame()
-            data_source_dict[table] = temp_df.to_dict(orient= 'records')
-        else:
-            for column in column_list:
-                try:
-                    table_temp = {**table_temp, **{column : data_source[table][column]}}
-                except:
-                    traceback.print_exc()
-                    print(f"Skipped inserting {table} {column}")
-            data_source_dict[table] = [table_temp]
-    #    print(data_source_dict)
-    return data_source_dict
-
-def to_DT_data(parameters):
-    output = []
-    try:
-        for param_dict in parameters:
-            print(param_dict)    
-            if param_dict['column'] == 'Add_on_Table':
-                output.append({'table': param_dict['table'],'column': param_dict['column'],'value': param_dict['value']})
-                # Need to add a function to show this or tell Kamal check if its addon table and parse accordingly
-            else:                
-                output.append({'table': param_dict['table'],'column': param_dict['column'],'value': param_dict['value']})
-    except:
-        print("Error in to_DT_data()")
-        traceback.print_exc()
-        return []
-    try:
-        output = [dict(t) for t in {tuple(d.items()) for d in output}]
-    except:
-        print("Error in removing duplicate dictionaries in list")
-        traceback.print_exc()
-        pass
-    return output

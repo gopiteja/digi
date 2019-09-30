@@ -36,7 +36,7 @@ class DB(object):
         self.USER = user
         self.PASSWORD = password
         self.PORT = port
-        self.DATABASE = f'{tenant_id}_{database}' if tenant_id is not None and tenant_id else database
+        self.DATABASE = f'{tenant_id}_{database}' if tenant_id else database
         
         logging.info(f'Host: {self.HOST}')
         logging.info(f'User: {self.USER}')
@@ -65,8 +65,7 @@ class DB(object):
                     retry += 1
                     self.db_.dispose()
         except:
-            logging.exception(f'Something went wrong while connecting. Check trace.')
-            return
+            raise Exception('Something went wrong while connecting. Check trace.')
 
     def execute(self, query, **kwargs):
         """

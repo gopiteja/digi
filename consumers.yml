@@ -297,7 +297,7 @@ services:
     image: 'run_business_rule'
     container_name: 'run_business_rule'
     build:
-      context: ./business_rules_api/BL/app
+      context: ./button_functions/app/run_business_rule
       dockerfile: run_business_rule.Dockerfile
     networks:
       - service_bridge
@@ -335,29 +335,6 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "process_time_tag"
-
-  # Update Addon Table
-  update_addon:
-    image: 'update_addon'
-    container_name: 'update_addon'
-    build:
-      context: ./button_functions/app/update_addon
-      dockerfile: update_addon.Dockerfile
-    networks:
-      - service_bridge
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-      - LOCAL_DB_USER=${LOCAL_DB_USER}
-      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "update_addon_tag"
 
 volumes:
   # Reports

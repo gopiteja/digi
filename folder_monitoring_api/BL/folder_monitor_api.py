@@ -30,7 +30,12 @@ db_config = {
 
 def watch(path_to_watch, output_path, tenant_id):
     logging.info('Watch folder started.')
+
+    path_to_watch = Path('./input').absolute() / Path(path_to_watch)
+    output_path = Path('./output').absolute() / Path(output_path)
+
     logging.debug(f'Watching folder: {path_to_watch}')
+    logging.debug(f'Output folder: {output_path}')
 
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
     stats_db = DB('stats', tenant_id=tenant_id, **db_config)
@@ -52,7 +57,7 @@ def watch(path_to_watch, output_path, tenant_id):
             unique_id = file_path.stem # Some clients require file name as Case ID
 
             time.sleep(3) # Buffer time. Required to make sure files move without any error.
-            shutil.copy(file_path, output_path / (unique_id + file_path.suffix))
+            shutil.move(file_path, output_path / (unique_id + file_path.suffix))
             logging.debug(f' - {file_path.name} moved to {output_path.absolute()} directory')
 
             data = {
@@ -60,7 +65,7 @@ def watch(path_to_watch, output_path, tenant_id):
                 'file_name': unique_id + file_path.suffix,
                 'files': [unique_id + file_path.suffix],
                 'source': [str(file_path.parent).split('/')[-1]],
-                'file_path': file_path,
+                'file_path': str(file_path),
                 'original_file_name': [file_path.name],
                 'tenant_id': tenant_id,
                 'type': 'file_ingestion'
@@ -78,7 +83,7 @@ def watch(path_to_watch, output_path, tenant_id):
                     logging.info(f'Producing to topic {topic}')
                     produce(topic, data)
                 else:
-                    logging.info(f'There is topic to send to for `folder_monitor`. [{topic}]')
+                    logging.info(f'There is no topic to send to for `folder_monitor`. [{topic}]')
 
 @app.route('/folder_monitor', methods=['POST', 'GET'])
 def folder_monitor():
@@ -86,11 +91,15 @@ def folder_monitor():
         data = request.json
 
         tenant_id = data.get('tenant_id', None)
+        logging.debug(f'Connecting to tenant {tenant_id}')
 
         db = DB('io_configuration', tenant_id=tenant_id, **db_config)
         
         input_config = db.get_all('input_configuration')
         output_config = db.get_all('output_configuration')
+
+        logging.debug(f'Input Config: {input_config.to_dict()}')
+        logging.debug(f'Output Config: {output_config.to_dict()}')
 
         # Sanity checks
         if (input_config.loc[input_config['type'] == 'Document'].empty
@@ -111,8 +120,8 @@ def folder_monitor():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        input_path = Path(input_path)
-        output_path = Path(output_path)
+        input_path = Path('./input').absolute() / Path(input_path)
+        output_path = Path('./output').absolute() / Path(output_path)
 
         # Only watch the folder if both are valid directory
         if input_path.is_dir() and output_path.is_dir():
