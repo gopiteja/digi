@@ -41,13 +41,13 @@ def load_trained_info(tenant_id):
 
     trained_info = {}
     for i in trained_info_data:
-        trained_info[i[1]] = {
-            'header_ocr': i[3],
-            'footer_ocr': i[4],
-            'address_ocr': i[5],
-            'unique_fields': i[6],
-            'condition': i[7],
-            'ad_trained_info': i[12]
+        trained_info[i['template_name']] = {
+            'header_ocr': i['header_ocr'],
+            'footer_ocr': i['footer_ocr'],
+            'address_ocr': i['address_ocr'],
+            'unique_fields': i['unique_fields'],
+            'condition': i['operator'],
+            'ad_trained_info': i['ad_train_info']
         }
     return trained_info
 
