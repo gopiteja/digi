@@ -65,8 +65,7 @@ class DB(object):
                     retry += 1
                     self.db_.dispose()
         except:
-            logging.exception(f'Something went wrong while connecting. Check trace.')
-            return
+            raise Exception('Something went wrong while connecting. Check trace.')
 
     def execute(self, query, **kwargs):
         """
