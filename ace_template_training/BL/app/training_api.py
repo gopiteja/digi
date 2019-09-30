@@ -2337,7 +2337,7 @@ def get_ocr_data():
     vendor_list = list(trained_db.get_all('vendor_list').vendor_name)
     template_list = list(trained_db.get_all('trained_info').template_name)
 
-    ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char)
+    ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenant_id=tenant_id)
     all_values = remove_keys(ocr_data, ocr_keywords)
 
     field_validations = get_field_validations(tenant_id)
