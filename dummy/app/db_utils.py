@@ -36,7 +36,7 @@ class DB(object):
         self.USER = user
         self.PASSWORD = password
         self.PORT = port
-        self.DATABASE = f'{tenant_id}_{database}' if tenant_id is not None and tenant_id else database
+        self.DATABASE = f'{tenant_id}_{database}' if tenant_id else database
         
         logging.info(f'Host: {self.HOST}')
         logging.info(f'User: {self.USER}')
