@@ -37,7 +37,7 @@ machines = parameters['platform']
 def load_trained_info(tenant_id):
     query = "SELECT * from trained_info"
     template_db = DB('template_db', tenant_id=tenant_id, **db_config)
-    trained_info_data = template_db.execute(query)
+    trained_info_data = list(template_db.execute(query))
 
     trained_info = {}
     for i in trained_info_data:
