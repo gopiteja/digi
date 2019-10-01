@@ -8,6 +8,7 @@ Created on Thu Mar 14 13:54:54 2019
 import argparse
 import json
 import traceback
+import os
 
 import ast
 import ntpath
@@ -118,7 +119,11 @@ def cluster():
                 text_top = []
                 text_middle = []
                 text_bottom = []
-                ocr_data = json.loads(file[1])[0]
+                try:
+                    ocr_data = json.loads(json.loads(file[1])[0])
+                except:
+                    ocr_data = json.loads(file[1])[0]
+
 
                 if not ocr_data:
                     continue
@@ -201,4 +206,5 @@ def cluster():
                 final_dict[str(k + 1)] = clusters[k]
             return final_dict
     except Exception as e:
+        logging.exception('clustering failed')
         return jsonify({'flag': False, 'message': 'System error! Please contact your system administrator.'})

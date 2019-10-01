@@ -1111,9 +1111,20 @@ def get_fields(case_id=None):
         except:
             logging.debug(f'Failed while fetching addon table details. Initializing it to empty dictionary')
             addon_table = {}
+            addon_column = ''
 
         if table:
             response_data['table'] = table
+
+        try:
+            io_db = DB('io_configuration', **db_config)
+            query = "SELECT * FROM `output_configuration`"
+            file_parent = list(io_db.execute(query).access_1)[0] + '/'
+        except:
+            file_parent = ''
+            logging.info('No output folder defined')
+
+        file_name = file_parent + list(case_files.file_name)[0]
         
         response_data = {
             'flag': True,
@@ -1122,7 +1133,7 @@ def get_fields(case_id=None):
             'data': renamed_fields,
             'dropdown_values': dropdown,
             'highlight': renamed_higlight,
-            'file_name': list(case_files.file_name)[0],
+            'file_name': file_name,
             'table': table,
             'time_spent': 0,
             'timer': list(queue_info.timer)[0],
@@ -1320,6 +1331,8 @@ def get_ocr_data():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
+        pdf_type = list(case_files.document_type)[0]
+
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = db.execute(query, params=params)
@@ -1360,7 +1373,7 @@ def get_ocr_data():
                 'template_list': sorted(template_list),
                 'mandatory_fields': mandatory_fields,
                 'fields': fields_list,
-                'type': 'blob'})
+                'type': pdf_type})
 
         return jsonify({'flag': True, 'data': ocr_data, 'template_list': sorted(template_list), 'mandatory_fields': mandatory_fields,'fields': fields_list, 'type': 'blob'})
     except Exception as e:

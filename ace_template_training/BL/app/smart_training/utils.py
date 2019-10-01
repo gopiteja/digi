@@ -1,6 +1,7 @@
 import math
+from ace_logger import Logging
 
-
+logging = Logging()
 
 def get_area_intersection(box, word, area_of_word):
     box_l,box_r,box_b,box_t = box
@@ -116,26 +117,26 @@ def caculate_dis(box1, box2):
     return dist
 
 def validate_fields(extracted_data, field_validation):
-    print(f'Validating fields...')
+    logging.debug(f'Validating fields...')
 
     if not field_validation:
-        print(
+        logging.debug(
             f' - Not in field configuration! Check configuration immediately! Skipping')
     else:
         field_pattern = field_validation['pattern']
         if field_pattern is None:
-            print(f' - No pattern configured. Skipping.')
+            logging.debug(f' - No pattern configured. Skipping.')
         else:
-            print(f' - Applying regex: `{field_pattern}`')
+            logging.debug(f' - Applying regex: `{field_pattern}`')
 
             matches = re.findall(
                 field_pattern, raw_value.replace('suspicious', ''))
 
             if matches:
-                print(f' - Matches found: {matches}')
+                logging.debug(f' - Matches found: {matches}')
                 extracted_data = matches[0]
             else:
-                print(f' - No pattern found for `{field}`.')
+                logging.debug(f' - No pattern found for `{field}`.')
                 extracted_data = ''
 
     return extracted_data
@@ -303,5 +304,5 @@ def get_rel_info(box1,box2,direction=None):
         else:
             return 'top'
 
-    print({'dist':dist,'angle':angle})
+    logging.debug({'dist':dist,'angle':angle})
     return {'dist':dist,'angle':angle}

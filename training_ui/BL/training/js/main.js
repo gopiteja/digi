@@ -91,7 +91,7 @@ $(document).ready(function () {
         $("#edit_new_temp").hide();
     }
     case_id = case_id.split('.')[0];
-    file_name = 'images/invoices/' + file_id;
+    
     var stepper = document.querySelector('.stepper');
     var stepperInstace = new MStepper(stepper, {
         // options
@@ -105,7 +105,7 @@ $(document).ready(function () {
     })
 
     // var file_name___
-    if (nullCheck(file_name)) {
+    if (nullCheck(case_id)) {
         sendObj = {};
         sendObj.file_name = file_id;
         sendObj.case_id = case_id;
@@ -131,6 +131,8 @@ $(document).ready(function () {
         $.ajax(settings11).done(function (msg) {
             // console.log(msg);
             if (msg.flag) {
+                file_id = msg.file_name;
+                file_name = 'images/invoices/' + file_id;
                 mandatoryFields = msg.mandatory_fields;
                 idx = mandatoryFields.indexOf('Vendor Name');
                 mandatoryFields.splice(idx, 1)

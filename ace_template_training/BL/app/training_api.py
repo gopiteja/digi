@@ -16,7 +16,6 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from nltk import edit_distance
-from pprint import pprint
 from pdf2image import convert_from_path
 from db_utils import DB
 from producer import produce
@@ -25,7 +24,7 @@ from ace_logger import Logging
 try:
     # from app.producer import produce
     from app.extracto_utils import *
-    from app.testing_extract import *
+    # from app.testing_extract import *
     from app.automatic_training import cluster_similar_words
     from app.smart_training.predict_keywords import predict_keywords
     from app.smart_training.key_value_method_key_prediction import kv_values_prediction
@@ -40,7 +39,7 @@ try:
 except:
     from producer import produce
     from extracto_utils import *
-    from testing_extract import *
+    # from testing_extract import *
     from automatic_training import cluster_similar_words
     from smart_training.predict_keywords import predict_keywords
     from smart_training.key_value_method_key_prediction import kv_values_prediction
@@ -175,7 +174,7 @@ def percentage_inside(box, word):
 @zipkin_span(service_name='ace_template_training', span_name='standardize_date')
 def standardize_date(all_data, input_format=[r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%Y'], standard_format=r'%Y-%m-%d'):
     # Find date related fields and change the format of the value to a standard one
-    print(f'Changing date formats in extracted fields...')
+    logging.debug(f'Changing date formats in extracted fields...')
     # date_formats = [r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%Y']
 
     standard_format = r'%Y-%m-%d'
@@ -187,7 +186,7 @@ def standardize_date(all_data, input_format=[r'%d-%m-%Y', r'%d.%m.%Y', r'%d/%m/%
                 try:
                     parsed_date = parse(raw_field_value, fuzzy=True, dayfirst=True)
                 except ValueError:
-                    print(f'Error occured while parsing date field `{field_name}`:`{field_value}`.')
+                    logging.exception(f'Error occured while parsing date field `{field_name}`:`{field_value}`.')
                     parsed_date = None
 
                 if parsed_date is not None:
@@ -316,7 +315,7 @@ def keyword_extract(ocr_data, keyword, scope):
                 tempCords[0]['top'] = top
                 tempCords[0]['bottom'] = bottom
                 keyCords.append(tempCords[0])
-    print('keyCords ', keyCords)
+    logging.debug(f'keyCords {keyCords}')
     if (counter > 0):
         keysDict = keyCords
         proceed = True
@@ -332,7 +331,7 @@ def keyword_extract(ocr_data, keyword, scope):
             proceed = False
 
         if proceed:
-            print("Finding nearest to trained..")
+            logging.debug("Finding nearest to trained..")
             # Find keyword nearest to trained box
             inpX = (scope['y'] + scope['y'] + scope['height']) / 2
             inpY = (scope['x'] + scope['x'] + scope['width']) / 2
@@ -358,7 +357,7 @@ def keyword_extract(ocr_data, keyword, scope):
         return {'height': key_bottom - key_top, 'width': key_right - key_left, 'y': key_top, 'x': key_left}
 
     else:
-        print('keyword not found in OCR')
+        logging.debug('keyword not found in OCR')
         return {}
 
 
@@ -390,7 +389,7 @@ def get_cell_data(scope_, multi_way_field_info, resize_factor, ocr_data):
         try:
             cell_data[direction] = each_additional_key
         except Exception as e:
-            print('Error in making cell-data for multi key fields', e)
+            logging.exception(f'Error in making cell-data for multi key fields')
 
     return cell_data
 
@@ -459,19 +458,19 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
         checkboxes = field['checkboxes']
     except:
         checkboxes = {}
-    print(checkboxes)
+    logging.debug(checkboxes)
 
     checkb = False
     if validation == 'Checkbox Body':
         checkb = True
-        print('ssss')
+        logging.debug('ssss')
     else:
         pass
 
     if checkb:
-        print('enterred here')
+        logging.debug('enterred here')
         pattern = validation
-        print('checkbox_keys', checkboxes.keys())
+        logging.debug('checkbox_keys', checkboxes.keys())
 
         for keyword_ch, ch_field_box in checkboxes.items():
             if keyword_ch == 'id':
@@ -480,8 +479,8 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 pass
 
             field_box = ch_field_box
-            # print(field_box)
-            print('keyyyy', keyword_ch)
+            # logging.debug(field_box)
+            logging.debug('keyyyy', keyword_ch)
 
             # Resize field box
             field_box["width"] = int(field_box["width"] / resize_factor)
@@ -520,8 +519,8 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                         'left': scope['x'] - context_scope['x'],
                         'top': scope['y'] - context_scope['y']
                     }
-                    # print('context_coords',context_coords)
-                    # print('ocr_data type',type(ocr_data))
+                    # logging.debug('context_coords',context_coords)
+                    # logging.debug('ocr_data type',type(ocr_data))
                     context_ocr_data = ocrDataLocal(context_coords['y'], context_coords['x'],
                                                     context_coords['x'] + context_coords['width'],
                                                     context_coords['y'] + context_coords['height'],
@@ -532,30 +531,30 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                         'box': box,
                         'relative': relative
                     }
-                # print('multi_key_field_info',multi_key_field_info)
-                # print('context_key_field_info',context_key_field_info)
+                # logging.debug('multi_key_field_info',multi_key_field_info)
+                # logging.debug('context_key_field_info',context_key_field_info)
             except:
                 pass
             '''
                 Finding keyword using different method
                 bcoz I don't trust old method.Hence keyword_box_new
             '''
-            print('scope of checkbox ', scope)
+            logging.debug('scope of checkbox ', scope)
             haystack = ocrDataLocal(scope['y'], scope['x'], scope['x'] + scope['width'], scope['y'] + scope['height'],
                                     ocr_data[int(page_no)])
             try:
-                print('haystach ', keyword_ch)
+                logging.debug('haystach ', keyword_ch)
                 keyword_box_new = needle_in_a_haystack(keyword_ch, haystack)
-                print('keybox new ', keyword_box_new)
+                logging.debug('keybox new ', keyword_box_new)
             except Exception as e:
                 keyword_box_new = {}
-                print('Exception in finding keyword:', keyword_ch, '\nError:', e)
+                logging.exception('Exception in finding keyword:', keyword_ch, '\nError:', e)
 
             try:
                 value_meta = needle_in_a_haystack(field_value, haystack)
             except Exception as e:
                 value_meta = {}
-                print('Exception in finding keyword', e)
+                logging.exception('Exception in finding keyword', e)
 
             # Box's Top, Right, Bottom, Left
             box_t = field_box['y']
@@ -567,13 +566,13 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
             # relative distance from keyword to box's edges
             # else save the box coordinates directly
             if keyword_ch:
-                print('key_ch ', keyword_ch)
+                logging.debug('key_ch ', keyword_ch)
                 regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:;]')
                 alphareg = re.compile(r'[a-zA-Z]')
                 keyList = keyword_ch.split()
-                print('key ist', keyList)
+                logging.debug('key ist', keyList)
                 if len(keyList) > 1:
-                    print('hereeeeee')
+                    logging.debug('hereeeeee')
                     if regex.search(keyList[-1]) != None and alphareg.search(keyList[-1]) == None:
                         # if the last word of keyword sentence containes only special characters
                         junk = keyList[-1]
@@ -582,7 +581,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 # Get keyword's box coordinates
                 keyword_box = keyword_extract(ocr_data[int(page_no)], keyword_ch, scope)
 
-                print('keywooooorddd', keyword_box)
+                logging.debug('keywooooorddd', keyword_box)
                 if not keyword_box:
                     keyword_2, junk = correct_keyword(ocr_data[int(page_no)], keyword_ch, scope, field_value)
                     keyword_box = keyword_extract(ocr_data[int(page_no)], keyword_2, scope)
@@ -590,7 +589,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                         # field['keyword']=keyword_ch=keyword_2    ###### changed here
                         field['keyword'] = keyword_2
                 if keyword_box:
-                    print('in keyword loop')
+                    logging.debug('in keyword loop')
                     # Keyword's Top, Right, Bottom, Left
                     keyword_t = keyword_box['y']
                     keyword_r = keyword_box['x'] + keyword_box['width']
@@ -621,9 +620,9 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 bottom = box_b
                 left = box_l
 
-            print('top', top, 'b', bottom, 'r', right, 'l', left)
+            logging.debug('top', top, 'b', bottom, 'r', right, 'l', left)
             try:
-                print('in try loop')
+                logging.debug('in try loop')
                 cbdict = {
                     'keyword': keyword_ch,
                     'top': top,
@@ -638,7 +637,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                     checkboxes_all[field_type] = [cbdict]
                 else:
                     checkboxes_all[field_type].append(cbdict)
-                print('final checkbox ', checkboxes_all)
+                logging.debug('final checkbox ', checkboxes_all)
             except Exception as e:
                 pass
     else:
@@ -661,7 +660,7 @@ def get_pre_processed_char(ocr_data):
 
 @zipkin_span(service_name='ace_template_training', span_name='get_trained_info')
 def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_keyword={}, pre_processed_char=[]):
-    print('fields', fields)
+    logging.debug('fields', fields)
     field_data = {}
     extracted_data = {}
 
@@ -737,10 +736,10 @@ def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_key
     #     keyword_trainer = KeywordTrainer(ner_model_path)
 
     #     keyword_trainer.train(ocr_text, field_data)
-    #     print("training ner model complete")
+    #     logging.debug("training ner model complete")
     # except:
     #     logging.error('path wrong maybe')
-    #     traceback.print_exc()
+    #     traceback.logging.debug_exc()
 
     # storing fued positional descriptors information
     return field_data, checkboxes_all
@@ -753,7 +752,7 @@ def update_queue_trace(queue_db, case_id, latest):
 
     if queue_trace_df.empty:
         message = f' - No such case ID `{case_id}` in `trace_info`.'
-        print(f'ERROR: {message}')
+        logging.error(f'ERROR: {message}')
         return {'flag': False, 'message': message}
     # Updating Queue Name trace
     try:
@@ -977,7 +976,7 @@ def get_ring_fenced_field(fields, neighbourhood, ocr_data, pre_processed_char):
 #     if images is None:
 #         images = pdf_to_image(file_name)
 #
-#     print(word_temp)
+#     logging.debug(word_temp)
 #     # if the word also have weightage
 #     if type(word_temp) is list:
 #         word = word_temp[0]
@@ -991,7 +990,7 @@ def get_ring_fenced_field(fields, neighbourhood, ocr_data, pre_processed_char):
 #     w, h, c = img.shape
 #     rf = parameters['default_img_width'] / int(h)
 #     img = cv2.resize(img, (0, 0), fx=rf, fy=rf)
-#     print(word)
+#     logging.debug(word)
 #     if type(word) == list:
 #         word = word[0]
 #
@@ -1074,7 +1073,7 @@ def get_predicted_fields(
 
         # if no keyword is found
         else:
-            print('no keyword is found')
+            logging.debug('no keyword is found')
             if case_id:
                 page_dimensions = get_page_dimension(case_id, tenant_id=tenant_id)
             else:
@@ -1222,7 +1221,7 @@ def merge_neightbour_dict_value(old_neighbours, maybe_new_neighbours, multi=Fals
     """
     new_neighbours_list = {}
 
-    print(maybe_new_neighbours)
+    logging.debug(maybe_new_neighbours)
     if not multi:
         new_neighbours = [maybe_new_neighbours[0]]
     else:
@@ -1638,7 +1637,7 @@ def force_template():
         fields = {'template_name': template_name, 'cluster': None, 'queue': 'Processing'}
 
         # Insert a new record for each file of the cluster with template name set and cluster removed
-        print(f'Extracting for case ID `{case_id}`')
+        logging.debug(f'Extracting for case ID `{case_id}`')
 
         if retrain == 'yes':
             queue_db.update('process_queue', update=fields, where={'case_id': case_id})
@@ -1659,7 +1658,7 @@ def force_template():
         cluster_query = "SELECT `id`,`cluster` from `process_queue` where `case_id` = %s"
         cluster = list(queue_db.execute(cluster_query, params=[case_id]).cluster)[0]
 
-        print(cluster, '##############')
+        logging.debug(cluster, '##############')
 
         queue_db.update('process_queue', update=fields, where={'case_id': case_id})
         audit_data = {
@@ -1680,16 +1679,16 @@ def force_template():
         else:
             return jsonify({'flag': True, 'message': 'Successfully extracted!'})
 
-        print(cluster_case_data)
+        logging.debug(cluster_case_data)
         for case_data in cluster_case_data:
             if case_data['case_id'] == case_id:
-                print(f'Already extracted for case ID `{case_id}`')
+                logging.debug(f'Already extracted for case ID `{case_id}`')
                 continue
 
             cluster_case_id = case_data['case_id']
 
             # Update the record for each file of the cluster with template name set and cluster removed
-            print(f'Extracting for case ID - Force `{cluster_case_id}`')
+            logging.debug(f'Extracting for case ID - Force `{cluster_case_id}`')
 
             fields['template_name'] = template_name
             fields['cluster'] = None
@@ -1819,7 +1818,10 @@ def retrain():
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queue_db.execute(query, params=params)
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
         trained_data = get_trained_info(ocr_data, fields, resize_factor)
 
         # * Add trained information & template name into `trained_info` table
@@ -1846,7 +1848,7 @@ def retrain():
                 page_no = 0
             # Check if column name is there in OCR table
             if column_name not in columns_in_ocr:
-                print(f' - `{column_name}` does not exist in `ocr` table. Skipping field.')
+                logging.debug(f' - `{column_name}` does not exist in `ocr` table. Skipping field.')
                 continue
 
             # Add highlight to the dict
@@ -1908,7 +1910,11 @@ def test_fields():
 
         ocr_data_df = queue_db.execute(query, params=[case_id])
 
-        ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
+        try:
+            ocr_data = json.loads(json.loads(ocr_data_df['ocr_data'].iloc[0]))
+        except:
+            ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
+
 
         checkboxes_all = {}
         if force_check == 'yes':
@@ -1941,11 +1947,11 @@ def test_fields():
         host = 'extractionapi'
         port = 80
         route = 'predict_field'
-        print(f'Hitting URL: http://{host}:{port}/{route}')
-        print(f'Sending Data: {value_extract_params}')
+        logging.debug(f'Hitting URL: http://{host}:{port}/{route}')
+        logging.debug(f'Sending Data: {value_extract_params}')
         headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
         response = requests.post(f'http://{host}:{port}/{route}', json=value_extract_params, headers=headers)
-        print('response', response.content)
+        logging.debug('response', response.content)
         return jsonify({'flag': 'true', 'data': response.json()})
 
 
@@ -1964,7 +1970,7 @@ def train():
 
         # ! Requires `template_name`, `extracted_data`, `case_id`, `trained_data`, `resize_factor`
         # ! `header_ocr`, `footer_ocr`, `address_ocr`
-        print('ui_data', ui_data)
+        logging.debug('ui_data', ui_data)
         # Database configuration
         db_config = {
             'host': os.environ['HOST_IP'],
@@ -2053,7 +2059,7 @@ def train():
         trained_template_names = list(trained_info.template_name)
         if template_name.lower() in [t.lower() for t in trained_template_names]:
             message = f'Template name `{template_name}` already exist.'
-            print(message)
+            logging.debug(message)
             return jsonify({'flag': False, 'message': message})
         try:
             table_trained_info = ui_data['table'][0]['table_data']['trained_data']
@@ -2100,11 +2106,9 @@ def train():
                 where = {'id': 0}
                 table_db.update('table_keywords', update=table_keywords, where=where)
             except Exception as e:
-                print(e)
-                print('error in saving table keywords')
+                logging.exception('error in saving table keywords')
         except Exception as e:
-            print(e)
-            print('table info not saved')
+            logging.exception('table info not saved')
             table_trained_info = {}
 
         query = "SELECT * from process_queue where queue = 'Template Exceptions'"
@@ -2117,7 +2121,11 @@ def train():
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queue_db.execute(query, params=params)
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+
 
         trained_data, checkboxes_all = get_trained_info(ocr_data, fields, resize_factor)
 
@@ -2157,7 +2165,7 @@ def train():
         extracted_column_values = {'case_id': case_id}
         columns_in_ocr = extraction_db.get_column_names('ocr')
         extracted_column_values['highlight'] = {}
-        print(fields, '*' * 50)
+        logging.debug(fields, '*' * 50)
         for _, field in fields.items():
             column_name = field['field']
             value = field['value']
@@ -2168,7 +2176,7 @@ def train():
                 page_no = 0
             # Check if column name is there in OCR table
             if column_name not in columns_in_ocr:
-                print(f' - `{column_name}` does not exist in `ocr` table. Skipping field.')
+                logging.debug(f' - `{column_name}` does not exist in `ocr` table. Skipping field.')
                 continue
 
             # Add highlight to the dict
@@ -2219,13 +2227,13 @@ def train():
         cluster_case_data = cluster_files_df.to_dict(orient='records')
         for case_data in cluster_case_data:
             if case_data['case_id'] == case_id:
-                print(f'Already extracted for case ID `{case_id}`')
+                logging.debug(f'Already extracted for case ID `{case_id}`')
                 continue
 
             cluster_case_id = case_data['case_id']
 
             # Update the record for each file of the cluster with template name set and cluster removed
-            print(f'Extracting for case ID - cluster `{cluster_case_id}`')
+            logging.debug(f'Extracting for case ID - cluster `{cluster_case_id}`')
 
             fields['template_name'] = template_name
             fields['cluster'] = None
@@ -2266,18 +2274,16 @@ def get_ocr_data():
         'tenant_id': tenant_id
     }
     db = DB('queues', **db_config)
-    # db = DB('queues')
 
-    trained_db_config = {
-        'host': os.environ['HOST_IP'],
-        'user': os.environ['LOCAL_DB_USER'],
-        'password': os.environ['LOCAL_DB_PASSWORD'],
-        'port': os.environ['LOCAL_DB_PORT'],
-        'tenant_id': tenant_id
-    }
-    trained_db = DB('template_db', **trained_db_config)
+    trained_db = DB('template_db', **db_config)
 
-    # print("Case ID:", case_id)
+    try:
+        io_db = DB('io_configuration', **db_config)
+        query = "SELECT * FROM `output_configuration`"
+        file_parent = list(io_db.execute(query).access_1)[0] + '/'
+    except:
+        file_parent = ''
+        logging.info('No output folder defined')
 
     # Get all OCR mandatory fields
     try:
@@ -2293,7 +2299,7 @@ def get_ocr_data():
         fields = list(ocr_fields_df['display_name'])
 
     except Exception as e:
-        print(f'Error getting mandatory fields: {e}')
+        logging.exception(f'Error getting mandatory fields: {e}')
         mandatory_fields = []
 
     # Get data related to the case from invoice table
@@ -2302,13 +2308,17 @@ def get_ocr_data():
     case_files = invoice_files_df.loc[invoice_files_df['case_id'] == case_id]
     if case_files.empty:
         message = f'No such case ID {case_id}.'
-        print(f'ERROR: {message}')
+        logging.debug(f'ERROR: {message}')
         return jsonify({'flag': False, 'message': message})
 
     query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
     params = [case_id]
     ocr_info = db.execute(query, params=params)
-    ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+
+    try:
+        ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+    except:
+        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
 
     pre_processed_char = []
     for index, page in enumerate(ocr_data):
@@ -2317,7 +2327,8 @@ def get_ocr_data():
         char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
         pre_processed_char.append([char_index_list, haystack])
 
-    file_name = list(case_files['file_name'])[0]
+    pdf_type = list(case_files.document_type)[0]
+    file_name = file_parent + list(case_files['file_name'])[0]
 
     quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
@@ -2327,7 +2338,7 @@ def get_ocr_data():
 
     ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
 
-    print('ocr_field_keyword- ', ocr_field_keyword)
+    logging.debug('ocr_field_keyword- ', ocr_field_keyword)
     # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
 
     # ocr_field_keyword = json.loads(list(ocr_info.fields_keywords)[0])
@@ -2361,11 +2372,11 @@ def get_ocr_data():
             trained_data[field['field']] = get_trained_data_format(field)
 
         query = f'SELECT id, case_id from trained_info_predicted where case_id = "{case_id}"'
-        print(query)
+        logging.debug(query)
 
         check = trained_db.execute(query)
 
-        print(check)
+        logging.debug(check)
         if type(check) != bool:
             check = not check.empty
 
@@ -2386,7 +2397,7 @@ def get_ocr_data():
 
     return jsonify(
         {'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list),
-         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': 'blob'})
+         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': pdf_type, 'file_name': file_name})
 
 
 if __name__ == '__main__':
