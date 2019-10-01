@@ -317,7 +317,7 @@ services:
     volumes:
       - file_input:/app/input
       - file_output:/app/output
-      - angular_images:/app/output
+      - angular_images:/app/angular
     networks:
       service_bridge:
         aliases:
