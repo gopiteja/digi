@@ -1,5 +1,7 @@
 import math
 import json
+from ace_logger import Logging
+
 
 try:
     from app.smart_training.utils import centroid_hunt
@@ -15,6 +17,8 @@ except:
     from smart_training.utils import ocrDataLocal
     from smart_training.utils import make_scope
     from smart_training.utils import get_rel_info
+
+logging = Logging()
 
 try:
     with open('app/parameters.json') as f:
@@ -281,14 +285,14 @@ def get_split_info(field_box, value_meta, keyword_box):
     field_value_coords = {}
 
     if keyword_box:
-        print('direction', get_rel_info(keyword_box, value_meta, 'direction'))
+        logging.debug('direction', get_rel_info(keyword_box, value_meta, 'direction'))
         if get_rel_info(keyword_box, value_meta, 'direction') == 'left':
             field_value_coords = field_value_coords_left
         else:
             field_value_coords = field_value_coords_bottom
 
-        print('keyword_box', keyword_box)
-        print('field_value_coords', field_value_coords)
+        logging.debug('keyword_box', keyword_box)
+        logging.debug('field_value_coords', field_value_coords)
         key_val_meta = get_rel_info(keyword_box, field_value_coords)
     key_val_meta = {**field_value_coords, **key_val_meta}
 

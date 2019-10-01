@@ -8,6 +8,8 @@ from PyPDF2 import PdfFileReader
 from pathlib import Path
 from PIL import Image
 from db_utils import DB
+from ace_logger import Logging
+
 
 try:
     from app.smart_training.string_matching import convert_ocrs_to_char_dict_only_al_num
@@ -22,6 +24,8 @@ except:
     from smart_training.string_matching import string_match_python
     from smart_training.string_matching import merge_coord
     from smart_training.string_matching import make_keyword_string
+
+logging = Logging()
 
 try:
     with open('app/parameters.json') as f:
@@ -156,14 +160,14 @@ def actual_clustering(keywords_list, keyCords_list):
 
                 min_dis = min(all_dist)
 
-                print(f'idx - {idx}')
-                print(f'coord - {coord}')
-                print(f'threshold - {threshold}')
-                print(f'all_dist - {all_dist}')
-                print(f'min_dis - {min_dis}')
-                print(f'key_list - {keywords_list[1 + rem_idx]}')
-                print(f'coord_list - {remaining_coords}')
-                print(f'index - {all_dist.index(min_dis)}')
+                logging.debug(f'idx - {idx}')
+                logging.debug(f'coord - {coord}')
+                logging.debug(f'threshold - {threshold}')
+                logging.debug(f'all_dist - {all_dist}')
+                logging.debug(f'min_dis - {min_dis}')
+                logging.debug(f'key_list - {keywords_list[1 + rem_idx]}')
+                logging.debug(f'coord_list - {remaining_coords}')
+                logging.debug(f'index - {all_dist.index(min_dis)}')
 
                 if min_dis < threshold:
                     min_index = all_dist.index(min_dis)
@@ -527,7 +531,7 @@ def get_pre_process_char(pre_process_char, ocr_data, page_no):
     """
     """
     if not pre_process_char:
-        print('pre prossesing not done, VERY BADDDDD!!!')
+        logging.warning('pre prossesing not done, VERY BADDDDD!!!')
         char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(ocr_data[page_no])
     else:
         try:
@@ -612,7 +616,7 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, fiel
     ocr_field_keyword = {}
 
     for field in mandatory_fields:
-        print(f'field - {field}')
+        logging.debug(f'field - {field}')
         if field in field_with_variation:
             for variation, weight in field_with_variation[field]:
                 for idx, page in enumerate(pre_processed_char):
@@ -667,7 +671,7 @@ def get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenan
     ocr_field_keyword = {}
 
     for field in mandatory_fields:
-        print(f'field - {field}')
+        logging.debug(f'field - {field}')
         if field in field_with_variation:
             for variation, _ in field_with_variation[field]:
                 for idx, page in enumerate(pre_processed_char):

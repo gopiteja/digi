@@ -56,7 +56,7 @@ def consume(broker_url='broker:9092'):
             logging.warning(f'No partitions for topic `{topic}`')
             logging.debug(f'Creating Topic: {topic}')
             produce(topic, {})
-            print(f'Listening to topic `{topic}`...')
+            logging.info(f'Listening to topic `{topic}`...')
             while parts is None:
                 consumer = KafkaConsumer(
                     bootstrap_servers=broker_url,
