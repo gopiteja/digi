@@ -264,7 +264,10 @@ def predict_with_ui_data():
             query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
             params = [case_id]
             ocr_info = queue_db.execute(query, params=params)
-            ocr_data_list = json.loads(list(ocr_info.ocr_data)[0])
+            try:
+                ocr_data_list = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+            except:
+                ocr_data_list = json.loads(list(ocr_info.ocr_data)[0])
 
 
             try:
