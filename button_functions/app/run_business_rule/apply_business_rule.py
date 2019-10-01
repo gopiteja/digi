@@ -62,6 +62,17 @@ def get_rules(tenant_id, group):
     rules = business_rules_db.execute(get_rules_query, params=params)
     return rules
 
+def update_tables(case_id, tenant_id, updates):
+    """Update the values in the database"""
+    extraction_db = DB('extraction', tenant_id=tenant_id, **db_config) # only in ocr or process_queue we are updating
+    queue_db = DB('queues', tenant_id=tenant_id, **db_config) # only in ocr or process_queue we are updating
+    
+    for table, colum_values in updates.items():
+        if table == 'ocr':
+            extraction_db.update(table, update=colum_values, where={'case_id':case_id})
+        if table == 'process_queue':
+            queue_db.update(table, update=colum_values, where={'case_id':case_id})
+    return "UPDATED IN THE DATABASE SUCCESSFULLY"
 
 def run_group_rules(case_id, rules, data):
     """Run the rules"""
@@ -112,19 +123,11 @@ def apply_business_rule(case_id, function_params, tenant_id):
             # updates = run_chained_rules()
             pass
         else:
-            print ('rules', rules)
             updates = run_group_rules(case_id, rules, data_tables)
             
         
         # update in the database, the changed fields eventually when all the stage rules were got
-        extraction_db = DB('extraction', tenant_id=tenant_id, **db_config) # only in ocr or process_queue we are updating
-        queue_db = DB('queues', tenant_id=tenant_id, **db_config) # only in ocr or process_queue we are updating
-        
-        for table, colum_values in updates.items():
-            if table == 'ocr':
-                extraction_db.update(table, update=colum_values, where={'case_id':case_id})
-            if table == 'process_queue':
-                queue_db.update(table, update=colum_values, where={'case_id':case_id})
+        update_tables(case_id, tenant_id, updates)
         
         #  return the updates for viewing
         return {'flag': True, 'message': 'Applied business rules successfully.', 'updates':updates}
