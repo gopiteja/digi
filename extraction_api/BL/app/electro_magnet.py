@@ -1,12 +1,16 @@
 import cv2
 import numpy as np
 from functools import reduce
+from ace_logger import Logging
+
 # import matplotlib.pyplot as plt
 import statistics
 
+logging = Logging()
+
 def get_histogram(img,type):
     histogram = np.sum(img[:,:], axis=type)
-    print(img.shape)
+    logging.debug(img.shape)
     return histogram
 
 
@@ -23,7 +27,7 @@ def normalise(histogram,thres):
                 idx += 1
             k = idx
         except Exception as e:
-            print(e)
+            logging.exception(e)
             break
     return normalised
 
@@ -93,15 +97,15 @@ def get_cv_lines(src_img,rf=None,scale = 6.5):
     try:
         vers = hist_to_lines(ver_histogram)
     except:
-        print('No verticals found')
+        logging.warning('No verticals found')
         vers = []
     try:
         hors = hist_to_lines(hor_histogram)
     except:
-        print('No horizontal lines')
+        logging.warning('No horizontal lines')
         hors = []
 
-    print(hors,vers)
+    logging.debug(hors,vers)
 
     # for ver in vers:
     #     cv2.line(src_img,(ver,0),(ver,4000),(0,0,255),2)
@@ -119,8 +123,8 @@ def get_cv_lines(src_img,rf=None,scale = 6.5):
     # plt.show()
     # vers = [int(ver*rf) for ver in vers]
     # hors = [int(hor*rf) for hor in hors]
-    print('vers',vers)
-    print('hors',hors)
+    logging.debug('vers',vers)
+    logging.debug('hors',hors)
 
     for hor in hors:
         cv2.line(src_img,(0,int(hor)),(4000,int(hor)),(255,255,255),7)
@@ -134,7 +138,7 @@ def get_cv_lines(src_img,rf=None,scale = 6.5):
         img_cropped = src_img[:,vers[0]:]
         return img_cropped, int(vers[0])
     except Exception as e:
-        print('In except')
+        logging.exception('In except')
         return src_img, 0
     # for hor in hors:
     #     cv2.line(src_img,(0,int(hor)),(4000,int(hor)),(0,0,255),2)

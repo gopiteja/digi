@@ -4,10 +4,8 @@ from functools import reduce
 import copy
 import cv2
 
-try:
-    from app.ace_logger import Logging
-except:
-    from ace_logger import Logging
+
+from ace_logger import Logging
 
 logging = Logging()
 
@@ -25,7 +23,7 @@ def ocr_data_local(ocrData,T,L,R,B):
                 ocrDataLocal.append(data)
         return ocrDataLocal
     except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+        logging.exception('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         return []
 
 
@@ -541,7 +539,7 @@ def field_mapping(ocr_data, extracted_data_maintable, field_json_data, horizonta
             field_type = field_info['type']
 
             if field_type == "kh_vh":
-                print('f_kh_vh')
+                logging.debug('f_kh_vh')
                 # field_extracted_list.append(field_in_header_value_header(ocr_data,
                                                         # field,
                                                         # extracted_data_maintable)

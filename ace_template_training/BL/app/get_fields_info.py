@@ -1,5 +1,6 @@
 import json,sys
 from get_fields_info_utils import *
+from ace_logger import Logging
 
 class DevNull(object):
     def write(self, arg):
@@ -28,7 +29,7 @@ class DevNull(object):
 # w,h = img.shape[:2]
 # rf = 670/int(h)
 # img = cv2.resize(img, (0,0), fx=rf, fy=rf)
-
+logging = Logging()
 
 def get_fields_info(ocr_data,highlight,field_data):
     all_fields_data = {}
@@ -83,7 +84,7 @@ def get_fields_info(ocr_data,highlight,field_data):
                     field_info['value'] = ''
                     field_info['box'] = keyword_meta
                 except Exception as e:
-                    print('Failed to fetch the keyword')
+                    logging.exception('Failed to fetch the keyword')
             if field_info:   
                 all_fields_data[field] = field_info
             # cv2.namedWindow('matrix',cv2.WINDOW_NORMAL)
@@ -92,7 +93,7 @@ def get_fields_info(ocr_data,highlight,field_data):
             # cv2.waitKey()
         # pprint(all_fields_data)
     except Exception as e:
-        print('Error in sending fields info while retraining')
+        logging.exception('Error in sending fields info while retraining')
     return all_fields_data
 
 # get_fields_info(ocr_data,highlight,field_data)

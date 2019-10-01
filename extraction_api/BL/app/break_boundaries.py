@@ -1,5 +1,6 @@
 import json
 import pdb
+from ace_logger import Logging
 
 #threshold in percentage
 threshold_to_expand = 60 
@@ -17,6 +18,9 @@ orientation_sign = {
     'top' : -1,
     'bottom' : 1
 }
+
+logging = Logging()
+
 try:
     from app.finding_field_without_keyword import return_lines
     with open('app/parameters.json') as f:
@@ -38,7 +42,7 @@ def sort_ocr(data):
 def expand_along_orientation(box, orientations):
     global orientations_dict
     global orientation_sign
-    print(box)
+    logging(box)
 
     width = box[1] - box[0]
     height = box[2] - box[3]
@@ -73,7 +77,7 @@ def get_crop_box(field_data):
         crop_box['right'] = field_data['scope']['x'] + field_data['scope']['width'] + field_data['right']
         crop_box['bottom'] = field_data['scope']['y']  + field_data['scope']['height'] + field_data['bottom']
     except Exception as e:
-        print(e)
+        logging.exception(e)
         crop_box = {}
 
     return crop_box
@@ -130,8 +134,8 @@ def actual_get_orientations(crop_box, keyword_box):
 
     keyword_box_mid_x = get_mid(keyword_box['left'], keyword_box['right'])
     keyword_box_mid_y = get_mid(keyword_box['top'], keyword_box['bottom'])
-    print("crop_box_mid ", [crop_box_mid_x, crop_box_mid_y])
-    print("keyword ", keyword_box)
+    logging.debug("crop_box_mid ", [crop_box_mid_x, crop_box_mid_y])
+    logging.debug("keyword ", keyword_box)
     orientation = []
 
     x_dis = crop_box_mid_x - keyword_box_mid_x
@@ -214,8 +218,8 @@ def break_boundaries(ocr_data, field_data, box, field_conf_threshold):
 
     orientations, crop_box = get_orientations(field_data)
 
-    print("orientations - ", orientations)
-    print("box before - ", box)
+    logging.debug("orientations - ", orientations)
+    logging.debug("box before - ", box)
     box = expand_along_orientation(box, orientations)
 
     # box = [box['left'],box['right'],box['bottom'],box['top']]
@@ -223,7 +227,7 @@ def break_boundaries(ocr_data, field_data, box, field_conf_threshold):
     keyList=keyword.split()
     keyList = [i.strip() for i in keyList]
 
-    print("box = ", box)
+    logging.debug("box = ", box)
     word = []
     temp_highlight = []
     for data in ocr_data:

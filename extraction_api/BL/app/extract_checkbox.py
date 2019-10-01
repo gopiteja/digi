@@ -1,51 +1,49 @@
-# import comtypes.client as cc
 import cv2
 import imutils
-# import pythoncom
 import traceback
 import os
 import json
-from pdf2image import convert_from_path
 import base64
+import io
+import math
+import re
+import copy
+import requests
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from wand.image import Image
 from wand.drawing import Drawing
 from wand.color import Color
 import numpy as np
 from io import BytesIO
-import io
-# import extract
-from app.electro_magnet import *
-import matplotlib.pyplot as plt
-import math
-import re
-import copy
 from nltk import edit_distance
-import requests
-parent_dir = os.getcwd()
 from py_zipkin.zipkin import zipkin_span,ZipkinAttrs, create_http_headers_for_new_span
+from pdf2image import convert_from_path
 from ace_logger import Logging
-with open('/var/www/extraction_api/app/parameters.json') as f:
-    parameters = json.loads(f.read())
+
+
+import matplotlib.pyplot as plt
+try:
+    from app.electro_magnet import *
+    with open('app/parameters.json') as f:
+        parameters = json.loads(f.read())
+except:
+    from electro_magnet import *
+    with open('parameters.json') as f:
+        parameters = json.loads(f.read())
+
+parent_dir = os.getcwd()
 logging = Logging()
-# with open(parent_dir+'/configs/parameters.json') as f:
-#     parameters = json.loads(f.read())
-
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
-import requests
-
-
-
 
 def checkbox_selector(file_name, checkbox_data, ocr_data, cordextract, output, output_):
-    print('checkbox_data')
-    print(checkbox_data)
-    print('corddd',cordextract)
+    logging.debug('checkbox_data')
+    logging.debug(checkbox_data)
+    logging.debug(f'corddd {cordextract}')
     ocr_length = len(ocr_data)
     pages = None
     if file_name.lower().endswith('.pdf'):
-        print('Converting PDF to images... ')
+        logging.debug('Converting PDF to images... ')
         filename_with_path = '/var/www/table_api/app/invoice_files/' + file_name
         pages = convert_from_path(filename_with_path, dpi=500)
     # iterate each checkbox field
@@ -58,7 +56,7 @@ def checkbox_selector(file_name, checkbox_data, ocr_data, cordextract, output, o
             num_of_words = len(keyword.split())
             page_no = int(cbox['page'])
             validation = cbox['validation']
-            print('validation is ', validation)
+            logging.debug(f'validation is  {validation}')
 
             # If keyword is there then get the nearest keyword to the trained
             # keyword and use relative position of that keyword to get the value
@@ -80,13 +78,13 @@ def checkbox_selector(file_name, checkbox_data, ocr_data, cordextract, output, o
                                 if val:
                                     break
                 if val:
-                    print("VALUE FOUND:", val)
+                    logging.debug(f"VALUE FOUND: {val}')
                 else:
                     try:
-                        print('OCR DATA IS {} LENGTH IS {} TYPE is {} PAGE NO is {}'.format(ocr_data,len(ocr_data), type(ocr_data), page_no))
+                        logging.debug('OCR DATA IS {} LENGTH IS {} TYPE is {} PAGE NO is {}'.format(ocr_data,len(ocr_data), type(ocr_data), page_no))
                         val, valCords = closest_field_extract(ocr_data[page_no], keyword, scope, cbox, file_name, check_field, validation=validation, pages=pages)
                     except Exception as e:
-                        print('In extract checkbox CLOSEST KEY {} not found in the OCR exception is {} type is {}'.format(keyword, e, type(page_no)))
+                        logging.debug('In extract checkbox CLOSEST KEY {} not found in the OCR exception is {} type is {}'.format(keyword, e, type(page_no)))
             else:
                 # No keyword
                 field_value = []
@@ -135,16 +133,16 @@ def checkbox_selector(file_name, checkbox_data, ocr_data, cordextract, output, o
 
 
 def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filename, field_name, validation=None, pages=None):
-    print('field name is ', field_name)
-    print('field data is ', field_data)
+    logging.debug(f'field name is {field_name}')
+    logging.debug(f'field data is  {field_data}')
     rel_top = field_data['top']
     rel_bottom = field_data['bottom']
     rel_left = field_data['left']
     rel_right = field_data['right']
 
     keyList = keyword.split()
-    print('Keyword list is', keyList)
-    # print("\nKeyList:\n%s" % keyList)
+    logging.debug(f'Keyword list is {keyList}')
+    # logging.debug("\nKeyList:\n%s" % keyList)
     keyLength = len(keyList)
     page_no = page
     
@@ -157,7 +155,7 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
             regex = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
             check = False
             if (data['word'] == keyList[0] or (regex.search(data['word']) != None and keyList[0] in data['word'])):
-                print('WORD FOUND IS ',data['word'])
+                logging.debug(f'WORD FOUND IS {data["word"]}')
                 if (keyLength > 1):
                     for x in range(0, keyLength):
                         if i + x >= ocr_length:
@@ -176,14 +174,14 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
 
             tempCords = [{}] * 1
             if (check):
-                # print("-----")
-                # print(data['word'])
+                # logging.debug("-----")
+                # logging.debug(data['word'])
                 counter = counter + 1
                 top = 1000
                 bottom = 0
                 # Left is of the first word
                 if (data['word'] == keyList[0] or (regex.search(data['word']) != None and keyList[0] in data['word'])):
-                    print('WORD 2 FOUND IS ',data['word'])
+                    logging.debug(f'WORD 2 FOUND IS {data["word"]}')
                     tempCords[0]['left'] = data['left']
                     for x in range(0, keyLength):
                         # Right is of the last word
@@ -193,7 +191,7 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
                         # If multi word key
                         if (keyLength > 1):
                             if (ocr_data[page_no][i + x]['word'] == keyList[x]):
-                                # print("%s" % keyList[x])
+                                # logging.debug("%s" % keyList[x])
                                 if (ocr_data[page_no][i + x]['top'] < top):
                                     top = ocr_data[page_no][i + x]['top']
                                 if (ocr_data[page_no][i + x]['bottom'] > bottom):
@@ -204,11 +202,11 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
 
                     tempCords[0]['top'] = top
                     tempCords[0]['bottom'] = bottom
-                    # print(tempCords)
-                    print('tempCords for {} is {}'.format(data['word'], tempCords[0]))
+                    # logging.debug(tempCords)
+                    logging.debug('tempCords for {} is {}'.format(data['word'], tempCords[0]))
                     keyCords.append(tempCords[0])
 
-        # print("\nNo of occurences of %s:\n%s" %(keyword,counter))
+        # logging.debug("\nNo of occurences of %s:\n%s" %(keyword,counter))
     if (counter > 0):
         keysDict = keyCords
         inpX = (inp['y'] + inp['y'] + inp['height']) / 2
@@ -223,7 +221,7 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
             y = abs(midwidth - inpY)
             dist = math.sqrt((x * x) + (y * y))
             DistList.append(round(dist, 2))
-        # print("\nKey distance dictionary:\n%s" % DistList)
+        # logging.debug("\nKey distance dictionary:\n%s" % DistList)
         closestKey = min(DistList)
         minIndex = DistList.index(closestKey)
 
@@ -233,13 +231,13 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
         box_left = keyCords[minIndex]['left'] - rel_left
         box_right = keyCords[minIndex]['right'] + rel_right
         box = [box_left, box_right, box_bottom, box_top]
-        print('box is ', box)
-        print('keycords is ', keyCords)
+        logging.debug(f'box is {box}')
+        logging.debug(f'keycords is  {keyCords}')
         word = []
         valueCords = []
-        print('filename is ', filename)
+        logging.debug(f'filename is  {filename}')
         if validation:
-            print('entered in checkbox')
+            logging.debug('entered in checkbox')
             if 'checkbox body' in validation.lower() or 'checkbox body' in validation.lower():
                 state, cboxCords = extract_checkbox_cords(filename, box, keyCords[minIndex], page_no, field_name, keyword, pdf_pages=pages)
                 if cboxCords:
@@ -266,12 +264,12 @@ def keyword_selector_with_cords(ocr_data, keyword, inp, field_data, page, filena
         return ' '.join(word), valueCords
 
     else:
-        print('Exact Keyword not found in OCR')
+        logging.debug('Exact Keyword not found in OCR')
         return None, []
 
 
 def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename, field_name, validation=None, pages=None):
-    print('FIELD DATA In CLOSEST is ', field_data)
+    logging.debug(f'FIELD DATA In CLOSEST is  {field_data}')
     size_increment = 100#Constant value of expanding of scope field box
     sort=True
     right_offset=0
@@ -284,10 +282,10 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
             field_tokens.append(val)# add only non special characters to field kw list
             right_offset+=7 #because special character removed, keyword's right should not reduce
     length = len(field_tokens)
-    # print("\nNo. of keywords to be found: ",length)
+    # logging.debug("\nNo. of keywords to be found: ",length)
 
-    # print("\nFinal field tokens: ",field_tokens)
-    # print("\nOriginal field tokens :",original_field_tokens)
+    # logging.debug("\nFinal field tokens: ",field_tokens)
+    # logging.debug("\nOriginal field tokens :",original_field_tokens)
     scope_page_data = []
 
     if scope:
@@ -297,7 +295,7 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
         box_l = scope['x'] - size_increment
 
         box = [box_l, box_r, box_b, box_t]
-        print("\nExpanded scope box",box)
+        logging.debug(f"\nExpanded scope box{box}")
         for data in page_data:
             word_t = data['top']
             word_r = data['left'] + data['width']
@@ -311,7 +309,7 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
 
     if sort:
         data = sorted(scope_page_data, key = lambda i: (i['top']))
-        # print("\nData:",data)
+        # logging.debug("\nData:",data)
 
     for i in range(len(data)-1):
         if abs(data[i]['top'] - data[i+1]['top']) < 5:
@@ -328,8 +326,8 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
     for i in scope_page_data:
         if not re.match(r'^[_\W]+$', i["word"]):
             i["word"]=re.sub('[^ a-zA-Z0-9]', '', i["word"])#remove special character from scope box
-    # print("\nSorted data:",sorted_data)
-    # print("\nWith_special",with_special)
+    # logging.debug("\nSorted data:",sorted_data)
+    # logging.debug("\nWith_special",with_special)
 
 
     og_words=[]#to store all closest keywords found,in original format,with special characters
@@ -341,19 +339,19 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
             kw=field_tokens[index].lower()
             ocr_word=sorted_data[line_no + index]['word'].lower()
             ed=edit_distance(kw,ocr_word)
-            print('ocr word is {} and kw is{} and ed is{}'.format(ocr_word,kw, ed))
+            logging.debug('ocr word is {} and kw is{} and ed is{}'.format(ocr_word,kw, ed))
             if not ( ( ed<=1 and 1<len(ocr_word)<=4)  or ( ed <=2 and 10>=len(ocr_word)>4 )  or ( ed <=3 and len(ocr_word)>10  )  )   :
                 flag = False
-                print("---")
+                logging.debug("---")
             else:
                 og_words.append(with_special[line_no + index]['word'].lower())
             index += 1
         if flag == True and index == length:
-            print(og_words,"++++")
+            logging.debug(f"{og_words} ++++")
             # keyCords = [with_special[line_no + index]['left'], with_special[line_no + index]['lef']]
-            # print("\nKeywords coords to merge:\n",sorted_data[line_no: line_no + length])
+            # logging.debug("\nKeywords coords to merge:\n",sorted_data[line_no: line_no + length])
             result=merge_fields(sorted_data[line_no: line_no + length])#get combined coordinates
-            print("\nMerged kw box\n",result)
+            logging.debug(f"\nMerged kw box\n{result}")
             result = result[0]
             result["left"]=result["x"]
             result["top"]=result["y"]
@@ -370,12 +368,12 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
             box_right=result['right']+rel_right+right_offset #offset is imp
 
             box = [box_left, box_right, box_bottom, box_top]
-            # print("\nBOX TO EXTRACT",box)
+            # logging.debug("\nBOX TO EXTRACT",box)
             word=[]
             valueCords = []
             page_no = int(field_data['page'])
             if 'checkbox' in validation.lower() or 'check box' in validation.lower():
-                print('Heere in checkbox box is ', box)
+                logging.debug(f"Heere in checkbox box is {box}")
                 state, cboxCords = extract_checkbox_cords(filename, box, result, page_no, field_name, keyword_sentence, pdf_pages=pages)
                 valueCords.append({'word': keyword_sentence, 'left': cboxCords[0], 'right': cboxCords[2],
                                    'width': cboxCords[2] - cboxCords[0], 'height': cboxCords[3] - cboxCords[1],
@@ -438,23 +436,23 @@ def copy_file(blob,filename,url="http://192.168.0.138:5087/copy_file"):
     
 def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name, keyword, pdf_pages=None):
     try:
-        print('keycords are ',keycords)
-        print('box is ',selected_box)
+        logging.debug(f'keycords are {keycords}')
+        logging.debug(f'box is {selected_box}')
         # filename = parameters['ui_folder']+'assets/images/invoices/'+filename
         try:
             host = '172.31.45.112'
             port = 5002
             route = 'get_blob_data'
-            print(f'Hitting URL: http://{host}:{port}/{route}')
-            print(f'Sending Data: "case_id":{filename}')
+            logging.debug(f'Hitting URL: http://{host}:{port}/{route}')
+            logging.debug(f'Sending Data: "case_id":{filename}')
             response = requests.post(f'http://{host}:{port}/{route}', json= {'case_id':filename})
-            print("step 1")
+            logging.debug("step 1")
             blob_resp = response.json()
-            print("step 2")
+            logging.debug("step 2")
             blob = blob_resp['data'].replace('data:application/pdf;base64,','').strip()
 
             try:
-                print('In try loop')
+                logging.debug('In try loop')
                 pdf_blob = base64.b64decode(blob)
                 all_pages = Image(blob=pdf_blob)   # PDF will have several pages.
                 single_image = all_pages.sequence[int(page_no)] 
@@ -467,14 +465,14 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
                 res_h = int(h/rf)
                 image.resize(670,res_h,filter = 'gaussian')
 
-                print('Obtained Image')
+                logging.debug('Obtained Image')
             except Exception as e:
-                print("Error reading Image", e)
+                logging.exception(f"Error reading Image")
 
 
         except Exception as e:
-            print(e)
-        # print(pdf_pages)
+            logging.exception(e)
+        # logging.debug(pdf_pages)
         # new_filename = '/app/invoices/{}'.format(fname)
         # copy_file(fname,url = "http://192.168.0.138:5087/copy_file")
 
@@ -482,35 +480,35 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
         # try:
         #     image = cv2.imdecode(img_buffer, cv2.IMREAD_UNCHANGED)       
         # except Exception as e:
-        #     print('Not able to read image', e)
+        #     logging.debug('Not able to read image', e)
             
         # dimensions of image for resize factor
         # h, width, channels = image.shape
         # calculate resize factor
-        print('h ',h,'width ',width)
+        logging.debug(f'h {h} width {width}')
         rf = 1        # Need to define
         # resize cropped box and keyword co-ordinates
         keycords = {key: int(value*rf) for key, value in keycords.items() if not type(value) == str}  # keycords = {'left', 'right', 'top', 'bottom'}
-        print('key cords are ', keycords)
+        logging.debug(f'key cords are {keycords}')
         # take the cropped region
-        print('box is',selected_box[0],selected_box[3],keycords['left'], selected_box[2])
+        logging.debug(f'box is {selected_box[0]},{selected_box[3]},{keycords["left"]}, {selected_box[2]}')
 
         image.crop(selected_box[0],selected_box[3],keycords['left'], selected_box[2])  # left,top,right,bottom
         
         new_image = image.clone()
-        print(new_image.height)
-        print(new_image.width)
+        logging.debug(new_image.height)
+        logging.debug(new_image.width)
         img_buffer=np.asarray(bytearray(new_image.make_blob()), dtype=np.uint8)
         image = cv2.imdecode(img_buffer, cv2.IMREAD_GRAYSCALE)
         scaleX = 0.6
         scaleY = 0.6
-        print('before resize',image.shape)
+        logging.debug(f'before resize {image.shape}')
         scaleUp = cv2.resize(image, None, fx= scaleX*10, fy= scaleY*10, interpolation= cv2.INTER_LINEAR)
-        print('scale up ',scaleUp.shape)
+        logging.debug(f'scale up {scaleUp.shape}')
         final_copy = scaleUp.copy()
         kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
         im = cv2.filter2D(scaleUp, -1, kernel)
-        print('shape is ',im.shape)
+        logging.debug(f'shape is {im.shape}')
         
         
         thresh = cv2.adaptiveThreshold(im, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 31, 2)
@@ -521,28 +519,28 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
 
         new_copy = img_dilation.copy()
         backtorgb = cv2.cvtColor(scaleUp,cv2.COLOR_GRAY2RGB)
-        print(len(cnts))
+        logging.debug(len(cnts))
         cont_ares = []
         for c in cnts:
             # approximate the contour
             accuracy = 0.03*cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, accuracy, True)
-            print(len(approx))
-            print(cv2.contourArea(approx))
+            logging.debug(len(approx))
+            logging.debug(cv2.contourArea(approx))
             if cv2.contourArea(approx) < 6000 and cv2.contourArea(approx) > 2000:
                 cont_ares.append((len(approx),cv2.contourArea(approx),approx))
         cont_ares.sort(key = lambda x:x[1],reverse = True)
         cont_ares_max = cont_ares[0]
         max_rect_cord = cont_ares_max[-1]
-        print(max_rect_cord)
+        logging.debug(max_rect_cord)
         max_rec = max_rect_cord.tolist()
 
         x,y,w,h = cv2.boundingRect(max_rect_cord)
-        print(x,y,w,h)
-        # print('new shape ',new_image.shape)
-        print(y+10,y+h-10,x+10,x+w-10)
+        logging.debug(f'{x},{y},{w},{h}')
+        # logging.debug('new shape ',new_image.shape)
+        logging.debug(f'{y+10},{y+h-10},{x+10},{x+w-10}')
         crop_img = final_copy[y+13:y+h-10,x+13:x+w-10]
-        print('crop shape',crop_img.shape)
+        logging.debug(f'crop shape {crop_img.shape}')
 
         if crop_img.shape[0] > crop_img.shape[1]:
             final_crop = crop_img.shape[1]
@@ -556,7 +554,7 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
         
         
         # cropped_image = image.make_blob()
-        print("Cropped file successfully")
+        logging.debug("Cropped file successfully")
         # cropped_image = image[crop_box[3]:crop_box[2], crop_box[0]:crop_box[1]]
         # keyword_image = image[keycords['top']:keycords['bottom'], keycords['left']: keycords['right']]
 
@@ -566,25 +564,25 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
         # Java API Call
 
         copy_file(image_data,filename=filename,url = "http://7e72bbd1.ngrok.io/copy_file")
-        print('copied file successfully')
+        logging.debug('copied file successfully')
         value_extract_params = {'filename':filename+'.png','left':str(0),'right':str(final_crop),'top':str(1),'bottom':str(final_crop),'checkmark_type':'SQUARE'}
         value_extract_params = json.dumps(value_extract_params)
         host = '192.168.0.142'   # ip address
         port = 8081
         route = 'get_checkmark'
-        print(f'Hitting URL: http://{host}:{port}/{route}')
-        print(f'Sending Data: {value_extract_params}')
+        logging.debug(f'Hitting URL: http://{host}:{port}/{route}')
+        logging.debug(f'Sending Data: {value_extract_params}')
         headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
         response = requests.post(f"http://2f91d92e.ngrok.io/get_checkmark?checkbox_param={value_extract_params}", headers=headers)
         # response = requests.post(f'http://{host}:{port}/{route}', data={'checkbox_params':json.dumps(value_extract_params)}, headers=headers)
-        # print('response',response.content)
-        print(response.text)
-        print('response',json.loads(response.text))
+        # logging.debug('response',response.content)
+        logging.debug(response.text)
+        logging.debug(f'response {json.loads(response.text)}')
         res = json.loads(response.text)
         checkmark_state = res['cmarkstate']
         # import pdb
         # pdb.set_trace()
-        # print('response',json.loads(response.text))
+        # logging.debug('response',json.loads(response.text))
         "left top right bottom"
         cbox = [selected_box[0],selected_box[3],selected_box[1],selected_box[2]]   
         if checkmark_state == 'CMCS_NotChecked':
@@ -598,5 +596,5 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
         else:
             return 'None', cbox
     except Exception as e:
-        traceback.print_exc()
+        logging.exception('not able to process')
         return 'not able to process'

@@ -2,6 +2,8 @@ import sys
 import pdb
 import re
 import math
+from ace_logger import Logging
+
 
 try:
     from app.smart_training.key_value_method_key_prediction import get_split_info
@@ -20,6 +22,7 @@ except:
     from get_keywords import compute_all_key_list_coord
     from get_keywords import get_key_list_coord
 
+logging = Logging()
 
 def keyword_extract(pre_processed_char, keyword, scope):
     '''
@@ -45,7 +48,7 @@ def keyword_extract(pre_processed_char, keyword, scope):
         return  {'height': key_bottom-key_top, 'width': key_right-key_left, 'y': key_top, 'x': key_left }
 
     else:
-        print('keyword not found in OCR')
+        logging.debug('keyword not found in OCR')
         return {}
 
 
@@ -97,7 +100,7 @@ def predict_keywords(keywords, values, kv_keywords, file_ocr, page_no, pre_proce
     Return :
 
     """
-    print(kv_keywords)
+    logging.debug(kv_keywords)
     # print(values)
     key_val = []
     key_scope_actual = ''
@@ -230,7 +233,7 @@ def main():
         'boundary_data' : feud
     }
 
-    print(training_info)
+    logging.debug(training_info)
 
 
 # main()
