@@ -78,7 +78,7 @@ def checkbox_selector(file_name, checkbox_data, ocr_data, cordextract, output, o
                                 if val:
                                     break
                 if val:
-                    logging.debug(f"VALUE FOUND: {val}')
+                    logging.debug(f"VALUE FOUND: {val}")
                 else:
                     try:
                         logging.debug('OCR DATA IS {} LENGTH IS {} TYPE is {} PAGE NO is {}'.format(ocr_data,len(ocr_data), type(ocr_data), page_no))
