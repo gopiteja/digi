@@ -49,7 +49,7 @@ def export_json(content, tenant_id):
     # * STEP 0 - Get metadata
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
 
-    case_data = queue_db.get_all('process_queue', {'case_id': case_id})
+    case_data = queue_db.get_all('process_queue', condition={'case_id': case_id})
     # latest_case_file = queue_db.get_latest(case_files, 'case_id', 'created_date')
 
     if case_data.empty:
