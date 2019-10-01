@@ -300,7 +300,10 @@ def value_extract(result, api=False, retrained=False):
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queues_db.execute(query, params=params)
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
 
         if ocr_data is None or not ocr_data:
             message = 'OCR data is none/empty string'

@@ -1819,7 +1819,10 @@ def retrain():
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queue_db.execute(query, params=params)
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
         trained_data = get_trained_info(ocr_data, fields, resize_factor)
 
         # * Add trained information & template name into `trained_info` table
@@ -1908,7 +1911,11 @@ def test_fields():
 
         ocr_data_df = queue_db.execute(query, params=[case_id])
 
-        ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
+        try:
+            ocr_data = json.loads(json.loads(ocr_data_df['ocr_data'].iloc[0]))
+        except:
+            ocr_data = json.loads(ocr_data_df['ocr_data'].iloc[0])
+
 
         checkboxes_all = {}
         if force_check == 'yes':
@@ -2117,7 +2124,11 @@ def train():
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queue_db.execute(query, params=params)
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+
 
         trained_data, checkboxes_all = get_trained_info(ocr_data, fields, resize_factor)
 
@@ -2306,7 +2317,11 @@ def get_ocr_data():
     query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
     params = [case_id]
     ocr_info = db.execute(query, params=params)
-    ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+
+    try:
+        ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+    except:
+        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
 
     pre_processed_char = []
     for index, page in enumerate(ocr_data):
