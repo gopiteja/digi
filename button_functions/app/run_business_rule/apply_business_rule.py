@@ -23,18 +23,20 @@ db_config = {
     'port': os.environ['LOCAL_DB_PORT']
 }
 
-def get_data_sources(tenant_id, case_id, master=False):
+def get_data_sources(tenant_id, case_id, column_name, master=False):
     """Helper to get all the required table data for the businesss rules to apply
     """
     get_datasources_query = "SELECT * from `data_sources`"
     business_rules_db = DB('business_rules', tenant_id=tenant_id, **db_config)
     data_sources = business_rules_db.execute(get_datasources_query)
 
-    # case_id based
-    case_id_based_sources = json.loads(list(data_sources['case_id_based'])[0])
+
+    # sources
+    sources = json.loads(list(data_sources[column_name])[0])
+    
     
     data = {}
-    for database, tables in case_id_based_sources.items():
+    for database, tables in sources.items():
         db = DB(database, tenant_id=tenant_id, **db_config)
         for table in tables:
             if master:
@@ -73,6 +75,9 @@ def update_tables(case_id, tenant_id, updates):
         if table == 'process_queue':
             queue_db.update(table, update=colum_values, where={'case_id':case_id})
     return "UPDATED IN THE DATABASE SUCCESSFULLY"
+
+def run_chained_rules():
+    pass
 
 def run_group_rules(case_id, rules, data):
     """Run the rules"""
@@ -114,10 +119,15 @@ def apply_business_rule(case_id, function_params, tenant_id):
         is_chain_rule = '' not in rule_id_mapping
         
         # get the required table data on which we will be applying business_rules  
-        data_tables = get_data_sources(tenant_id, case_id) 
+        case_id_data_tables = get_data_sources(tenant_id, case_id, 'case_id_based') 
+        master_data_tables = get_data_sources(tenant_id, case_id, 'master', master=True)
+        
+        # consolidate the data into data_tables
+        data_tables = {**case_id_data_tables, **master_data_tables} 
         
         logging.info(f"\ndata got from the tables is\n")
         logging.info(data_tables)
+        
         # apply business rules
         if is_chain_rule:
             # updates = run_chained_rules()
