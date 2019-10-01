@@ -13,7 +13,7 @@ import json
 import os
 from db_utils import DB 
 
-from business_rules.BusinessRules import BusinessRules
+from BusinessRules import BusinessRules
 
 # one configuration
 db_config = {
