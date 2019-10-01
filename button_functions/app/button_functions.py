@@ -74,7 +74,7 @@ def execute_button_function():
 
             first_route = list(group_messages['listen_to_topic'])[0]
             logging.debug(f'First Route: {first_route}')
-            try:    
+            try:
                 query_ = f"SELECT * FROM `button_functions` where `route` = '{first_route}'"
                 button_functions_df = queue_db.execute(query_)
                 button_type = list(button_functions_df['type'])[0]

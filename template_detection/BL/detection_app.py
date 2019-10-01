@@ -136,7 +136,11 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         ocr_data = {}
         logging.warning('OCR data is not in DB or is empty.')
     else:
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+
 
     if ocr_data:
         td = TemplateDetector(tenant_id=tenant_id,
@@ -155,7 +159,7 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         #     return
 
         predicted_template = td.unique_fields(ocr_data)
-        print(f'predicted_template_with_unique_fields - {predicted_template}')
+        logging.debug(f'predicted_template_with_unique_fields - {predicted_template}')
 
         # predicted_template_with_aankho_dekhi = ''
         # predicted_template_with_aankho_dekhi = td.aankho_dekhi_method(ocr_data, predicted_template_with_keyword) 
@@ -491,7 +495,7 @@ def abbyy_template_detection(data):
 
             # If OCR-ed successfully, insert into process_queue with status 1 (success)
             # else insert with status 0 (failed)
-            print("pdf_data", pdf_data)
+            logging.debug(f'pdf_data {pdf_data}')
             # print("saving ocr data")
             # if xml_string is None and isListEmpty(pdf_data):
             #     query = "UPDATE `process_queue` SET `ocr_status`=0, `queue`='Failed' WHERE `case_id`=%s"

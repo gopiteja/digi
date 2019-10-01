@@ -2,6 +2,9 @@
 import traceback
 from difflib import SequenceMatcher
 from math import sqrt
+from ace_logger import Logging
+
+logging = Logging()
 
 thres = 0.7
 word_space_mul = 1.5
@@ -162,7 +165,7 @@ def field_extract_with_cell_method(ocr_data, trained):
           boundary_words = find_in_ocr(ocr_data, extraction_help_data[boundary])
           option[boundary], _ = option_selector(boundary_words, extraction_help_data[boundary])
         except Exception as e:
-          traceback.print_exc()
+          logging.exception('error')
           pass
     except:
       option = {}

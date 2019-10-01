@@ -300,7 +300,10 @@ def value_extract(result, api=False, retrained=False):
         query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
         params = [case_id]
         ocr_info = queues_db.execute(query, params=params)
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
 
         if ocr_data is None or not ocr_data:
             message = 'OCR data is none/empty string'
@@ -435,8 +438,7 @@ def value_extract(result, api=False, retrained=False):
                         output_['method_used'][fte] = method_used
                     except Exception as e:
                         val = ''
-                        traceback.print_exc()
-                        print('Error in extracting for field:{} keyword:{} due to {}'.format(fte, keyword, e))
+                        logging.exception('Error in extracting for field:{} keyword:{} due to {}'.format(fte, keyword, e))
 
                 # 2d method
                 elif not keyword and multi_key_field_info:
@@ -1045,7 +1047,7 @@ def ocrDataLocal_special(T, L, R, B, ocrData):
 
     ocrDataLocal = []
     for data in ocrData:
-        print(data)
+        logging.debug(data)
 
         if (data['left'] + int(0.2 * data['width']) >= L
                 and data['left'] <= R
@@ -1097,16 +1099,16 @@ def find_value_using_box(keyList, ocr_data, page_no, box, field_data, field_conf
     word = []
     temp_highlight = []
 
-    print(box)
+    logging.debug(box)
 
     for data in ocr_data[page_no]:
         if (data['left'] + int(parameters['box_left_margin_ratio'] * data['width']) >= box[0]
                 and data['right'] - int(parameters['box_right_margin_ratio'] * data['width']) <= box[1]
                 and data['top'] + int(parameters['box_top_margin_ratio'] * data['height']) >= box[3]
                 and data['bottom'] - int(parameters['box_bottom_margin_ratio'] * data['height']) <= box[2]):
-            print('keyword select word - ', data['word'])
+            logging.debug('keyword select word - ', data['word'])
             word_box = [data['left'], data['right'], data['bottom'], data['top']]
-            print('word box - ', word_box)
+            logging.debug('word box - ', word_box)
             if (percentage_inside(box, word_box) > parameters['overlap_threshold']
                     and data['word'] not in keyList):
                 if 'junk' in field_data:
@@ -1181,8 +1183,8 @@ def cluster_points_coord(keywords_list, keyCords_list, keyCords):
     """
     keyList = []
 
-    print(keywords_list)
-    print(keyCords_list)
+    logging.debug(f'keywords_list {keywords_list}')
+    logging.debug(f'keyCords_list {keyCords_list}')
 
     coord_clusters, word_clusters = actual_clustering(keywords_list, keyCords_list)
 
@@ -1319,7 +1321,7 @@ def get_pre_process_char(pre_process_char, ocr_data, page_no):
     """
     """
     if not pre_process_char:
-        print('pre prossesing not done, VERY BADDDDD!!!')
+        logging.warning('pre prossesing not done, VERY BADDDDD!!!')
         char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(ocr_data[page_no])
     else:
         try:
