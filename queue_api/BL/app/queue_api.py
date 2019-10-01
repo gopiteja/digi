@@ -941,7 +941,6 @@ def get_fields(case_id=None):
 
         db_config['tenant_id'] = tenant_id
         queue_db = DB('queues', **db_config)
-        # queue_db = DB('queues')
 
         logging.debug(f'Getting ID and operator from process queue for case `{case_id}`')
         query = "SELECT id, operator from process_queue where case_id = %s"
@@ -1063,6 +1062,19 @@ def get_fields(case_id=None):
 
             if display_name in table_fields_:
                 renamed_fields[unique_name] = table_fields_[display_name]
+
+            query = "select unique_name from field_definition where type LIKE '%%picker%%'"
+            date_columns = list(queue_db.execute_(query).unique_name)
+        
+            for k,v in renamed_fields.items():
+                if k in date_columns:
+                    try:
+                        renamed_fields[k] = (renamed_fields[k]).strftime(r'%B %d, %Y %I:%M %p')
+                    except ValueError:
+                        renamed_fields[k] = ''
+                    except:
+                        logging.exception(f'Could not parse {k} value. `{k}`.')
+                        pass
 
             if display_name in highlight and table_name == 'ocr':
                 renamed_higlight[unique_name] = highlight[display_name]
