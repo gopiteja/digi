@@ -144,7 +144,7 @@ class BusinessRules():
             return self.evaluate_rule(param_value)
         if param_source == 'input':
             param_value = param_object['value']
-            param_value = str(param_value).strip() # converting into strings..need to check
+            # param_value = str(param_value).strip() # converting into strings..need to check
             return  param_value
  
 
