@@ -161,7 +161,7 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
         # evaluate the rule
         rules = [json.loads(rule_to_evaluate)] 
         BR  = BusinessRules(case_id, rules, data_tables)
-        decision = BR.evaluate_rule(rule_to_evaluate)
+        decision = BR.evaluate_rule(rules[0])
         
         updates = {}
         # update the updates if any
