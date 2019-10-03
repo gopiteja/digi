@@ -309,6 +309,9 @@ def value_extract(result, api=False, retrained=False):
             message = 'OCR data is none/empty string'
             logging.debug(message)
             return {'flag': False, 'message': message}
+    else:
+        message = f'case_id - {case_id} does not exist'
+        return {'flag': False, 'message': message}
 
     if api:
         field_data = result['field_data']
@@ -342,6 +345,7 @@ def value_extract(result, api=False, retrained=False):
 
         remove_keys = ['header_ocr', 'footer_ocr', 'address_ocr']
         [field_data.pop(key, None) for key in remove_keys]  # Remove unnecessary keys
+
     # No Template, No Extraction
     ocr_length = len(ocr_data)
     word_highlights = {}
