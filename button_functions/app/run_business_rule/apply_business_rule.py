@@ -161,8 +161,16 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
         # evaluate the rule
         rules = [json.loads(rule_to_evaluate)] 
         BR  = BusinessRules(case_id, rules, data_tables)
-        updates = BR.evaluate_business_rules()
+        decision = BR.evaluate_rule(rule_to_evaluate)
         
+        updates = {}
+        # update the updates if any
+        if BR.changed_fields:
+            updates = BR.changed_fields
+            update_tables(case_id, tenant_id, updates)
+
+        logging.info(f"\n got the decision {decision} for the rule id {start_rule_id}")
+        logging.info(f"\n updates got are {updates}")
         # update the trace_data
         trace_exec.append(start_rule_id)
 
@@ -249,7 +257,7 @@ def apply_business_rule(case_id, function_params, tenant_id):
         
         # apply business rules
         if is_chain_rule:
-            updates = run_chained_rules(case_id, rules, data_tables)
+            updates = run_chained_rules(case_id, tenant_id, chain_rules)
             pass
         else:
             updates = run_group_rules(case_id, list(rules['rule_string']), data_tables)
