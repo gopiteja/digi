@@ -1,8 +1,0 @@
-Flask
-Flask-Cors
-pandas
-requests
-sqlalchemy
-mysqlclient
-kafka
-Flask-Caching
