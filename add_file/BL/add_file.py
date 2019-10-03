@@ -42,9 +42,9 @@ def add_file_to_db(data):
     process_queue_df = queue_db.get_all('process_queue')
     case_id_process = process_queue_df.loc[process_queue_df['file_name'] == file_path.name]
     if case_id_process.empty:
-        insert_query = ('INSERT INTO `process_queue` (`file_name`, `case_id`, `file_path`, `source_of_invoice`) '
-            'VALUES (%s, %s, %s, %s)')
-        params = [file_path.name, unique_id, str(file_path.parent.absolute()), str(file_path.parent).split('/')[-1]]
+        insert_query = ('INSERT INTO `process_queue` (`file_name`, `case_id`, `source_of_invoice`) '
+            'VALUES (%s, %s, %s)')
+        params = [file_path.name, unique_id, str(file_path.parents[0])]
         queue_db.execute(insert_query, params=params)
         logging.debug(f' - {file_path.name} inserted successfully into the database')
     else:
