@@ -163,14 +163,16 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
         BR  = BusinessRules(case_id, rules, data_tables)
         decision = BR.evaluate_rule(rules[0])
         
+        logging.info(f"\n got the decision {decision} for the rule id {start_rule_id}")
+        logging.info(f"\n updates got are {updates}")
+        
         updates = {}
         # update the updates if any
         if BR.changed_fields:
             updates = BR.changed_fields
             update_tables(case_id, tenant_id, updates)
 
-        logging.info(f"\n got the decision {decision} for the rule id {start_rule_id}")
-        logging.info(f"\n updates got are {updates}")
+        
         # update the trace_data
         trace_exec.append(start_rule_id)
 
