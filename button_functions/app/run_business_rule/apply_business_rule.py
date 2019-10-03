@@ -99,7 +99,7 @@ def update_tables(case_id, tenant_id, updates):
             queue_db.update(table, update=colum_values, where={'case_id':case_id})
     return "UPDATED IN THE DATABASE SUCCESSFULLY"
 
-def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, update_tables=False, trace_exec=None, rule_params=None):
+def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updated_tables=False, trace_exec=None, rule_params=None):
     """Execute the chained rules"""
     
     # get the mapping of the rules...basically a rule_id maps to a rule
@@ -153,7 +153,7 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
         # update the data_table if there is any change
         case_id_data_tables = get_data_sources(tenant_id, case_id, 'case_id_based')
         master_updated_tables = {} 
-        if update_tables:
+        if updated_tables:
             master_updated_tables = get_data_sources(tenant_id, case_id, 'updated_tables')
         # consolidate the data into data_tables
         data_tables = {**case_id_data_tables, **master_data_tables, **master_updated_tables} 
