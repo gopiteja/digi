@@ -257,7 +257,7 @@ def apply_business_rule(case_id, function_params, tenant_id):
         
         # apply business rules
         if is_chain_rule:
-            updates = run_chained_rules(case_id, tenant_id, chain_rules)
+            updates = run_chained_rules(case_id, tenant_id, rules)
             pass
         else:
             updates = run_group_rules(case_id, list(rules['rule_string']), data_tables)
