@@ -257,14 +257,13 @@ def apply_business_rule(case_id, function_params, tenant_id):
         logging.info(f"\ndata got from the tables is\n")
         logging.info(data_tables)
         
+        updates = {}
         # apply business rules
         if is_chain_rule:
-            updates = run_chained_rules(case_id, tenant_id, rules)
-            pass
+            run_chained_rules(case_id, tenant_id, rules)
         else:
             updates = run_group_rules(case_id, list(rules['rule_string']), data_tables)
             
-        
         # update in the database, the changed fields eventually when all the stage rules were got
         update_tables(case_id, tenant_id, updates)
         
