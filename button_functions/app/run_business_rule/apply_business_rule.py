@@ -199,11 +199,11 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
     
     # store the trace_exec and rule_params in the database
     update_rule_params_query = f"INSERT INTO `rule_data`(`id`, `case_id`, `rule_params`) VALUES ('NULL',%s,%s) ON DUPLICATE KEY UPDATE `rule_params`=%s"
-    params = [case_id, rule_params, rule_params]
+    params = [case_id, json.dumps(rule_params), json.dumps(rule_params)]
     business_rules_db.execute(update_rule_params_query, params=params)
     
     update_trace_exec_query = f"INSERT INTO `rule_data` (`id`, `case_id`, `trace_data`) VALUES ('NULL',%s,%s) ON DUPLICATE KEY UPDATE `trace_data`=%s"
-    params = [case_id, trace_exec, trace_exec]
+    params = [case_id, json.dumps(trace_exec), json.dumps(trace_exec)]
     business_rules_db.execute(update_trace_exec_query, params=params)
     
     logging.info("\n Applied chained rules successfully")
