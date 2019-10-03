@@ -1,8 +1,0 @@
-Flask
-Flask-Cors
-kafka
-kafka
-pandas
-sklearn
-sqlalchemy
-mysqlclient
