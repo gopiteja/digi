@@ -27,11 +27,11 @@ services:
           - servicebridge
     depends_on:
       - apache_base
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "service_bridge_tag"
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:12201
+        tag: "service_bridge_tag"
   
   extraction_api:
     image: 'extraction_api'
@@ -491,7 +491,7 @@ services:
     container_name: elasticsearch
     image: elasticsearch:7.0.0
     ports:
-      - "9200:9200"
+      - "9201:9200"
     networks:
       - service_bridge
     volumes:
