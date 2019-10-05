@@ -571,12 +571,29 @@ def get_queue(queue_id=None):
                 db.execute(update_operator_q,params=[None,operator])
                 logging.debug(f'Time taken for operator update: {time()-oper_st}')
 
+            # Check if queue has children
+            children_dropdown = {}
             try:
                 queue_uid, queue_name, queue_type, queue_definition = queue_name_type(queue_id, tenant_id)
             except:
-                message = 'Some column ID not found in column definition table.'
+                message = 'Some error in queue definition configuration'
                 logging.exception(message)
                 return jsonify({'flag': False, 'message': message})
+
+            query = "select id,name from queue_definition where parent=%s and level=3"
+            result = db.execute_(query,params=[queue_uid])
+            count = len(list(result))
+
+            if count > 0:
+                queue_id = list(result.id)[0]
+                children_dropdown = result.to_dict(orient='records')
+
+                try:
+                    queue_uid, queue_name, queue_type, queue_definition = queue_name_type(queue_id, tenant_id)
+                except:
+                    message = 'Some error in queue definition configuration'
+                    logging.exception(message)
+                    return jsonify({'flag': False, 'message': message})
 
             if queue_type == 'train':
                 logging.info(f' > Redirecting to `get_template_exception` route.')
@@ -756,6 +773,7 @@ def get_queue(queue_id=None):
                 'pagination': pagination,
                 'column_mapping': column_mapping,
                 'column_order': list(column_mapping.keys()),
+                'children_dropdown': children_dropdown
             }
             logging.debug(f'Total time taken to get `{queue_name}` {time()-rt_time}')
 
