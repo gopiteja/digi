@@ -572,7 +572,7 @@ def get_queue(queue_id=None):
                 logging.debug(f'Time taken for operator update: {time()-oper_st}')
 
             # Check if queue has children
-            children_dropdown = {}
+            children_dropdown = []
             try:
                 queue_uid, queue_name, queue_type, queue_definition = queue_name_type(queue_id, tenant_id)
             except:
