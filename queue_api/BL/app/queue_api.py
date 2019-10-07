@@ -582,7 +582,7 @@ def get_queue(queue_id=None):
 
             query = "select id,name from queue_definition where parent=%s and level=3"
             result = db.execute_(query,params=[queue_uid])
-            count = len(list(result))
+            count = len(result.values.tolist())
 
             if count > 0:
                 queue_id = list(result.id)[0]
