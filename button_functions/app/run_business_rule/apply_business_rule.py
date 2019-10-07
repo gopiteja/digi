@@ -99,7 +99,7 @@ def update_tables(case_id, tenant_id, updates):
             queue_db.update(table, update=colum_values, where={'case_id':case_id})
     return "UPDATED IN THE DATABASE SUCCESSFULLY"
 
-def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, update_tables=False, trace_exec=None, rule_params=None):
+def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updated_tables=False, trace_exec=None, rule_params=None):
     """Execute the chained rules"""
     
     # get the mapping of the rules...basically a rule_id maps to a rule
@@ -153,7 +153,7 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
         # update the data_table if there is any change
         case_id_data_tables = get_data_sources(tenant_id, case_id, 'case_id_based')
         master_updated_tables = {} 
-        if update_tables:
+        if updated_tables:
             master_updated_tables = get_data_sources(tenant_id, case_id, 'updated_tables')
         # consolidate the data into data_tables
         data_tables = {**case_id_data_tables, **master_data_tables, **master_updated_tables} 
@@ -161,7 +161,10 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
         # evaluate the rule
         rules = [json.loads(rule_to_evaluate)] 
         BR  = BusinessRules(case_id, rules, data_tables)
-        decision = BR.evaluate_rule(rule_to_evaluate)
+        decision = BR.evaluate_rule(rules[0])
+        
+        logging.info(f"\n got the decision {decision} for the rule id {start_rule_id}")
+        logging.info(f"\n updates got are {BR.changed_fields}")
         
         updates = {}
         # update the updates if any
@@ -169,8 +172,7 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
             updates = BR.changed_fields
             update_tables(case_id, tenant_id, updates)
 
-        logging.info(f"\n got the decision {decision} for the rule id {start_rule_id}")
-        logging.info(f"\n updates got are {updates}")
+        
         # update the trace_data
         trace_exec.append(start_rule_id)
 
@@ -197,12 +199,12 @@ def run_chained_rules(case_id, tenant_id, chain_rules, start_rule_id=None, updat
     
     # store the trace_exec and rule_params in the database
     update_rule_params_query = f"INSERT INTO `rule_data`(`id`, `case_id`, `rule_params`) VALUES ('NULL',%s,%s) ON DUPLICATE KEY UPDATE `rule_params`=%s"
-    params = [case_id, rule_params, rule_params]
-    business_rules_db.execute(rule_data_query, params=params)
+    params = [case_id, json.dumps(rule_params), json.dumps(rule_params)]
+    business_rules_db.execute(update_rule_params_query, params=params)
     
     update_trace_exec_query = f"INSERT INTO `rule_data` (`id`, `case_id`, `trace_data`) VALUES ('NULL',%s,%s) ON DUPLICATE KEY UPDATE `trace_data`=%s"
-    params = [case_id, trace_exec, trace_exec]
-    business_rules_db.execute(rule_data_query, params=params)
+    params = [case_id, json.dumps(trace_exec), json.dumps(trace_exec)]
+    business_rules_db.execute(update_trace_exec_query, params=params)
     
     logging.info("\n Applied chained rules successfully")
     return 'Applied chained rules successfully'
@@ -255,14 +257,13 @@ def apply_business_rule(case_id, function_params, tenant_id):
         logging.info(f"\ndata got from the tables is\n")
         logging.info(data_tables)
         
+        updates = {}
         # apply business rules
         if is_chain_rule:
-            updates = run_chained_rules(case_id, tenant_id, chain_rules)
-            pass
+            run_chained_rules(case_id, tenant_id, rules)
         else:
             updates = run_group_rules(case_id, list(rules['rule_string']), data_tables)
             
-        
         # update in the database, the changed fields eventually when all the stage rules were got
         update_tables(case_id, tenant_id, updates)
         
