@@ -97,5 +97,5 @@ cluster.initial_master_nodes: ["logger-node"]
 #       starttls.enable: true
 #       host: smtp.gmail.com
 #       port: 587
-#       user: ashyam.zubair@algonox.com
-#       password: Ashu.11858
+#       user: 
+#       password: 
