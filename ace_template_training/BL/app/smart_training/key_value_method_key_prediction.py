@@ -285,14 +285,14 @@ def get_split_info(field_box, value_meta, keyword_box):
     field_value_coords = {}
 
     if keyword_box:
-        logging.debug('direction', get_rel_info(keyword_box, value_meta, 'direction'))
+        logging.debug(f'direction - {get_rel_info(keyword_box, value_meta, "direction")}')
         if get_rel_info(keyword_box, value_meta, 'direction') == 'left':
             field_value_coords = field_value_coords_left
         else:
             field_value_coords = field_value_coords_bottom
 
-        logging.debug('keyword_box', keyword_box)
-        logging.debug('field_value_coords', field_value_coords)
+        logging.debug(f'keyword_box {keyword_box}')
+        logging.debug(f'field_value_coords - {field_value_coords}' )
         key_val_meta = get_rel_info(keyword_box, field_value_coords)
     key_val_meta = {**field_value_coords, **key_val_meta}
 

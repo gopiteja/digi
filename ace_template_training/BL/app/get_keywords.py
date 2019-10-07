@@ -424,9 +424,14 @@ def get_page_dimension(case_id, tenant_id, standard_width=670):
         query = f'select id, file_name from process_queue where case_id = "{case_id}"'
         file_name = list(queue_db.execute(query)['file_name'])[0]
 
-        file_name = output_path + '/' + file_name
+        try:
+            file_name = output_path + '/' + file_name
+        except:
+            file_name = output_path + '/' + case_id + '.pdf'
+
         file_path = Path(source_folder) / file_name
         try:
+            logging.debug(f'file_path - {file_path}')
             with open(file_path, 'rb') as file_blob:
                 file = PdfFileReader(file_blob)
                 for page in range(file.numPages):
@@ -455,7 +460,9 @@ def get_page_dimension(case_id, tenant_id, standard_width=670):
 
                 page_dimensions[page] = (width / rf, height / rf)
         except:
-            raise Exception('merged blob and pdf both are not there')
+            message = 'merged blob and pdf both are not there'
+            logging.error(message)
+            raise Exception(message)
 
     return page_dimensions
 

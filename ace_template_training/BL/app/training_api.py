@@ -1938,11 +1938,14 @@ def test_fields():
             logging.info(f'trained_info `{trained_info}`')
             logging.info(f'checkbox_info `{checkboxes_all}`')
 
-        value_extract_params = {"case_id": case_id,
+        value_extract_params = {
+                                "case_id": case_id,
                                 "field_data": trained_info,
                                 "checkbox_data": checkboxes_all,
-                                "tenant_id" : tenant_id
+                                "tenant_id": tenant_id
                                 }
+        if os.environ['MODE'] == "Test":
+            return value_extract_params
 
         host = 'extractionapi'
         port = 80
@@ -2262,7 +2265,11 @@ def get_ocr_data():
 
     case_id = data['case_id']
 
-    tenant_id = data['tenant_id'] if 'tenant_id' in data else None
+    try:
+        tenant_id = data['tenant_id']
+    except:
+        return jsonify({'flag': False, 'message': 'Tenant_id not present'})
+
 
     logging.debug(f'case_id - {case_id}')
 
@@ -2328,11 +2335,18 @@ def get_ocr_data():
         pre_processed_char.append([char_index_list, haystack])
 
     pdf_type = list(case_files.document_type)[0]
-    file_name = file_parent + list(case_files['file_name'])[0]
+
+    file_name = list(case_files['file_name'])[0]
+
+    try:
+        file_name = file_parent + file_name
+    except:
+        file_name = file_parent + case_id + '.pdf'
 
     quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
 
-    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id, tenant_id=tenant_id)
+    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id,
+                                        tenant_id=tenant_id)
 
     ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
 
@@ -2353,7 +2367,6 @@ def get_ocr_data():
 
     field_validations = get_field_validations(tenant_id)
 
-    # todo remove field_keyword from ocr_data
     predicted_fields = get_predicted_fields(
         mandatory_fields,
         all_values,

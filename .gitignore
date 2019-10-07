@@ -148,3 +148,5 @@ extraction_api/BL/app/extract_checkbox.py
 
 # VSCode
 .vscode
+*.env
+/.idea/
