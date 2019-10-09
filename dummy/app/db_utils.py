@@ -302,7 +302,7 @@ class DB(object):
                 where_clause.append(f'{where_column}=%s')
                 where_value_list.append(where_value)
             where_clause_string = ' AND '.join(where_clause)
-            return self.execute(f'SELECT * FROM `{table}` WHERE `{where_clause_string}`')
+            return self.execute(f'SELECT * FROM `{table}` WHERE `{where_clause_string}`', params=where_value_list)
 
         return self.execute(f'SELECT * FROM `{table}`')
 
