@@ -133,19 +133,24 @@ def consume(broker_url='broker:9092'):
                             data = response_data['send_data'] if 'send_data' in response_data else {}
                             data['workflow'] = workflow
                             
-                            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
-                            message_flow = kafka_db.execute(query, params=[topic, workflow])
-                            
-                            if message_flow.empty:
-                                logging.error('`folder_monitor` is not configured correctly in message flow table.')
+                            if os.environ['MODE'] == 'Test':
+                                data = response_data['send_data'] if 'send_data' in response_data else {}
+                                logging.info('Message commited!')
+                                produce('test', data)
                             else:
-                                topic = list(message_flow.send_to_topic)[0]
-
-                                if topic is not None:
-                                    logging.info(f'Producing to topic {topic}')
-                                    produce(topic, data)
+                                query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                                message_flow = kafka_db.execute(query, params=[topic, workflow])
+                                
+                                if message_flow.empty:
+                                    logging.error('`folder_monitor` is not configured correctly in message flow table.')
                                 else:
-                                    logging.info(f'There is no topic to send to for `{topic}`.')
+                                    topic = list(message_flow.send_to_topic)[0]
+
+                                    if topic is not None:
+                                        logging.info(f'Producing to topic {topic}')
+                                        produce(topic, data)
+                                    else:
+                                        logging.info(f'There is no topic to send to for `{topic}`.')
                         else:
                             logging.info('Message not consumed. Some error must have occured. Will try again!')
                     else:

@@ -1,0 +1,36 @@
+version: '3.6'
+
+networks:
+  service_bridge:
+    name: service_bridge
+    driver: overlay
+
+services:
+  test_training:
+    image: 'test_training'
+    container_name: 'test_training'
+    build: ./ace_template_training/TL
+    networks:
+      - service_bridge
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+
+
+  test_extraction:
+    image: 'test_extraction'
+    container_name: 'test_extraction'
+    build: ./extraction_api/TL
+    networks:
+      - service_bridge
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}

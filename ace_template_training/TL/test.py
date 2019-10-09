@@ -1,6 +1,8 @@
 import unittest
 import json
 import requests
+import os
+
 from db_utils import DB
 from ace_logger import Logging
 logging = Logging()
@@ -9,7 +11,7 @@ logging = Logging()
 BEWARE RUNNING THIS SCRIPT in a environment will delete all of it's tables for the tenant.
 """
 
-with open('test_cases.json') as f:
+with open('./test_cases.json') as f:
     test_cases = json.loads(f.read())
     testFields_data = test_cases['test_fields']
     get_ocr_data_DATA = test_cases['get_ocr_data']
@@ -17,10 +19,10 @@ with open('test_cases.json') as f:
 
 
 trained_db_config = {
-    'host': "127.0.0.1",
-    'user': "root",
-    'password': "",
-    'port': "3306",
+    'host': os.environ['HOST_IP'],
+    'user': os.environ['LOCAL_DB_USER'],
+    'password': os.environ['LOCAL_DB_PASSWORD'],
+    'port': os.environ['LOCAL_DB_PORT'],
 }
 
 
@@ -37,36 +39,37 @@ def delete_from_db(db, table, where):
 
 
 class MyTestCase(unittest.TestCase):
-    # def test_testFields(self):
-    #     # TODO also add the test for forcedcheck
-    #     files = testFields_data['files']
-    #     for file, data in files.items():
-    #         ocr_data = json.loads(data['ocr'])
-    #         input_data = data['input']
-    #         output = data['output']
-    #
-    #         tenant_id = input_data['tenant_id']
-    #         case_id = input_data['case_id']
-    #
-    #         queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
-    #
-    #         ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
-    #         process_queue = {'case_id': case_id, 'queue': 'templateExceptions'}
-    #
-    #         insert_into_db(queue_db, ocr_info, 'ocr_info')
-    #         insert_into_db(queue_db, process_queue, 'process_queue')
-    #
-    #         host = '127.0.0.1'
-    #         port = 5002
-    #         route = 'testFields'
-    #         headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
-    #         url = f"http://{host}:{port}/{route}"
-    #         response = requests.post(url, json=input_data, headers=headers)
-    #
-    #         delete_from_db(queue_db, 'process_queue', {'case_id': case_id})
-    #         delete_from_db(queue_db, 'ocr_info', {'case_id': case_id})
-    #
-    #         self.assertEqual(response.json(), output)
+    def test_testFields(self):
+        # TODO also add the test for forcedcheck
+        files = testFields_data['files']
+        for file, data in files.items():
+            ocr_data = json.loads(data['ocr'])
+            input_data = data['input']
+            output = data['output']
+
+            tenant_id = input_data['tenant_id']
+            case_id = input_data['case_id']
+
+            queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
+
+            ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
+            process_queue = {'case_id': case_id, 'queue': 'templateExceptions'}
+
+            insert_into_db(queue_db, ocr_info, 'ocr_info')
+            insert_into_db(queue_db, process_queue, 'process_queue')
+
+            host = os.environ['HOST_IP']
+            port = 5002
+            route = 'testFields'
+            headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
+            url = f"http://{host}:{port}/{route}"
+            response = requests.post(url, json=input_data, headers=headers)
+
+            delete_from_db(queue_db, 'process_queue', {'case_id': case_id})
+            delete_from_db(queue_db, 'ocr_info', {'case_id': case_id})
+
+            print(response.json())
+            self.assertEqual(response.json(), output)
 
     def test_train(self):
         # todo add for already existing template also
@@ -101,7 +104,7 @@ class MyTestCase(unittest.TestCase):
             insert_into_db(queue_db, ocr_info, 'ocr_info')
             insert_into_db(queue_db, process_queue, 'process_queue')
 
-            host = '127.0.0.1'
+            host = os.environ['HOST_IP']
             port = 5002
             route = 'train'
             headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
@@ -219,45 +222,45 @@ class MyTestCase(unittest.TestCase):
             self.assertEqual(total_test, test_passed)
 
 
-    # def test_get_ocr_data(self):
-    #     # TODO many moving parts in db beware of those
-    #     files = get_ocr_data_DATA['files']
-    #     for file, data in files.items():
-    #         # ocr_data = json.loads(data['ocr'])
-    #         input_data = data['input']
-    #         output = data['output']
-    #
-    #         tenant_id = input_data['tenant_id']
-    #         case_id = input_data['case_id']
-    #
-    #         template_db = DB('template_db', **trained_db_config, tenant_id=tenant_id)
-    #         queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
-    #
-    #         table_truncate = ['field_dict', 'field_neighbourhood_dict', 'field_quadrant_dict', 'trained_info_predicted',
-    #                           'trained_info', 'vendor_list']
-    #
-    #         for table in table_truncate:
-    #             query = f"truncate table {table}"
-    #             template_db.execute(query)
-    #
-    #         ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
-    #         process_queue = {'case_id': case_id, 'queue': 'templateExceptions', 'document_type': 'folder'}
-    #
-    #         insert_into_db(queue_db, ocr_info, 'ocr_info')
-    #         insert_into_db(queue_db, process_queue, 'process_queue')
-    #
-    #         host = '127.0.0.1'
-    #         port = 5002
-    #         route = 'get_ocr_data_training'
-    #         headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
-    #         url = f"http://{host}:{port}/{route}"
-    #         response = requests.post(url, json=input_data, headers=headers)
-    #
-    #         delete_from_db(queue_db, 'process_queue', {'case_id': case_id})
-    #         delete_from_db(queue_db, 'ocr_info', {'case_id': case_id})
-    #         delete_from_db(template_db, 'trained_info_predicted', {'case_id': case_id})
-    #
-    #         self.assertEqual(response.json(), output)
+    def test_get_ocr_data(self):
+        # TODO many moving parts in db beware of those
+        files = get_ocr_data_DATA['files']
+        for file, data in files.items():
+            # ocr_data = json.loads(data['ocr'])
+            input_data = data['input']
+            output = data['output']
+
+            tenant_id = input_data['tenant_id']
+            case_id = input_data['case_id']
+
+            template_db = DB('template_db', **trained_db_config, tenant_id=tenant_id)
+            queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
+
+            table_truncate = ['field_dict', 'field_neighbourhood_dict', 'field_quadrant_dict', 'trained_info_predicted',
+                              'trained_info', 'vendor_list']
+
+            for table in table_truncate:
+                query = f"delete from {table}"
+                template_db.execute(query)
+
+            ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
+            process_queue = {'case_id': case_id, 'queue': 'templateExceptions', 'document_type': 'folder'}
+
+            insert_into_db(queue_db, ocr_info, 'ocr_info')
+            insert_into_db(queue_db, process_queue, 'process_queue')
+
+            host = os.environ['HOST_IP']
+            port = 5002
+            route = 'get_ocr_data_training'
+            headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
+            url = f"http://{host}:{port}/{route}"
+            response = requests.post(url, json=input_data, headers=headers)
+
+            delete_from_db(queue_db, 'process_queue', {'case_id': case_id})
+            delete_from_db(queue_db, 'ocr_info', {'case_id': case_id})
+            delete_from_db(template_db, 'trained_info_predicted', {'case_id': case_id})
+
+            self.assertEqual(response.json(), output)
 
     def test_retrain(self):
         self.assertEqual(True, True)
