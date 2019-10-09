@@ -5,7 +5,7 @@ import os
 from kafka import KafkaConsumer, TopicPartition
 
 from db_utils import DB
-from detection_app import abbyy_ocr
+from abbyy_ocr import abbyy_ocr
 from producer import produce
 
 from ace_logger import Logging
