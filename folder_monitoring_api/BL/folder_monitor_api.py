@@ -109,7 +109,7 @@ def folder_monitor():
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
 
-        for _, row in input_config.iterrows():
+        for index, row in input_config.iterrows():
             input_path = row['access_1']
             output_path = output_config.ix[row['output']]['access_1']
             workflow = row['workflow']
@@ -134,7 +134,7 @@ def folder_monitor():
                     message = f'Succesfully watching {input_path}. Updating active IO config to 1.'
                     logging.info(message)
                     query = 'UPDATE `input_configuration` SET `active`=1 WHERE `id`=%s'
-                    db.execute(query, params=[row['id']])
+                    db.execute(query, params=[index])
                     return jsonify({'flag': True, 'message': message})
                 except Exception as e:
                     message = f'Error occured while watching the folder.'
