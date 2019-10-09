@@ -64,7 +64,7 @@ def watch(path_to_watch, output_path, tenant_id):
                 'case_id': unique_id,
                 'file_name': unique_id + file_path.suffix,
                 'files': [unique_id + file_path.suffix],
-                'source': [str(file_path.parents[0]),
+                'source': [str(file_path.parents[0])],
                 'file_path': str(file_path),
                 'original_file_name': [file_path.name],
                 'tenant_id': tenant_id,
