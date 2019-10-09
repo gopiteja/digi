@@ -299,10 +299,10 @@ class DB(object):
             where_clause = []
             where_value_list = []
             for where_column, where_value in condition.items():
-                where_clause.append(f'{where_column}=%s')
+                where_clause.append(f'`{where_column}`=%s')
                 where_value_list.append(where_value)
             where_clause_string = ' AND '.join(where_clause)
-            return self.execute(f'SELECT * FROM `{table}` WHERE `{where_clause_string}`', params=where_value_list)
+            return self.execute(f'SELECT * FROM `{table}` WHERE {where_clause_string}', params=where_value_list)
 
         return self.execute(f'SELECT * FROM `{table}`')
 
