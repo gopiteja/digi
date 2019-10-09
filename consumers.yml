@@ -75,8 +75,8 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "digital_signature_tag"
 
-  # Template Detection
-  detection_app:
+  # Abbyy OCR
+  abbyy_ocr:
     image: 'abbyy_ocr'
     container_name: 'abbyy_ocr'
     build: ./abbyy_ocr/BL
