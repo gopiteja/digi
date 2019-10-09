@@ -133,9 +133,14 @@ def consume(broker_url='broker:9092'):
                         logging.debug(f'Extraction message:{data}')
                         response_data = value_extract(data)
                         if response_data['flag']:
-                            data = response_data['send_data'] if 'send_data' in response_data else {}
-                            logging.info('Message commited!')
-                            produce(send_to_topic, data)
+                            if os.environ['MODE'] == 'Test':
+                                data = response_data['send_data'] if 'send_data' in response_data else {}
+                                logging.info('Message commited!')
+                                produce('test', data)
+                            else:
+                                data = response_data['send_data'] if 'send_data' in response_data else {}
+                                logging.info('Message commited!')
+                                produce(send_to_topic, data)
                         else:
                             logging.info('Message not consumed. Some error must have occured. Will try again!')
                     else:
