@@ -71,7 +71,7 @@ $(document).ready(function () {
     var retrain = getUrlParameter('retrain');
     var user_name = getUrlParameter('user');
     var template_name_retrain = getUrlParameter('template');
-    var tenant_id = getUrlParameter('host_url')
+    var tenant_id = getUrlParameter('host_name')
 
     var field_crop_flag;
     retrain = nullCheck(retrain) ? retrain : "no"
