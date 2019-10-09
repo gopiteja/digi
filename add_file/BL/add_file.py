@@ -109,7 +109,7 @@ def consume(broker_url='broker:9092'):
                 consumer.commit()
                 continue
             
-            if not data.get('workflow', False):
+            if data.get('workflow', None) is None:
                 logging.debug(f'No workflow given.')
                 consumer.commit()
                 continue
