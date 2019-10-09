@@ -111,7 +111,7 @@ def folder_monitor():
 
         for _, row in input_config.iterrows():
             input_path = row['access_1']
-            ouptut_path = list(output_config.ix[row['output']]['access_1'])[0]
+            output_path = list(output_config.ix[row['output']]['access_1'])[0]
             workflow = row['workflow']
 
             logging.debug(f'Input path: {input_path}')
