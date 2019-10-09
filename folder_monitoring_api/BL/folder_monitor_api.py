@@ -28,7 +28,7 @@ db_config = {
     'port': os.environ['LOCAL_DB_PORT']
 }
 
-def watch(path_to_watch, output_path, tenant_id):
+def watch(path_to_watch, output_path, tenant_id, workflow):
     logging.info('Watch folder started.')
 
     path_to_watch = Path('./input').absolute() / Path(path_to_watch)
@@ -68,14 +68,15 @@ def watch(path_to_watch, output_path, tenant_id):
                 'file_path': str(file_path),
                 'original_file_name': [file_path.name],
                 'tenant_id': tenant_id,
-                'type': 'file_ingestion'
+                'type': 'file_ingestion',
+                'workflow': workflow
             }
 
-            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
-            message_flow = kafka_db.execute(query, params=['folder_monitor'])
+            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+            message_flow = kafka_db.execute(query, params=['folder_monitor', workflow])
 
             if message_flow.empty:
-                logging.error('`folder_monitor` is not configured in message flow table.')
+                logging.error('`folder_monitor` is not configured correctly in message flow table.')
             else:
                 topic = list(message_flow.send_to_topic)[0]
 
@@ -95,7 +96,7 @@ def folder_monitor():
 
         db = DB('io_configuration', tenant_id=tenant_id, **db_config)
         
-        input_config = db.get_all('input_configuration')
+        input_config = db.get_all('input_configuration', condition={'active': 0})
         output_config = db.get_all('output_configuration')
 
         logging.debug(f'Input Config: {input_config.to_dict()}')
@@ -107,38 +108,42 @@ def folder_monitor():
             message = 'Input/Output not configured in DB.'
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
-        else:
-            input_path = input_config.iloc[0]['access_1']
-            output_path = output_config.iloc[0]['access_1']
 
-        logging.debug(f'Input path: {input_path}')
-        logging.debug(f'Output path: {output_path}')
+        for _, row in input_config.iterrows():
+            input_path = row['access_1']
+            ouptut_path = list(output_config.loc[output_path['id'] == row['output']]['access_1'])[0]
+            workflow = row['workflow']
 
-        if (input_path is None or not input_path
-                or output_path is None or not output_path):
-            message = 'Input/Output is empty/none in DB.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
+            logging.debug(f'Input path: {input_path}')
+            logging.debug(f'Output path: {output_path}')
 
-        input_path = Path('./input').absolute() / Path(input_path)
-        output_path = Path('./output').absolute() / Path(output_path)
-
-        # Only watch the folder if both are valid directory
-        if input_path.is_dir() and output_path.is_dir():
-            try:
-                watch_thread = threading.Thread(target=watch, args=(input_path, output_path, tenant_id))
-                watch_thread.start()
-                message = f'Succesfully watching {input_path}'
-                logging.info(output_path)
-                return jsonify({'flag': True, 'message': message})
-            except Exception as e:
-                message = f'Error occured while watching the folder.'
-                logging.exception(message)
+            if (input_path is None or not input_path
+                    or output_path is None or not output_path):
+                message = 'Input/Output is empty/none in DB.'
+                logging.error(message)
                 return jsonify({'flag': False, 'message': message})
-        else:
-            message = f'{input_path}/{output_path} not a directory'
-            logging.error(message)
-            return jsonify({'flag': True, 'message': message})
+
+            input_path = Path('./input').absolute() / Path(input_path)
+            output_path = Path('./output').absolute() / Path(output_path)
+
+            # Only watch the folder if both are valid directory
+            if input_path.is_dir() and output_path.is_dir():
+                try:
+                    watch_thread = threading.Thread(target=watch, args=(input_path, output_path, tenant_id, workflow))
+                    watch_thread.start()
+                    message = f'Succesfully watching {input_path}. Updating active IO config to 1.'
+                    logging.info(message)
+                    query = 'UPDATE `input_configuration` SET `active`=1 WHERE `id`=%s'
+                    db.execute(query, params=[row['id']])
+                    return jsonify({'flag': True, 'message': message})
+                except Exception as e:
+                    message = f'Error occured while watching the folder.'
+                    logging.exception(message)
+                    return jsonify({'flag': False, 'message': message})
+            else:
+                message = f'{input_path}/{output_path} not a directory'
+                logging.error(message)
+                return jsonify({'flag': True, 'message': message})
     except Exception as e:
         logging.exception('Something went wrong watching folder. Check trace.')
         return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})

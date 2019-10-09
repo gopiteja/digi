@@ -74,6 +74,7 @@ def consume(broker_url='broker:9092'):
 
             try:
                 tenant_id = data['tenant_id']
+                workflow = data['workflow']
             except Exception as e:
                 logging.warning(f'Received unknown data. [{data}] [{e}]')
                 consumer.commit()
@@ -104,18 +105,26 @@ def consume(broker_url='broker:9092'):
                              # port=5014,
                              sample_rate=100, ):
                 try:
-                    message_flow = kafka_db.get_all('message_flow')
-                    listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == topic]
-                    send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
+                    query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                    message_flow = kafka_db.execute(query, params=[topic, workflow])
 
                     response_data = predict_with_template(**data)
                     if response_data['flag']:
                         send_data = {
                             'case_id': case_id,
-                            'send_to_topic': 'sap',
+                            'workflow': workflow
                         }
-                        logging.debug('Message committed!')
-                        produce(send_to_topic, send_data)
+                        
+                        if message_flow.empty:
+                            logging.error('`folder_monitor` is not configured correctly in message flow table.')
+                        else:
+                            topic = list(message_flow.send_to_topic)[0]
+
+                            if topic is not None:
+                                logging.info(f'Producing to topic {topic}')
+                                produce(topic, data)
+                            else:
+                                logging.info(f'There is no topic to send to for `{topic}`.')
                     else:
                         logging.debug('Message not consumed. Some error must have occurred. Will try again!')
                 except:

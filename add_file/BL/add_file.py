@@ -102,12 +102,18 @@ def consume(broker_url='broker:9092'):
 
         for message in consumer:
             data = message.value
+            logging.info(f'Data received: {data}')
 
             if not data:
                 logging.debug('Recieved no data. Commiting.')
                 consumer.commit()
                 continue
             
+            if not data.get('workflow', False):
+                logging.debug(f'No workflow given.')
+                consumer.commit()
+                continue
+
             try:
                 logging.info(f'Message: {data}')
 
@@ -117,10 +123,11 @@ def consume(broker_url='broker:9092'):
                     add_file_to_db(data)
                     
                     tenant_id = data.get('tenant_id', None)
+                    workflow = data['workflow']
                     kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
                         
-                    query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s'
-                    message_flow = kafka_db.execute(query, params=['add_file'])
+                    query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                    message_flow = kafka_db.execute(query, params=['add_file', workflow])
 
                     if message_flow.empty:
                         logging.error('`add_file` is not configured in message flow table.')
