@@ -77,6 +77,29 @@ services:
 
   # Template Detection
   detection_app:
+    image: 'abbyy_ocr'
+    container_name: 'abbyy_ocr'
+    build: ./abbyy_ocr/BL
+    networks:
+      - service_bridge
+    volumes:
+      - angular:/app/angular
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "abbyy_ocr_tag"
+
+  # Template Detection
+  detection_app:
     image: 'detection_app'
     container_name: 'detection_app'
     build: ./template_detection/BL
