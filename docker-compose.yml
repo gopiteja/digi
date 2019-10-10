@@ -502,12 +502,15 @@ services:
       - KAFKA_BROKER_ID=1
 
   kafdrop:
+    container_name: elasticsearch
     image: obsidiandynamics/kafdrop
-    restart: "no"
+    restart: on-failure:3
     ports:
       - "9000:9000"
+    networks:
+      - service_bridge
     environment:
-      KAFKA_BROKERCONNECT: "kafka:29092"
+      KAFKA_BROKERCONNECT: "broker:9092"
       JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication"
 
   # ELK Stack
