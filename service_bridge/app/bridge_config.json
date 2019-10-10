@@ -147,10 +147,6 @@
     "host": "sapapi",
     "port": "80"
   },
-  "sap_portal_inward": {
-    "host": "sapapi",
-    "port": "80"
-  },
   "generate_json": {
     "host": "jsonbuilderapi",
     "port": "80"

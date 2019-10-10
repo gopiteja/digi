@@ -58,7 +58,7 @@ def partition_creator(parts, topic, broker_url):
                 bootstrap_servers=broker_url,
                 value_deserializer=lambda value: json.loads(value.decode()),
                 auto_offset_reset='earliest',
-                group_id='sap_portal',
+                group_id=topic,
                 api_version=(0, 10, 1),
                 enable_auto_commit=False,
                 session_timeout_ms=800001,
