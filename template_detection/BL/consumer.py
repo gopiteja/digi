@@ -177,6 +177,7 @@ def consume(broker_url='broker:9092'):
                             data['workflow'] = workflow
 
                             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                            logging.debug(f'topic - {topic} , workflow - {workflow}')
                             message_flow = kafka_db.execute(query, params=[topic, workflow])
                             
                             if message_flow.empty:
