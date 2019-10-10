@@ -37,8 +37,6 @@ def watch(path_to_watch, output_path, tenant_id):
     logging.debug(f'Watching folder: {path_to_watch}')
     logging.debug(f'Output folder: {output_path}')
 
-    queue_db = DB('queues', tenant_id=tenant_id, **db_config)
-    stats_db = DB('stats', tenant_id=tenant_id, **db_config)
     kafka_db = DB('kafka', tenant_id=tenant_id, **db_config)
 
     supported_files = ['.pdf', '.jpeg', '.jpg', '.png']
