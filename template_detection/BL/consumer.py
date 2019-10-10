@@ -134,6 +134,7 @@ def consume(broker_url='broker:9092'):
                             data['workflow'] = workflow
 
                             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                            logging.debug(f'topic - {topic} , workflow - {workflow}')
                             message_flow = kafka_db.execute(query, params=[topic, workflow])
                             
                             if message_flow.empty:
@@ -176,18 +177,19 @@ def consume(broker_url='broker:9092'):
                             data['workflow'] = workflow
 
                             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                            logging.debug(f'topic - {topic} , workflow - {workflow}')
                             message_flow = kafka_db.execute(query, params=[topic, workflow])
                             
                             if message_flow.empty:
                                 logging.error('`folder_monitor` is not configured correctly in message flow table.')
                             else:
-                                topic = list(message_flow.send_to_topic)[0]
+                                send_to_topic = list(message_flow.send_to_topic)[0]
 
-                                if topic is not None:
-                                    logging.info(f'Producing to topic {topic}')
-                                    produce(topic, data)
+                                if send_to_topic is not None:
+                                    logging.info(f'Producing to topic {send_to_topic}')
+                                    produce(send_to_topic, data)
                                 else:
-                                    logging.info(f'There is no topic to send to for `{topic}`.')
+                                    logging.info(f'There is no topic to send to for `{send_to_topic}`.')
                         else:
                             if 'send_to_topic' in response_data:
                                 send_to_topic_bypassed = response_data['send_to_topic']
