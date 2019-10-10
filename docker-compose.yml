@@ -502,7 +502,7 @@ services:
       - KAFKA_BROKER_ID=1
 
   kafdrop:
-    container_name: elasticsearch
+    container_name: kafdrop
     image: obsidiandynamics/kafdrop
     restart: on-failure:3
     ports:
