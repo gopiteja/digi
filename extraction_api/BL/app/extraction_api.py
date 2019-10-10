@@ -631,23 +631,14 @@ def value_extract(result, api=False, retrained=False):
         return output_
 
     # Update queue of the file. Field exceptions if there are any suspicious value else Verify queue.
-    is_field_exception = False
+    query = 'SELECT * FROM `workflow_stages` where `stage`=%s'
+    queue_id_df = queues_db.execute(query, params=['detection'])
+    queue_id_df['id'] = queue_id_df.index
+    queue_id = list(queue_id_df['id'])[0]
 
-    query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
-            '`workflow_definition`.`queue_id`=`queue_definition`.`id` '
-    template_exc_wf = queues_db.execute(query)
-    workflow_frame = template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']
-
-    queue_id = list(workflow_frame['queue_id'])[0]
-    move_to_queue_id = list(workflow_frame['move_to'])[0]
-
-    query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
-    move_to_queue_df = queues_db.execute(query, params=[move_to_queue_id])
+    query = 'SELECT * FROM `queue_definition` WHERE `default_flow`=%s'
+    move_to_queue_df = queues_db.execute(query, params=[queue_id])
     move_to_queue = list(move_to_queue_df['unique_name'])[0]
-
-    query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
-    queue_df = queues_db.execute(query, params=[queue_id])
-    queue_unique_name = list(move_to_queue_df['unique_name'])[0]
 
     if os.environ['MODE'] == 'Test':
         output_.pop('method_used', 0)
@@ -663,7 +654,8 @@ def value_extract(result, api=False, retrained=False):
 
         return return_data
 
-    updated_queue = queue_unique_name if is_field_exception else move_to_queue
+    updated_queue = move_to_queue
+
     query = "UPDATE `process_queue` SET `queue`=%s WHERE `case_id`=%s"
     params = [updated_queue, case_id]
     queues_db.execute(query, params=params)
