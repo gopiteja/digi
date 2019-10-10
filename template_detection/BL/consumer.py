@@ -75,7 +75,7 @@ def consume(broker_url='broker:9092'):
 
         for message in consumer:
             data = message.value
-
+            logging.info(f'data = {data}')
             try:
                 tenant_id = data['tenant_id']
                 workflow = data['workflow']
