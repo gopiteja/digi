@@ -131,7 +131,7 @@ def peaks_actually_between_header(header_column_wise_data, groups):
     return header_group
 
 
-def calibrate_peaks(header_group):
+def calibrate_peaks(header_group, left):
     """
 
     :param header_group:
@@ -142,7 +142,7 @@ def calibrate_peaks(header_group):
         # value = my_max(header_lines, identity)
         # new_group.append(int(value[0] + int(value[1]/2))+int(left))
         if header_lines[1] > word_space:
-            new_group.append(int(header_lines[0] + int(header_lines[1] / 2)))
+            new_group.append(int(header_lines[0] + int(header_lines[1] / 2))+int(left))
 
     return new_group
 
@@ -213,7 +213,7 @@ def ocrMask(ocr, width, height, left, top, bottom, right, axis=1):
 
         # header_group = peaks_actually_between_header(header_column_wise_data, groups)
 
-        new_group = calibrate_peaks(groups)
+        new_group = calibrate_peaks(groups, left)
 
         # show_lines_on_image(new_group, image_arr, left, axis, sum_vals)
     except Exception as e:

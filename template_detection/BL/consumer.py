@@ -75,9 +75,10 @@ def consume(broker_url='broker:9092'):
 
         for message in consumer:
             data = message.value
-
+            logging.info(f'data = {data}')
             try:
                 tenant_id = data['tenant_id']
+                workflow = data['workflow']
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
                 consumer.commit()
@@ -130,9 +131,22 @@ def consume(broker_url='broker:9092'):
                         # print(response_data)
                         if response_data['flag']:
                             data = response_data['send_data'] if 'send_data' in response_data else {}
-                            # consumer.commit()
-                            logging.info('Message commited!')
-                            produce(send_to_topic, data)
+                            data['workflow'] = workflow
+
+                            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                            logging.debug(f'topic - {topic} , workflow - {workflow}')
+                            message_flow = kafka_db.execute(query, params=[topic, workflow])
+                            
+                            if message_flow.empty:
+                                logging.error('`folder_monitor` is not configured correctly in message flow table.')
+                            else:
+                                send_to_topic = list(message_flow.send_to_topic)[0]
+
+                                if send_to_topic is not None:
+                                    logging.info(f'Producing to topic {send_to_topic}')
+                                    produce(send_to_topic, data)
+                                else:
+                                    logging.info(f'There is no topic to send to for `{send_to_topic}`.')
                         else:
                             if 'send_to_topic' in response_data:
                                 send_to_topic_bypassed = response_data['send_to_topic']
@@ -160,13 +174,22 @@ def consume(broker_url='broker:9092'):
                         # print(response_data)
                         if response_data['flag']:
                             data = response_data['send_data'] if 'send_data' in response_data else {}
-                            message_flow = kafka_db.get_all('message_flow')
-                            listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == topic]
-                            send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
+                            data['workflow'] = workflow
 
-                            # consumer.commit()
-                            logging.info('Message commited!')
-                            produce(send_to_topic, data)
+                            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
+                            logging.debug(f'topic - {topic} , workflow - {workflow}')
+                            message_flow = kafka_db.execute(query, params=[topic, workflow])
+                            
+                            if message_flow.empty:
+                                logging.error('`folder_monitor` is not configured correctly in message flow table.')
+                            else:
+                                send_to_topic = list(message_flow.send_to_topic)[0]
+
+                                if send_to_topic is not None:
+                                    logging.info(f'Producing to topic {send_to_topic}')
+                                    produce(send_to_topic, data)
+                                else:
+                                    logging.info(f'There is no topic to send to for `{send_to_topic}`.')
                         else:
                             if 'send_to_topic' in response_data:
                                 send_to_topic_bypassed = response_data['send_to_topic']

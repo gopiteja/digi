@@ -442,7 +442,8 @@ def value_extract(result, api=False, retrained=False):
                         output_['method_used'][fte] = method_used
                     except Exception as e:
                         val = ''
-                        logging.exception('Error in extracting for field:{} keyword:{} due to {}'.format(fte, keyword, e))
+                        logging.exception(
+                            'Error in extracting for field:{} keyword:{} due to {}'.format(fte, keyword, e))
 
                 # 2d method
                 elif not keyword and multi_key_field_info:
@@ -630,26 +631,31 @@ def value_extract(result, api=False, retrained=False):
         return output_
 
     # Update queue of the file. Field exceptions if there are any suspicious value else Verify queue.
-    is_field_exception = False
+    query = 'SELECT * FROM `workflow_stages` where `stage`=%s'
+    queue_id_df = queues_db.execute(query, params=['detection'])
+    queue_id_df['id'] = queue_id_df.index
+    queue_id = list(queue_id_df['id'])[0]
 
-    query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
-                '`workflow_definition`.`queue_id`=`queue_definition`.`id` '
-    template_exc_wf = queues_db.execute(query)
-    workflow_frame = template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']
-
-    queue_id = list(workflow_frame['queue_id'])[0]
-    move_to_queue_id = list(workflow_frame['move_to'])[0]
-    
-    query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
-    move_to_queue_df = queues_db.execute(query, params=[move_to_queue_id])
+    query = 'SELECT * FROM `queue_definition` WHERE `default_flow`=%s'
+    move_to_queue_df = queues_db.execute(query, params=[queue_id])
     move_to_queue = list(move_to_queue_df['unique_name'])[0]
 
-    query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
-    queue_df = queues_db.execute(query, params=[queue_id])
-    queue_unique_name = list(move_to_queue_df['unique_name'])[0]
+    if os.environ['MODE'] == 'Test':
+        output_.pop('method_used', 0)
 
+        return_data = {
+            'flag': True,
+            'send_data': {
+                'case_id': case_id,
+                'template_name': template_name,
+                'data': output_
+            }
+        }
 
-    updated_queue = queue_unique_name if is_field_exception else move_to_queue
+        return return_data
+
+    updated_queue = move_to_queue
+
     query = "UPDATE `process_queue` SET `queue`=%s WHERE `case_id`=%s"
     params = [updated_queue, case_id]
     queues_db.execute(query, params=params)
@@ -1471,10 +1477,11 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
             ocr_length = len(ocr_data[page_no])
             regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
             check = False
-            if (data['word'] == keyList[0] or (regex.search(data['word']) != None and re.search('[a-zA-Z]',
-                                                                                                data['word'].replace(
+            if (data['word'] == keyList[0] or (regex.search(data['word']) is not None and re.search('[a-zA-Z]',
+                                                                                                    data[
+                                                                                                        'word'].replace(
                                                                                                         keyList[0],
-                                                                                                        '')) == None and
+                                                                                                        '')) is not None and
                                                keyList[0] in data['word'])):
                 if (keyLength > 1):
                     for x in range(0, keyLength):
@@ -1483,12 +1490,12 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
                             break
                         else:
                             if (ocr_data[page_no][i + x]['word'] == keyList[x] or (
-                                    regex.search(ocr_data[page_no][i + x]['word']) != None and re.search('[a-zA-Z]',
-                                                                                                         data[
-                                                                                                             'word'].replace(
+                                    regex.search(ocr_data[page_no][i + x]['word']) is not None and re.search('[a-zA-Z]',
+                                                                                                             data[
+                                                                                                                 'word'].replace(
                                                                                                                  keyList[
                                                                                                                      x],
-                                                                                                                 '')) == None and
+                                                                                                                 '')) is None and
                                     keyList[x] in ocr_data[page_no][i + x]['word'])):
                                 check = True
                             else:
@@ -1632,8 +1639,8 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
             #     logging.debug(re.search('[a-zA-Z]', data['word'].replace(keyList[0],''))==None)
             if (data['word'] == keyList[0] or (regex.search(data['word']) != None and re.search('[a-zA-Z]',
                                                                                                 data['word'].replace(
-                                                                                                        keyList[0],
-                                                                                                        '')) == None and
+                                                                                                    keyList[0],
+                                                                                                    '')) == None and
                                                keyList[0] in data['word']) or keyList[0] in data['word']):
                 if (keyLength > 1):
                     x = 0
@@ -1648,9 +1655,9 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
                                     regex.search(ocr_data[page_no][i + x]['word']) != None and re.search('[a-zA-Z]',
                                                                                                          data[
                                                                                                              'word'].replace(
-                                                                                                                 keyList[
-                                                                                                                     x],
-                                                                                                                 '')) == None and
+                                                                                                             keyList[
+                                                                                                                 x],
+                                                                                                             '')) == None and
                                     keyList[key_words_idx] in ocr_data[page_no][i + x]['word'])):
                                 check = True
                             elif (keyList[key_words_idx] in ocr_data[page_no][i + x]['word']):

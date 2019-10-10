@@ -140,6 +140,7 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
       - LOCAL_DB_USER=${LOCAL_DB_USER}
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+      - MODE=${MODE}
     volumes:
       - invoice_files:/app/invoice_files
     # logging:
@@ -403,7 +404,7 @@ volumes:
 
   training_images:
     external: true
-    name: ui_images
+    name: ui_files
 
   # Invoices
   invoice_files:

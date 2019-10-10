@@ -141,7 +141,6 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         except:
             ocr_data = json.loads(list(ocr_info.ocr_data)[0])
 
-
     if ocr_data:
         td = TemplateDetector(tenant_id=tenant_id,
                               threshold=parameters['matching_threshold'],
@@ -269,10 +268,14 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         if predicted_template == '':
             logging.warning('No matching template found. Updating queue to `Template Exceptions`.')
             # Mark for clustering
-            query = 'SELECT * FROM `queue_definition` WHERE `name`=%s'
-            move_to_queue_df = queue_db.execute(query, params=['Template Exceptions'])
-            move_to_queue = list(move_to_queue_df['unique_name'])[0]
+            query = 'SELECT * FROM `workflow_stages` where `stage`=%s'
+            queue_id_df = queue_db.execute(query, parameters=['exception'])
+            queue_id_df['id'] = queue_id_df.index
+            queue_id = list(queue_id_df['id'])[0]
 
+            query = 'SELECT * FROM `queue_definition` WHERE `default_flow`=%s'
+            move_to_queue_df = queue_db.execute(query, params=[queue_id])
+            move_to_queue = list(move_to_queue_df['unique_name'])[0]
 
             query = "UPDATE `process_queue` SET `queue`= %s WHERE `case_id` = %s;"
             queue_db.execute(query, params=[move_to_queue, case_id])
@@ -367,7 +370,7 @@ def abbyy_template_detection(data):
                 logging.info('Detecting using Abbyy')
 
                 db = DB('io_configuration', **template_db_config)
-        
+
                 input_config = db.get_all('input_configuration')
                 output_config = db.get_all('output_configuration')
 
@@ -418,7 +421,6 @@ def abbyy_template_detection(data):
             # no matter what ....try..abbyyy....
             # if isListEmpty(pdf_data) or not pdf_working:
             try:
-                
 
                 # file_data = open(file_path, 'rb')
 
