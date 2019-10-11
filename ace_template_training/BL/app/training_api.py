@@ -1388,6 +1388,9 @@ def extract_quadrant_information(trained_info, case_id, tenant_id=None):
 
     page_dimensions = get_page_dimension(case_id, tenant_id=tenant_id)
 
+    if not page_dimensions:
+        return quadrant_info
+
     for field, field_data in trained_info.items():
         field_page = field_data['page']
         quadrant = which_quadrant(field_data['scope'], page_dimensions[field_page])
@@ -2164,7 +2167,11 @@ def train():
         stats_db.insert_dict(audit_data, 'audit')
 
         # get the queue name
-        current_queue = list(queue_db.get_all('process_queue', condition={'case_id':case_id}))[0]
+        current_queue_df = queue_db.get_all('process_queue', condition={'case_id': case_id})
+
+        logging.info(current_queue_df)
+
+        current_queue = list(current_queue_df['queue'])[0]
 
         # * Update the queue name and template name in the process_queue
         query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
