@@ -527,6 +527,15 @@ services:
     volumes:
       - ./kafka/prometheus:/etc/prometheus
 
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - service_bridge
+    volumes:
+      - /var/lib/grafana:/var/lib/grafana
+
   # ELK Stack
   elasticsearch:
     container_name: elasticsearch
