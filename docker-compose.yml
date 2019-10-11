@@ -500,7 +500,7 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_BROKER_ID=1
-      - KAFKA_OPTS=-javaagent:/opt/bitnami/kafka/jmx_prometheus_javaagent.jar=7071:/opt/bitnami/kafka/prom-jmx-agent-config.yml
+      - KAFKA_OPTS=-javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
