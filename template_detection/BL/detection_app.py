@@ -482,11 +482,9 @@ def abbyy_template_detection(data):
                 except:
                     logging.error('no blob data')
 
-                # unique_id = file_path.stem
-                # Delete file for alorica
+                shutil.copyfile(file_path, 'angular/' + file_parent_input + file_name)
+                # shutil.copyfile(file_path, 'training_ui/' + file_parent_input + file_name)
                 os.remove(file_path)
-                # shutil.copyfile(file_path, 'angular/' + file_name)
-                # shutil.move(file_path, 'training_ui/' + file_name)
 
                 xml_string = sdk_output['xml_string'].encode('utf-8')
 
