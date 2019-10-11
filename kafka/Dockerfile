@@ -1,6 +1,6 @@
 FROM bitnami/minideb-extras-base:stretch-r305
 
-EXPOSE 9092
+EXPOSE 9092 7071
 
 ENV BITNAMI_PKG_CHMOD="-R g+rwX" \
     HOME="/" \
