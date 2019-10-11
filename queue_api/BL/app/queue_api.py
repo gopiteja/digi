@@ -1608,7 +1608,9 @@ def move_to_verify():
             template_name = 'Dummy Template'
 
         get_queue_name_query = 'SELECT `id`, `name`, `unique_name` FROM `queue_definition` WHERE `id` IN (SELECT `workflow_definition`.`move_to` FROM `queue_definition`, `workflow_definition` WHERE `queue_definition`.`name`=%s AND `workflow_definition`.`queue_id`=`queue_definition`.`id`)'
-        new_queue = list(db.execute(get_queue_name_query, params=[queue]).unique_name)[0]
+        result = db.execute(get_queue_name_query, params=[queue])
+        new_queue = list(result.unique_name)[0]
+        queue_name = list(result.name)[0]
         update_fields = {'queue': new_queue, 'template_name': template_name}
 
         logging.debug(f'Updating queue to `{new_queue}` for case `{case_id}`')
@@ -1623,7 +1625,7 @@ def move_to_verify():
         query = "INSERT into ocr (`case_id`, `highlight`) VALUES (%s,%s)"
         extraction_db.execute(query, params=[case_id, '{}'])
 
-        response = {'flag': True, 'status_type': 'success', 'message': "Successfully sent to Verify"}
+        response = {'flag': True, 'status_type': 'success', 'message': f"Successfully sent to {queue_name}"}
         logging.info(f'Response: {response}')
         return jsonify(response)
     except:
