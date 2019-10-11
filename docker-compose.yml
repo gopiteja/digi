@@ -518,6 +518,8 @@ services:
 
   prometheus:
     container_name: prometheus
+    networks:
+      - service_bridge
     image: prom/prometheus
     ports:
       - 9090:9090/tcp
@@ -526,6 +528,8 @@ services:
 
   jmx-exporter:
     image: sscaling/jmx-prometheus-exporter
+    networks:
+      - service_bridge
     ports:
       - "5556:5556"
   query:
