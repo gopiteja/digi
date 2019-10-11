@@ -2163,11 +2163,14 @@ def train():
         }
         stats_db.insert_dict(audit_data, 'audit')
 
+        # get the queue name
+        current_queue = list(queue_db.get_all('process_queue', condition={'case_id':case_id}))[0]
+
         # * Update the queue name and template name in the process_queue
         query = 'SELECT * FROM `workflow_definition`, `queue_definition` WHERE ' \
                 '`workflow_definition`.`queue_id`=`queue_definition`.`id` '
         template_exc_wf = queue_db.execute(query)
-        move_to_queue_id = list(template_exc_wf.loc[template_exc_wf['name'] == 'Template Exceptions']['move_to'])[0]
+        move_to_queue_id = list(template_exc_wf.loc[template_exc_wf['unique_name'] == current_queue]['move_to'])[0]
         query = 'SELECT * FROM `queue_definition` WHERE `id`=%s'
         move_to_queue_df = queue_db.execute(query, params=[move_to_queue_id])
         move_to_queue = list(move_to_queue_df['unique_name'])[0]
