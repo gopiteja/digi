@@ -1983,49 +1983,11 @@ def train():
             'tenant_id': tenant_id
         }
         queue_db = DB('queues', **db_config)
-        # queue_db = DB('queues')
-
-        trained_db_config = {
-            'host': os.environ['HOST_IP'],
-            'user': os.environ['LOCAL_DB_USER'],
-            'password': os.environ['LOCAL_DB_PASSWORD'],
-            'port': os.environ['LOCAL_DB_PORT'],
-            'tenant_id': tenant_id
-        }
-        trained_db = DB('template_db', **trained_db_config)
-        # trained_db = DB('template_db')
-
-        table_db_config = {
-            'host': os.environ['HOST_IP'],
-            'user': os.environ['LOCAL_DB_USER'],
-            'password': os.environ['LOCAL_DB_PASSWORD'],
-            'port': os.environ['LOCAL_DB_PORT'],
-            'tenant_id': tenant_id
-        }
-        table_db = DB('table_db', **table_db_config)
-        # trained_db = DB('template_db')
-
-        extarction_db_config = {
-            'host': os.environ['HOST_IP'],
-            'user': os.environ['LOCAL_DB_USER'],
-            'password': os.environ['LOCAL_DB_PASSWORD'],
-            'port': os.environ['LOCAL_DB_PORT'],
-            'tenant_id': tenant_id
-        }
-        extraction_db = DB('extraction', **extarction_db_config)
-
+        trained_db = DB('template_db', **db_config)
+        table_db = DB('table_db', **db_config)
+        extraction_db = DB('extraction', **db_config)
         kafka_db = DB('kafka', **db_config)
-        # extraction_db = DB('extraction')
-
-        stats_db_config = {
-            'host': os.environ['HOST_IP'],
-            'user': os.environ['LOCAL_DB_USER'],
-            'password': os.environ['LOCAL_DB_PASSWORD'],
-            'port': os.environ['LOCAL_DB_PORT'],
-            'tenant_id': tenant_id
-        }
-
-        stats_db = DB('stats', **stats_db_config)
+        stats_db = DB('stats', **db_config)
 
         template_name = ui_data['template_name']
         new_vendor = ui_data['temp_type']
