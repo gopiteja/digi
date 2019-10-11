@@ -269,7 +269,8 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
             logging.warning('No matching template found. Updating queue to `Template Exceptions`.')
             # Mark for clustering
             query = 'SELECT * FROM `workflow_stages` where `stage`=%s'
-            queue_id_df = queue_db.execute(query, parameters=['exception'])
+            queue_id_df = queue_db.execute(query, params=['exception'])
+
             queue_id_df['id'] = queue_id_df.index
             queue_id = list(queue_id_df['id'])[0]
 
@@ -300,7 +301,7 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
 @zipkin_span(service_name='detection_app', span_name='abbyy_template_detection')
 def abbyy_template_detection(data):
     # data = request.json
-
+    logging.info("entering abbyy_template_detection")
     # Sanity checks
     if 'files' not in data:
         message = '`files` key not in request'
@@ -345,9 +346,26 @@ def abbyy_template_detection(data):
 
     pdf_working = None
 
+    try:
+        io_db = DB('io_configuration', **template_db_config)
+        query = "SELECT * FROM `output_configuration`"
+        file_parent_output = list(io_db.execute(query).access_1)[0] + '/'
+    except:
+        file_parent_output = ''
+        logging.info(f'No output folder defined for tenant - {tenant_id} ')
+
+    try:
+        io_db = DB('io_configuration', **template_db_config)
+        query = "SELECT * FROM `input_configuration`"
+        file_parent_input = list(io_db.execute(query).access_1)[0] + '/'
+    except:
+        file_parent_input = ''
+        logging.info(f'No input folder defined for tenant - {tenant_id} ')
+
+
     # Process files one by one
     for index, file_name in enumerate(files):
-        file_path = './input/' + file_name
+        file_path = './input/' + file_parent_input + file_name
         case_id = file_name.rsplit('.', 1)[0]
         original_file_name = original_file_names[index]
         xml_string = None
@@ -386,16 +404,16 @@ def abbyy_template_detection(data):
                     input_path = input_config.iloc[0]['access_1']
                     output_path = output_config.iloc[0]['access_1']
 
-                file_path = output_path + '/' + file_name
-
                 logging.info(file_path)
+
+                internal_file_path = file_parent_input + file_name
 
                 logging.info(' -> Trying PDF plumber...')
                 host = 'pdf_plumber_api'
                 port = parameters['pdf_plumber_port']
                 route = 'plumb'
                 data = {
-                    'file_name': file_path,
+                    'file_name': internal_file_path,
                     'tenant_id': tenant_id
                 }
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
@@ -609,7 +627,7 @@ def abbyy_template_detection(data):
                 failed_files[file_name] = message
                 return {'flag': False, 'send_to_topic': 'clustering'}
 
-    return {'flag': False, 'send_to_topic': 'clustering'}
+    return {'flag': True}
 
 # if __name__ == '__main__':
 #     init(autoreset=True) # Intialize colorama

@@ -34,3 +34,16 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
       - LOCAL_DB_USER=${LOCAL_DB_USER}
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+  test_detection:
+    image: 'test_detection'
+    container_name: 'test_detection'
+    build: ./template_detection/TL
+    networks:
+      - service_bridge
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}

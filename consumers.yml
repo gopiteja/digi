@@ -117,6 +117,7 @@ services:
       - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
       - LOCAL_DB_USER=${LOCAL_DB_USER}
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+      - MODE=${MODE}
     # logging:
     #   driver: gelf
     #   options:

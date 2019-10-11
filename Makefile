@@ -3,8 +3,8 @@ build:
 		docker-compose -f docker-compose.yml up --build -d
 		docker-compose -f consumers.yml up --build -d
 stop:
-		docker-compose -f docker-compose.yml down
 		docker-compose -f consumers.yml down
+		docker-compose -f docker-compose.yml down
 
 test_setup:
 		docker-compose -f docker-compose.yml up --build -d service_bridge

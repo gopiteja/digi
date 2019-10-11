@@ -132,12 +132,15 @@ def consume(broker_url='broker:9092'):
                         if response_data['flag']:
                             data = response_data['send_data'] if 'send_data' in response_data else {}
                             data['workflow'] = workflow
+                            data['case_id'] = case_id
 
                             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
                             logging.debug(f'topic - {topic} , workflow - {workflow}')
                             message_flow = kafka_db.execute(query, params=[topic, workflow])
-                            
-                            if message_flow.empty:
+
+                            if os.environ['MODE'] == 'Test':
+                                sent_topic = 'test_detection'
+                            elif message_flow.empty:
                                 logging.error('`folder_monitor` is not configured correctly in message flow table.')
                             else:
                                 send_to_topic = list(message_flow.send_to_topic)[0]
@@ -175,12 +178,14 @@ def consume(broker_url='broker:9092'):
                         if response_data['flag']:
                             data = response_data['send_data'] if 'send_data' in response_data else {}
                             data['workflow'] = workflow
+                            data['case_id'] = case_id
 
                             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
                             logging.debug(f'topic - {topic} , workflow - {workflow}')
                             message_flow = kafka_db.execute(query, params=[topic, workflow])
-                            
-                            if message_flow.empty:
+                            if os.environ['MODE'] == 'Test':
+                                sent_topic = 'test_detection'
+                            elif message_flow.empty:
                                 logging.error('`folder_monitor` is not configured correctly in message flow table.')
                             else:
                                 send_to_topic = list(message_flow.send_to_topic)[0]
