@@ -527,20 +527,6 @@ services:
     volumes:
       - ./kafka/prometheus:/etc/prometheus
 
-  jmx-exporter:
-    image: sscaling/jmx-prometheus-exporter
-    networks:
-      - service_bridge
-    ports:
-      - "5556:5556"
-  query:
-    image: sscaling/jmx-prometheus-exporter
-    entrypoint:
-      - curl
-    command:
-      - -s
-      - "http://exporter:5556/metrics"
-
   # ELK Stack
   elasticsearch:
     container_name: elasticsearch
