@@ -19,8 +19,8 @@ COPY server.properties /opt/bitnami/kafka/conf/server.properties
 RUN ["chmod", "+x", "postunpack.sh"]
 RUN /postunpack.sh
 
-ADD prom-jmx-agent-config.yml /usr/app/prom-jmx-agent-config.yml
-ADD http://central.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.10/jmx_prometheus_javaagent-0.10.jar /usr/app/jmx_prometheus_javaagent.jar
+ADD prom-jmx-agent-config.yml /opt/bitnami/kafka/prom-jmx-agent-config.yml
+ADD http://central.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.10/jmx_prometheus_javaagent-0.10.jar /opt/bitnami/kafka/jmx_prometheus_javaagent.jar
 
 ENV ALLOW_PLAINTEXT_LISTENER="no" \
     BITNAMI_APP_NAME="kafka" \
