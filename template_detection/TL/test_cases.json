@@ -1,0 +1,9 @@
+{
+  "files": {
+    "2000459558": {
+      "input": {"case_id": "2000459558", "file_name": "2000459558.pdf", "files": ["2000459558.pdf"], "source": ["/app/input/test"], "file_path": "/app/input/test/2000459558.pdf", "original_file_name": ["2000459558.pdf"], "tenant_id": "test", "type": "file_ingestion", "workflow": 0},
+      "output":"templateExceptions"
+    }
+
+  }
+}
