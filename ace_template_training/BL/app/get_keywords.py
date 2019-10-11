@@ -461,8 +461,7 @@ def get_page_dimension(case_id, tenant_id, standard_width=670):
                 page_dimensions[page] = (width / rf, height / rf)
         except:
             message = 'merged blob and pdf both are not there'
-            logging.error(message)
-            raise Exception(message)
+            logging.warning(message)
 
     return page_dimensions
 
@@ -611,14 +610,6 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, fiel
     if not field_with_variation:
         field_with_variation = get_field_dict(tenant_id=tenant_id)
 
-    if not quadrant_dict:
-        quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
-
-    if case_id:
-        page_dimensions = get_page_dimension(case_id, standard_width=standard_width, tenant_id=tenant_id)
-    else:
-        page_dimensions = {}
-
     ocr_keywords = []
     ocr_field_keyword = {}
 
@@ -665,14 +656,6 @@ def get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenan
     """
     if not field_with_variation:
         field_with_variation = get_field_dict(tenant_id=tenant_id)
-
-    if not quadrant_dict:
-        quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
-
-    if case_id:
-        page_dimensions = get_page_dimension(case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
-    else:
-        page_dimensions = {}
 
     ocr_keywords = []
     ocr_field_keyword = {}
