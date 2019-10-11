@@ -17,6 +17,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from nltk import edit_distance
 from pdf2image import convert_from_path
+from py_zipkin.util import generate_random_64bit_string
+from py_zipkin import storage
+
 from db_utils import DB
 from producer import produce
 from ace_logger import Logging
@@ -1587,15 +1590,27 @@ def get_header_list(json_data):
 @app.route('/force_template', methods=['POST', 'GET'])
 def force_template():
     ui_data = request.json
+    if 'tenant_id' in ui_data:
+        tenant_id = ui_data['tenant_id']
+    else:
+        message = f'tenant_id not present'
+        return {'flag': False, "message": message}
+
+    attr = ZipkinAttrs(
+        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
+    )
+
     with zipkin_span(
             service_name='ace_template_training',
-            span_name='force_template',
+            zipkin_attrs=attr,
+            span_name='train',
             transport_handler=http_transport,
-            sample_rate=0.5,
-    ):
-        tenant_id = ''
-        if 'tenant_id' in ui_data:
-            tenant_id = ui_data['tenant_id']
+            sample_rate=0.5
+    ) as zipkin_context:
 
         case_id = ui_data['case_id']
         template_name = ui_data['template_name']
@@ -1713,15 +1728,27 @@ def force_template():
 @app.route('/retrain', methods=['POST', 'GET'])
 def retrain():
     ui_data = request.json
+    if 'tenant_id' in ui_data:
+        tenant_id = ui_data['tenant_id']
+    else:
+        message = f'tenant_id not present'
+        return {'flag': False, "message": message}
+
+    attr = ZipkinAttrs(
+        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
+    )
+
     with zipkin_span(
             service_name='ace_template_training',
-            span_name='testFields',
+            zipkin_attrs=attr,
+            span_name='train',
             transport_handler=http_transport,
-            sample_rate=0.5,
-    ):
-        tenant_id = ''
-        if 'tenant_id' in ui_data:
-            tenant_id = ui_data['tenant_id']
+            sample_rate=0.5
+    ) as zipkin_context:
 
         # ! Requires `template_name`, `extracted_data`, `case_id`, `trained_data`, `resize_factor`
         # ! `header_ocr`, `footer_ocr`, `address_ocr`
@@ -1879,16 +1906,30 @@ def retrain():
 @app.route('/testFields', methods=['POST', 'GET'])
 def test_fields():
     data = request.json
+    if 'tenant_id' in data:
+        tenant_id = data['tenant_id']
+    else:
+        message = f'tenant_id not present'
+        return {'flag': False, "message": message}
+
+    attr = ZipkinAttrs(
+        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
+    )
+
     with zipkin_span(
             service_name='ace_template_training',
-            span_name='testFields',
+            zipkin_attrs=attr,
+            span_name='train',
             transport_handler=http_transport,
-            sample_rate=0.5,
-    ):
+            sample_rate=0.5
+    ) as zipkin_context:
+        case_id = data['case_id']
         global  parameters
-        tenant_id = ''
-        if 'tenant_id' in data:
-            tenant_id = data['tenant_id']
+
         case_id = data['case_id']
         force_check = data['force_check']
         query = "SELECT `id`, `ocr_data` from `ocr_info` WHERE `case_id`=%s"
@@ -1964,16 +2005,28 @@ def test_fields():
 @app.route('/train', methods=['POST', 'GET'])
 def train():
     ui_data = request.json
+
+    if 'tenant_id' in ui_data:
+        tenant_id = ui_data['tenant_id']
+    else:
+        message = f'tenant_id not present'
+        return {'flag': False, "message": message}
+
+    attr = ZipkinAttrs(
+        trace_id=generate_random_64bit_string()+','+tenant_id,
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
+    )
+
     with zipkin_span(
             service_name='ace_template_training',
+            zipkin_attrs=attr,
             span_name='train',
             transport_handler=http_transport,
-            sample_rate=0.5,
-    ):
-        tenant_id = ''
-        if 'tenant_id' in ui_data:
-            tenant_id = ui_data['tenant_id']
-
+            sample_rate=0.5
+    ) as zipkin_context:
         # ! Requires `template_name`, `extracted_data`, `case_id`, `trained_data`, `resize_factor`
         # ! `header_ocr`, `footer_ocr`, `address_ocr`
         logging.debug('ui_data', ui_data)
@@ -2235,154 +2288,170 @@ def train():
 def get_ocr_data():
     data = request.json
 
-    case_id = data['case_id']
-
-    try:
+    if 'tenant_id' in data:
         tenant_id = data['tenant_id']
-    except:
-        return jsonify({'flag': False, 'message': 'Tenant_id not present'})
+    else:
+        message = f'tenant_id not present'
+        return {'flag': False, "message": message}
 
-
-    logging.debug(f'case_id - {case_id}')
-
-    db_config = {
-        'host': os.environ['HOST_IP'],
-        'port': 3306,
-        'user': os.environ['LOCAL_DB_USER'],
-        'password': os.environ['LOCAL_DB_PASSWORD'],
-        'tenant_id': tenant_id
-    }
-    db = DB('queues', **db_config)
-
-    trained_db = DB('template_db', **db_config)
-
-    try:
-        io_db = DB('io_configuration', **db_config)
-        query = "SELECT * FROM `output_configuration`"
-        file_parent = list(io_db.execute(query).access_1)[0] + '/'
-    except:
-        file_parent = ''
-        logging.info('No output folder defined')
-
-    # Get all OCR mandatory fields
-    try:
-        tab_df = db.get_all('tab_definition')
-        ocr_tab_id = tab_df.index[tab_df['source'] == 'ocr'].tolist()
-
-        tab_list = str(tuple(ocr_tab_id))
-        query = f'SELECT * FROM `field_definition` WHERE `tab_id`in {tab_list}'
-
-        ocr_fields_df = db.execute(query)
-        mandatory_fields = list(ocr_fields_df.loc[ocr_fields_df['mandatory'] == 1]['display_name'])
-        logging.debug(f'OCR Fields DF: {ocr_fields_df}')
-        fields = list(ocr_fields_df['display_name'])
-
-    except Exception as e:
-        logging.exception(f'Error getting mandatory fields: {e}')
-        mandatory_fields = []
-
-    # Get data related to the case from invoice table
-    invoice_files_df = db.get_all('process_queue')
-
-    case_files = invoice_files_df.loc[invoice_files_df['case_id'] == case_id]
-    if case_files.empty:
-        message = f'No such case ID {case_id}.'
-        logging.debug(f'ERROR: {message}')
-        return jsonify({'flag': False, 'message': message})
-
-    query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
-    params = [case_id]
-    ocr_info = db.execute(query, params=params)
-
-    try:
-        ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
-    except:
-        ocr_data = json.loads(list(ocr_info.ocr_data)[0])
-
-    pre_processed_char = []
-    for index, page in enumerate(ocr_data):
-        page = sort_ocr(page)
-
-        char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
-        pre_processed_char.append([char_index_list, haystack])
-
-    pdf_type = list(case_files.document_type)[0]
-
-    file_name = list(case_files['file_name'])[0]
-
-    try:
-        file_name = file_parent + file_name
-    except:
-        file_name = file_parent + case_id + '.pdf'
-
-    quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
-
-    _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id,
-                                        tenant_id=tenant_id)
-
-    ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
-
-    ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
-
-    logging.debug('ocr_field_keyword- ', ocr_field_keyword)
-    # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
-
-    # ocr_field_keyword = json.loads(list(ocr_info.fields_keywords)[0])
-
-    # ocr_data = [sort_ocr(data) for data in ocr_data]
-
-    vendor_list = list(trained_db.get_all('vendor_list').vendor_name)
-    template_list = list(trained_db.get_all('trained_info').template_name)
-
-    ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenant_id=tenant_id)
-    all_values = remove_keys(ocr_data, ocr_keywords)
-
-    field_validations = get_field_validations(tenant_id)
-
-    predicted_fields = get_predicted_fields(
-        mandatory_fields,
-        all_values,
-        ocr_field_keyword,
-        ocr_data,
-        pre_processed_char,
-        field_validations,
-        quadrant_dict,
-        case_id=case_id,
-        tenant_id=tenant_id
+    attr = ZipkinAttrs(
+        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
     )
 
-    if predicted_fields:
-        trained_data = {}
-        for field in predicted_fields:
-            trained_data[field['field']] = get_trained_data_format(field)
+    with zipkin_span(
+            service_name='ace_template_training',
+            zipkin_attrs=attr,
+            span_name='train',
+            transport_handler=http_transport,
+            sample_rate=0.5
+    ) as zipkin_context:
+        case_id = data['case_id']
 
-        query = f'SELECT id, case_id from trained_info_predicted where case_id = "{case_id}"'
-        logging.debug(query)
 
-        check = trained_db.execute(query)
+        logging.debug(f'case_id - {case_id}')
 
-        logging.debug(check)
-        if type(check) != bool:
-            check = not check.empty
+        db_config = {
+            'host': os.environ['HOST_IP'],
+            'port': 3306,
+            'user': os.environ['LOCAL_DB_USER'],
+            'password': os.environ['LOCAL_DB_PASSWORD'],
+            'tenant_id': tenant_id
+        }
+        db = DB('queues', **db_config)
 
-        if check:
-            to_update = {'field_data': json.dumps(trained_data)}
-            where = {'case_id': case_id}
+        trained_db = DB('template_db', **db_config)
 
-            trained_db.update('trained_info_predicted', update=to_update, where=where)
+        try:
+            io_db = DB('io_configuration', **db_config)
+            query = "SELECT * FROM `output_configuration`"
+            file_parent = list(io_db.execute(query).access_1)[0] + '/'
+        except:
+            file_parent = ''
+            logging.info('No output folder defined')
 
-        else:
-            # * Add trained information & template name into `trained_info` table
-            trained_data_column_values = {
-                'case_id': case_id,
-                'field_data': json.dumps(trained_data),
-                'ocr_data': json.dumps(ocr_data)
-            }
-            trained_db.insert_dict(trained_data_column_values, 'trained_info_predicted')
+        # Get all OCR mandatory fields
+        try:
+            tab_df = db.get_all('tab_definition')
+            ocr_tab_id = tab_df.index[tab_df['source'] == 'ocr'].tolist()
 
-    return jsonify(
-        {'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list),
-         'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': pdf_type, 'file_name': file_name})
+            tab_list = str(tuple(ocr_tab_id))
+            query = f'SELECT * FROM `field_definition` WHERE `tab_id`in {tab_list}'
+
+            ocr_fields_df = db.execute(query)
+            mandatory_fields = list(ocr_fields_df.loc[ocr_fields_df['mandatory'] == 1]['display_name'])
+            logging.debug(f'OCR Fields DF: {ocr_fields_df}')
+            fields = list(ocr_fields_df['display_name'])
+
+        except Exception as e:
+            logging.exception(f'Error getting mandatory fields: {e}')
+            mandatory_fields = []
+
+        # Get data related to the case from invoice table
+        invoice_files_df = db.get_all('process_queue')
+
+        case_files = invoice_files_df.loc[invoice_files_df['case_id'] == case_id]
+        if case_files.empty:
+            message = f'No such case ID {case_id}.'
+            logging.debug(f'ERROR: {message}')
+            return jsonify({'flag': False, 'message': message})
+
+        query = 'SELECT * FROM `ocr_info` WHERE `case_id`=%s'
+        params = [case_id]
+        ocr_info = db.execute(query, params=params)
+
+        try:
+            ocr_data = json.loads(json.loads(list(ocr_info.ocr_data)[0]))
+        except:
+            ocr_data = json.loads(list(ocr_info.ocr_data)[0])
+
+        pre_processed_char = []
+        for index, page in enumerate(ocr_data):
+            page = sort_ocr(page)
+
+            char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
+            pre_processed_char.append([char_index_list, haystack])
+
+        pdf_type = list(case_files.document_type)[0]
+
+        file_name = list(case_files['file_name'])[0]
+
+        try:
+            file_name = file_parent + file_name
+        except:
+            file_name = file_parent + case_id + '.pdf'
+
+        quadrant_dict = get_quadrant_dict(tenant_id=tenant_id)
+
+        _, ocr_field_keyword = get_keywords(ocr_data, mandatory_fields, pre_processed_char, case_id=case_id,
+                                            tenant_id=tenant_id)
+
+        ocr_field_keyword = get_keywords_max_length(mandatory_fields, ocr_field_keyword)
+
+        ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
+
+        logging.debug('ocr_field_keyword- ', ocr_field_keyword)
+        # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
+
+        # ocr_field_keyword = json.loads(list(ocr_info.fields_keywords)[0])
+
+        # ocr_data = [sort_ocr(data) for data in ocr_data]
+
+        vendor_list = list(trained_db.get_all('vendor_list').vendor_name)
+        template_list = list(trained_db.get_all('trained_info').template_name)
+
+        ocr_keywords, _ = get_keywords_for_value(ocr_data, mandatory_fields, pre_processed_char, tenant_id=tenant_id)
+        all_values = remove_keys(ocr_data, ocr_keywords)
+
+        field_validations = get_field_validations(tenant_id)
+
+        predicted_fields = get_predicted_fields(
+            mandatory_fields,
+            all_values,
+            ocr_field_keyword,
+            ocr_data,
+            pre_processed_char,
+            field_validations,
+            quadrant_dict,
+            case_id=case_id,
+            tenant_id=tenant_id
+        )
+
+        if predicted_fields:
+            trained_data = {}
+            for field in predicted_fields:
+                trained_data[field['field']] = get_trained_data_format(field)
+
+            query = f'SELECT id, case_id from trained_info_predicted where case_id = "{case_id}"'
+            logging.debug(query)
+
+            check = trained_db.execute(query)
+
+            logging.debug(check)
+            if type(check) != bool:
+                check = not check.empty
+
+            if check:
+                to_update = {'field_data': json.dumps(trained_data)}
+                where = {'case_id': case_id}
+
+                trained_db.update('trained_info_predicted', update=to_update, where=where)
+
+            else:
+                # * Add trained information & template name into `trained_info` table
+                trained_data_column_values = {
+                    'case_id': case_id,
+                    'field_data': json.dumps(trained_data),
+                    'ocr_data': json.dumps(ocr_data)
+                }
+                trained_db.insert_dict(trained_data_column_values, 'trained_info_predicted')
+
+        return jsonify(
+            {'flag': True, 'data': ocr_data, 'vendor_list': sorted(vendor_list), 'template_list': sorted(template_list),
+             'mandatory_fields': mandatory_fields, 'predicted_fields': predicted_fields, 'fields': fields, 'type': pdf_type, 'file_name': file_name})
 
 
 if __name__ == '__main__':

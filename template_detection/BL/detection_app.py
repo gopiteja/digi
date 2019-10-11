@@ -466,7 +466,7 @@ def abbyy_template_detection(data):
 
                 file_name_ = path_leaf(Path(file_path).absolute())
                 files_data = {'file': (file_name_, open(file_path, 'rb'))}
-                url = parameters['abbyy_url']
+                url = os.environ['ABBYY_URL']
 
                 logging.debug(url)
                 response = requests.post(url, files=files_data)
@@ -500,12 +500,12 @@ def abbyy_template_detection(data):
                 xml_string = None
                 message = f'Failed to OCR {file_name} using SDK'
                 logging.exception(message)
-                try:
-                    logging.debug('Trying Abbyy Cloud OCR')
-                    xml_string = ocr_cloud(file_path)
-                except:
-                    message = f'Failed to OCR {file_name} using Cloud SDK too'
-                    logging.exception(message)
+                # try:
+                #     logging.debug('Trying Abbyy Cloud OCR')
+                #     xml_string = ocr_cloud(file_path)
+                # except:
+                #     message = f'Failed to OCR {file_name} using Cloud SDK too'
+                #     logging.exception(message)
 
                 label = ''
                 probability = 0.0

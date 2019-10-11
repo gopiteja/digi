@@ -132,6 +132,7 @@ def consume(broker_url='broker:9092'):
                         if response_data['flag']:
                             data = response_data['send_data'] if 'send_data' in response_data else {}
                             data['workflow'] = workflow
+                            data['case_id'] = case_id
                             
                             if os.environ['MODE'] == 'Test':
                                 data = response_data['send_data'] if 'send_data' in response_data else {}
@@ -152,7 +153,7 @@ def consume(broker_url='broker:9092'):
                                     else:
                                         logging.info(f'There is no topic to send to for `{send_to_topic}`.')
                         else:
-                            logging.info('Message not consumed. Some error must have occured. Will try again!')
+                            logging.exception('Message not consumed. Some error must have occured. Will try again!')
                     else:
                         logging.info('Consuming old message.')
                 except Exception as e:

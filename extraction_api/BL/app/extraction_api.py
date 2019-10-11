@@ -335,6 +335,11 @@ def value_extract(result, api=False, retrained=False):
         trained_info_data = templates_db.get_all('trained_info')
         template_info_df = trained_info_data.loc[trained_info_data['template_name'] == template_name]
 
+        if template_info_df.empty:
+            message = f'template - {template_name} does not exist'
+            logging.error(message)
+            return {'flag': False, 'message': message}
+
         # * Get fields to extract (fte) from the trained info
         field_data = json.loads(template_info_df.field_data.values[0])
 

@@ -607,15 +607,20 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, fiel
     """
     Author : Akshat Goyal
     """
-    if not field_with_variation:
-        field_with_variation = get_field_dict(tenant_id=tenant_id)
+    try:
+        if not field_with_variation:
+            field_with_variation = get_field_dict(tenant_id=tenant_id)
+    except:
+        logging.error("table field_dict not present")
+        field_with_variation = {}
+
 
     ocr_keywords = []
     ocr_field_keyword = {}
 
     for field in mandatory_fields:
         logging.debug(f'field - {field}')
-        if field in field_with_variation:
+        if field_with_variation and field in field_with_variation:
             for variation, weight in field_with_variation[field]:
                 for idx, page in enumerate(pre_processed_char):
                     char_index_list, haystack = page
@@ -623,7 +628,7 @@ def get_keywords(ocr_data, mandatory_fields, pre_processed_char, tenant_id, fiel
                     keyCords_list, keywords_list, counter = compute_all_key_list_coord([variation], char_index_list,
                                                                                        haystack)
 
-                    if (counter > 0):
+                    if counter > 0:
                         keyList, keyCords = get_key_list_coord(keywords_list, keyCords_list, {})
 
                         for index, coord in enumerate(keyCords):
