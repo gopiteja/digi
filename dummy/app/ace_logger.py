@@ -56,10 +56,11 @@ class Logging(logging.Logger):
             zipkin_attrs = get_default_tracer().get_zipkin_attrs()
 
 
-            combined = zipkin_attrs.trace_id
+            # combined = zipkin_attrs.trace_id
 
-            trace_id, tenant_id = combined.split(',')
-
+            # trace_id, tenant_id = combined.split(',')
+            tenant_id = zipkin_attrs.tenant
+            trace_id = zipkin_attrs.trace_id
         except:
             message = 'Failed to get tenant and trace ID from zipkin header. Setting tenant/trace ID to None.'
             logging.error(message)
