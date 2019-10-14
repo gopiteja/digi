@@ -69,6 +69,7 @@ def recon():
     intermediate_table = "Temp"
 
     # Initiating Spark Session
+    print("reading jar")
     conf = SparkConf() \
           .setAppName(appName) \
           .setMaster(master) \
@@ -76,6 +77,8 @@ def recon():
     sc = SparkContext(conf=conf)
     sqlContext = SQLContext(sc)
     spark = sqlContext.sparkSession
+    print("read jar")
+
 
     # Create Database connection
     conn = pymysql.connect(host,user,password,database)
