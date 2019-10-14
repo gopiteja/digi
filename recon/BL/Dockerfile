@@ -52,7 +52,7 @@ COPY spark-defaults.conf $SPARK_HOME/conf/spark-defaults.conf
 WORKDIR /home/pyspark
 
 RUN wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java_8.0.17-1ubuntu18.04_all.deb
-RUN dpkg-deb -x mysql-connector-java_8.0.17-1ubuntu18.04_all.deb $SPARK_HOME
+RUN dpkg-deb -x mysql-connector-java_8.0.17-1ubuntu18.04_all.deb $SPARK_HOME/jars
 RUN pip install pyspark
 # RUN cp -i $SPARK_HOME/mysql-connector-java-8.0.17.jar $SPARK_HOME/jars
 
