@@ -293,6 +293,27 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "queue_api_tag"
+
+  # Database Ingestion
+  recon_spark:
+    image: 'recon_spark'
+    container_name: 'recon_spark'
+    build: ./recon/BL
+    networks:
+      service_bridge:
+        aliases:
+          - reconspark
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
     
   # Clustering
   clustering:
