@@ -29,20 +29,6 @@ RUN apt-get -qq update \
 ENV JAVA_REFRESHED_AT 2017-04-21
 RUN apt-get -qq update && apt-get install -y openjdk-8* && apt-get clean
 
-# 4. PYTHON+PIP
-# Install python, python-dev
-ENV PYTHON_REFRESHED_AT 2017-04-21
-RUN apt-get -qq update \
-        && apt-get install -y python python-dev \
-        && apt-get clean
-# Download get-pip.py file to '/tmp' directory
-ENV PIP_REFRESHED_AT 2017-04-21
-RUN wget --directory-prefix /tmp https://bootstrap.pypa.io/get-pip.py
-# Install pip
-RUN python /tmp/get-pip.py
-# Remove '/tmp/get-pip.py' file
-RUN rm /tmp/get-pip.py
-
 # 5. SPARK
 # Download Apache Spark ver. 2.1.0 (2016-12-28) to '/tmp' directory
 ENV URL_SCHEME=http
