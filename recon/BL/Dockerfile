@@ -49,17 +49,11 @@ ENV PYTHONPATH=$PYTHON_DIR_PATH:$PY4J_PATH
 COPY log4j.properties $SPARK_HOME/conf/log4j.properties
 COPY spark-defaults.conf $SPARK_HOME/conf/spark-defaults.conf
 
-# 6. SECURITY
-# Add new 'pyspark' user
-RUN useradd -c "Apache PySpark" -m -s /bin/bash pyspark
-# Change password for 'pyspark' user
-RUN echo "pyspark:pyspark" | chpasswd
-USER pyspark
 WORKDIR /home/pyspark
 
 RUN wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java_8.0.17-1ubuntu18.04_all.deb
-RUN sudo dpkg-deb -x mysql-connector-java_8.0.17-1ubuntu18.04_all.deb $SPARK_HOME
-RUN sudo cp -i $SPARK_HOME/mysql-connector-java-8.0.17.jar $SPARK_HOME/jars
+RUN dpkg-deb -x mysql-connector-java_8.0.17-1ubuntu18.04_all.deb $SPARK_HOME
+RUN cp -i $SPARK_HOME/mysql-connector-java-8.0.17.jar $SPARK_HOME/jars
 
 # Run app.py when the container launches
 CMD ["python", "-u", "recon.py"]
