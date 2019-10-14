@@ -57,4 +57,4 @@ RUN pip install pyspark
 # RUN cp -i $SPARK_HOME/mysql-connector-java-8.0.17.jar $SPARK_HOME/jars
 
 # Run app.py when the container launches
-CMD ["python", "-u", "recon.py"]
+CMD ["python", "-u", "Recon.py"]
