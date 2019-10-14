@@ -246,8 +246,8 @@ def get_columns(queue_id, tenant_id, template_exceptions=None):
     columns = list(columns_df.loc[columns_df['source'] == 'process_queue']['column_name'])
     if template_exceptions:
         return_data = {
-        'columns': columns,
-        'column_mapping': column_mapping
+            'columns': columns,
+            'column_mapping': column_mapping
         }
         return return_data
 
@@ -689,9 +689,10 @@ def get_queue(queue_id=None):
 
                     query = f'SELECT {select_part} FROM {from_part} WHERE {where_part}'
                     
-                    query_result = extraction_db.execute(query, params=case_ids)
-                    query_result_list = query_result.to_dict('records')
-                    logging.debug(f'Extraction data: {query_result_list}')
+                    if select_part and from_part and where_part:
+                        query_result = extraction_db.execute(query, params=case_ids)
+                        query_result_list = query_result.to_dict('records')
+                        logging.debug(f'Extraction data: {query_result_list}')
                 
                     for document in files:                       
                         try:
