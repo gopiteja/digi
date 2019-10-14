@@ -46,8 +46,8 @@ ENV SPARK_HOME=/usr/local/src/spark-2.1.0-bin-hadoop2.7
 ENV PYTHON_DIR_PATH=$SPARK_HOME/python/
 ENV PY4J_PATH=$SPARK_HOME/python/lib/py4j-0.10.4-src.zip
 ENV PYTHONPATH=$PYTHON_DIR_PATH:$PY4J_PATH
-COPY docker/log4j.properties $SPARK_HOME/conf/log4j.properties
-COPY docker/spark-defaults.conf $SPARK_HOME/conf/spark-defaults.conf
+COPY log4j.properties $SPARK_HOME/conf/log4j.properties
+COPY spark-defaults.conf $SPARK_HOME/conf/spark-defaults.conf
 
 # 6. SECURITY
 # Add new 'pyspark' user
