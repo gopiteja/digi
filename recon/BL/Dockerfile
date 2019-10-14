@@ -48,6 +48,7 @@ ENV PY4J_PATH=$SPARK_HOME/python/lib/py4j-0.10.4-src.zip
 ENV PYTHONPATH=$PYTHON_DIR_PATH:$PY4J_PATH
 COPY log4j.properties $SPARK_HOME/conf/log4j.properties
 COPY spark-defaults.conf $SPARK_HOME/conf/spark-defaults.conf
+COPY serializers.py $SPARK_HOME/python/pyspark/serializers.py
 
 WORKDIR /home/pyspark
 
