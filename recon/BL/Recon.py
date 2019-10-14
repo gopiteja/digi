@@ -315,7 +315,7 @@ def recon():
     print(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             
 schedule.every().day.at("11:01").do(recon)
-schedule.every(8).minutes.do(recon)
+schedule.every(5).minutes.do(recon)
 
 if __name__ == '__main__':
     while True: 
