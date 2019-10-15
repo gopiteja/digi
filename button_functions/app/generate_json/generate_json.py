@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import pandas as pd
 import requests
 
 from flask import Flask, request, jsonify
@@ -50,7 +51,6 @@ def export_json(content, tenant_id):
     queue_db = DB('queues', tenant_id=tenant_id, **db_config)
 
     case_data = queue_db.get_all('process_queue', condition={'case_id': case_id})
-    # latest_case_file = queue_db.get_latest(case_files, 'case_id', 'created_date')
 
     if case_data.empty:
         message = f'Case ID `{case_id}` not in process queue.'
@@ -59,13 +59,37 @@ def export_json(content, tenant_id):
 
     # * STEP 1 - Get data to export
     extraction_db = DB('extraction', tenant_id=tenant_id, **db_config)
+    
+    query = 'SELECT * FROM `field_definition` WHERE `export`=1'
+    fields_to_export = queue_db.execute(query)
+    tabs_df = queue_db.get_all('tab_definition')
+    tab_ids = list(fields_to_export['tab_id'].unique())
+    combined_data = pd.DataFrame()
 
-    if case_id is not None:
-        data = extraction_db.get_all('combined', condition={'case_id': case_id})
-    else:
-        data = extraction_db.get_all('combined')
+    for tab_id in tab_ids:
+        tab_fields = fields_to_export.loc[fields_to_export['tab_id'] == tab_id]
+        tab_source = tabs_df.ix[tab_id]['source']
+        field_names = list(tab_fields['display_name'])
 
-    if data.empty:
+        logging.debug(f'Tab ID: {tab_id}')
+        logging.debug(f'Source: {tab_source}')
+        logging.debug(f'Fields: {field_names}')
+
+        query = f'SELECT * FROM {tab_source} WHERE `case_id`=%s'
+        source_data = extraction_db.execute(query, params=[case_id])
+
+        logging.debug(f'Source Data: {source_data}')
+        logging.debug(f'Combined Data: {combined_data}')
+
+        if combined_data.empty:
+            combined_data = source_data
+        else:
+            combined_data = pd.merge(
+                combined_data,
+                source_data,
+                on='case_id')
+
+    if combined_data.empty:
         message = 'No data or case ID not in combined table. Merge table before exporting.'
         logging.error(message)
         return {'flag': False, 'message': message}
