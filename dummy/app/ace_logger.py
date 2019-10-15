@@ -54,16 +54,14 @@ class Logging(logging.Logger):
             # logging.debug('Setting tenant ID from zipkin...', extra=self.extra)
 
             zipkin_attrs = get_default_tracer().get_zipkin_attrs()
+            
+            if zipkin_attrs:
+                tenant_id = zipkin_attrs.tenant_id
+                trace_id = zipkin_attrs.trace_id
 
-
-            # combined = zipkin_attrs.trace_id
-
-            # trace_id, tenant_id = combined.split(',')
-            tenant_id = zipkin_attrs.tenant
-            trace_id = zipkin_attrs.trace_id
         except:
             message = 'Failed to get tenant and trace ID from zipkin header. Setting tenant/trace ID to None.'
-            logging.error(message)
+            logging.warning(message)
 
         # logging.debug(f'Tenant ID: {tenant_id}', extra=self.extra)
         # logging.debug(f'Trace ID: {trace_id}', extra=self.extra)

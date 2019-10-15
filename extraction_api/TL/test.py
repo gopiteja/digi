@@ -71,7 +71,42 @@ def partition_creator(parts, topic, broker_url):
 
 
 class MyTestCase(unittest.TestCase):
-    # def test_value_extract_(self):
+    def test_value_extract_(self):
+        files = test_cases['files']
+        data = files['2000470835']
+
+        input_data = data['input']
+        output = data['output']
+
+        tenant_id = input_data['tenant_id']
+        case_id = input_data['case_id']
+
+        queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
+
+        ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
+        process_queue = {'case_id': case_id, 'queue': 'templateExceptions'}
+
+        insert_into_db(queue_db, ocr_info, 'ocr_info')
+        insert_into_db(queue_db, process_queue, 'process_queue')
+
+        host = os.environ['HOST_IP']
+        port = 5002
+        route = 'predict_field'
+        headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
+        url = f"http://{host}:{port}/{route}"
+        logging.info(f"url - {url}")
+        response = requests.post(url, json=input_data, headers=headers)
+
+        delete_from_db(queue_db, 'process_queue', {'case_id': case_id})
+        delete_from_db(queue_db, 'ocr_info', {'case_id': case_id})
+
+        self.assertEqual(response.json(), output['data'])
+
+    # def test_consumer(self):
+    #     topic = 'test'
+    #     broker_url = 'broker:9092'
+    #     send_to_topic = 'extract'
+    #
     #     files = test_cases['files']
     #     data = files['2000470835']
     #     ocr_data = json.loads(data['ocr'])
@@ -82,92 +117,57 @@ class MyTestCase(unittest.TestCase):
     #     case_id = input_data['case_id']
     #
     #     queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
+    #     template_db = DB('template_db', **trained_db_config, tenant_id=tenant_id)
     #
     #     ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
-    #     process_queue = {'case_id': case_id, 'queue': 'templateExceptions'}
+    #     process_queue = {'case_id': case_id, 'queue': 'templateExceptions', 'template_name': 'test'}
+    #     trained_info = {'template_name': 'test', 'field_data': json.dumps(data['input']['field_data'])}
     #
     #     insert_into_db(queue_db, ocr_info, 'ocr_info')
     #     insert_into_db(queue_db, process_queue, 'process_queue')
+    #     insert_into_db(template_db, trained_info, 'trained_info')
     #
-    #     host = os.environ['HOST_IP']
-    #     port = 5002
-    #     route = 'predict_field'
-    #     headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
-    #     url = f"http://{host}:{port}/{route}"
-    #     logging.info(f"url - {url}")
-    #     response = requests.post(url, json=input_data, headers=headers)
     #
-    #     delete_from_db(queue_db, 'process_queue', {'case_id': case_id})
-    #     delete_from_db(queue_db, 'ocr_info', {'case_id': case_id})
+    #     produce(send_to_topic, input_data)
+    #     to_consume = 1
     #
-    #     self.assertEqual(response.json(), output['data'])
-
-    def test_consumer(self):
-        topic = 'test'
-        broker_url = 'broker:9092'
-        send_to_topic = 'extract'
-
-        files = test_cases['files']
-        data = files['2000470835']
-        ocr_data = json.loads(data['ocr'])
-        input_data = data['input']
-        output = data['output']
-
-        tenant_id = input_data['tenant_id']
-        case_id = input_data['case_id']
-
-        queue_db = DB('queues', **trained_db_config, tenant_id=tenant_id)
-        template_db = DB('template_db', **trained_db_config, tenant_id=tenant_id)
-
-        ocr_info = {'ocr_data': data['ocr'], 'case_id': case_id}
-        process_queue = {'case_id': case_id, 'queue': 'templateExceptions', 'template_name': 'test'}
-        trained_info = {'template_name': 'test', 'field_data': json.dumps(data['input']['field_data'])}
-
-        insert_into_db(queue_db, ocr_info, 'ocr_info')
-        insert_into_db(queue_db, process_queue, 'process_queue')
-        insert_into_db(template_db, trained_info, 'trained_info')
-
-
-        produce(send_to_topic, input_data)
-        to_consume = 1
-
-        try:
-            logging.info(f'Listening to topic `{topic}`...')
-            consumer = consumer_creator()
-            logging.debug('Consumer object created.')
-            parts = consumer.partitions_for_topic(topic)
-
-            parts = partition_creator(parts, topic, broker_url)
-
-            partitions = [TopicPartition(topic, p) for p in parts]
-            consumer.assign(partitions)
-
-            total = 0
-            correct = 0
-
-            for message in consumer:
-                data = message.value
-
-                case_id = '2000470835'
-
-                output = files[case_id]['output']
-
-                consumer.commit()
-                try:
-                    total += 1
-                    self.assertEqual(data['data'], output['data'])
-                    correct += 1
-                except:
-                    logging.error('something wrong with extracton')
-
-                to_consume -= 1
-                if to_consume <= 0:
-                    break
-
-        except:
-            logging.exception('Something went wrong in consumer. Check trace.')
-
-        self.assertEqual(total, correct)
+    #     try:
+    #         logging.info(f'Listening to topic `{topic}`...')
+    #         consumer = consumer_creator()
+    #         logging.debug('Consumer object created.')
+    #         parts = consumer.partitions_for_topic(topic)
+    #
+    #         parts = partition_creator(parts, topic, broker_url)
+    #
+    #         partitions = [TopicPartition(topic, p) for p in parts]
+    #         consumer.assign(partitions)
+    #
+    #         total = 0
+    #         correct = 0
+    #
+    #         for message in consumer:
+    #             data = message.value
+    #
+    #             case_id = '2000470835'
+    #
+    #             output = files[case_id]['output']
+    #
+    #             consumer.commit()
+    #             try:
+    #                 total += 1
+    #                 self.assertEqual(data['data'], output['data'])
+    #                 correct += 1
+    #             except:
+    #                 logging.error('something wrong with extracton')
+    #
+    #             to_consume -= 1
+    #             if to_consume <= 0:
+    #                 break
+    #
+    #     except:
+    #         logging.exception('Something went wrong in consumer. Check trace.')
+    #
+    #     self.assertEqual(total, correct)
 
 
 if __name__ == '__main__':

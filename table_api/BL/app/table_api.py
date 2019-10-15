@@ -1,8 +1,9 @@
 import argparse
 import json
 import requests
+import os
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
-
+from py_zipkin.util import generate_random_64bit_string
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from ace_logger import Logging
@@ -237,16 +238,30 @@ def extract_header():
 
 @app.route('/predict_with_ui_data', methods=['POST', 'GET'])
 def predict_with_ui_data():
+    data = request.json
+    logging.info(f'data{data}')
+
+    if 'tenant_id' in data:
+        tenant_id = data['tenant_id']
+    else:
+        message = f'tenant_id not present'
+        return {'flag': False, "message": message}
+
+    attr = ZipkinAttrs(
+    trace_id=generate_random_64bit_string() + ',' + tenant_id,
+    span_id=generate_random_64bit_string(),
+    parent_span_id=None,
+    flags=None,
+    is_sampled=False,
+
     with zipkin_span(service_name='table_api', span_name='predict_with_ui_data',
                      transport_handler=http_transport,
+                    zipkin_attrs=attr,
                      # port=5014,
                      sample_rate=0.5, ):
         try:
-            data = request.json
-            logging.info(f'data{data}')
             case_id = data['case_id']
             image_width = data['img_width']
-            tenant_id = data['tenant_id'] if 'tenant_id' in data else None
 
             db_config = {
                 'host': os.environ['HOST_IP'],

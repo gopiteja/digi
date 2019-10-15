@@ -118,11 +118,12 @@ services:
       - LOCAL_DB_USER=${LOCAL_DB_USER}
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
       - MODE=${MODE}
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "detection_app_tag"
+      - ABBYY_URL=${ABBYY_URL}
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:12201
+        tag: "detection_app_tag"
 
   # Extraction
   extraction:

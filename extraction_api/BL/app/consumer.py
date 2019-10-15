@@ -9,6 +9,7 @@ from kafka import KafkaConsumer, TopicPartition
 from extraction_api import value_extract
 
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.util import generate_random_64bit_string
 
 from ace_logger import Logging
 from db_utils import DB
@@ -109,16 +110,19 @@ def consume(broker_url='broker:9092'):
                 zipkin_headers = ''
                 zikpkin_atrr = ''
             # TODO add this again
-            # zipkin_attrs=ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
-            #                                  span_id=zipkin_headers['X-B3-SpanId'],
-            #                                  parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
-            #                                  flags=zipkin_headers['X-B3-Flags'],
-            #                                  is_sampled=zipkin_headers['X-B3-Sampled'], ),
+            attr = ZipkinAttrs(
+                trace_id=generate_random_64bit_string() + ',' + tenant_id,
+                span_id=generate_random_64bit_string(),
+                parent_span_id=None,
+                flags=None,
+                is_sampled=False,
+            )
             logging.debug(f'Zipkin headers: {zipkin_headers}')
             with zipkin_span(
                     service_name='extraction_api',
                     span_name='consumer',
                     transport_handler=http_transport,
+                    zipkin_attrs=attr,
                     port=5010,
                     sample_rate=0.5, ):
                 try:

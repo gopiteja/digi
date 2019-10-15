@@ -9,12 +9,14 @@ from db_utils import DB
 from detection_app import abbyy_template_detection, algonox_template_detection
 from producer import produce
 
+
 try:
     from .ace_logger import Logging
 except:
     from ace_logger import Logging
 
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.util import generate_random_64bit_string
 
 logging = Logging()
 
@@ -24,11 +26,11 @@ def http_transport(encoded_span):
     # decoding and re-encoding the already thrift-encoded message, we can just
     # add header bytes that specify that what follows is a list of length 1.
     body = encoded_span
-    requests.post(
-        'http://servicebridge:5002/zipkin',
-        data=body,
-        headers={'Content-Type': 'application/x-thrift'},
-    )
+    # requests.post(
+    #     'http://servicebridge:5002/zipkin',
+    #     data=body,
+    #     headers={'Content-Type': 'application/x-thrift'},
+    # )
 
 
 def consume(broker_url='broker:9092'):
@@ -77,7 +79,8 @@ def consume(broker_url='broker:9092'):
             data = message.value
             logging.info(f'data = {data}')
             try:
-                tenant_id = data['tenant_id']
+                tenant_id = data.get('tenant_id', '')
+
                 workflow = data['workflow']
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
@@ -104,16 +107,22 @@ def consume(broker_url='broker:9092'):
                 logging.warning(f'Critical error: Zipkin headers not found')
                 # print (f'Critical error: Zipkin headers not found')
             try:
+                attr = ZipkinAttrs(
+                    trace_id=generate_random_64bit_string(),
+                    span_id=generate_random_64bit_string(),
+                    parent_span_id=None,
+                    flags=None,
+                    is_sampled=False,
+                    tenant_id=tenant_id
+                )
+                logging.debug(f'attr - {attr}')
                 with zipkin_span(
                         service_name='detection_app',
                         span_name='consume',
-                        zipkin_attrs=ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
-                                                 span_id=zipkin_headers['X-B3-SpanId'],
-                                                 parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
-                                                 flags=zipkin_headers['X-B3-Flags'],
-                                                 is_sampled=zipkin_headers['X-B3-Sampled'], ),
+                        zipkin_attrs=attr,
                         transport_handler=http_transport,
                         sample_rate=100,
+                        use_128bit_trace_id=True
                 ):
                     case_id = data['case_id']
                     ingestion_type = data['type']
@@ -139,17 +148,17 @@ def consume(broker_url='broker:9092'):
                             message_flow = kafka_db.execute(query, params=[topic, workflow])
 
                             if os.environ['MODE'] == 'Test':
-                                sent_topic = 'test_detection'
+                                send_to_topic = 'test_detection'
                             elif message_flow.empty:
                                 logging.error('`folder_monitor` is not configured correctly in message flow table.')
                             else:
                                 send_to_topic = list(message_flow.send_to_topic)[0]
 
-                                if send_to_topic is not None:
-                                    logging.info(f'Producing to topic {send_to_topic}')
-                                    produce(send_to_topic, data)
-                                else:
-                                    logging.info(f'There is no topic to send to for `{send_to_topic}`.')
+                            if send_to_topic is not None:
+                                logging.info(f'Producing to topic {send_to_topic}')
+                                produce(send_to_topic, data)
+                            else:
+                                logging.info(f'There is no topic to send.')
                         else:
                             if 'send_to_topic' in response_data:
                                 send_to_topic_bypassed = response_data['send_to_topic']
@@ -158,54 +167,9 @@ def consume(broker_url='broker:9092'):
                                 logging.error('Message not consumed. Some error must have occured. Will try again!')
                     else:
                         logging.info("Consuming old message.")
-            except:
-                try:
-                    case_id = data['case_id']
-                    ingestion_type = data['type']
-                    logging.info(f'case_id - {case_id}')
-                    query = "SELECT * from process_queue where case_id = %s"
-                    case_id_process = queue_db.execute(query, params=[case_id])
-                    current_queue = 'Old file' if case_id_process.empty else list(case_id_process.queue)[0]
-                    if not current_queue:
-                        current_queue = 'New file'
-                    # print(current_queue)
-                    if current_queue == 'New file' or overwrite:
-                        if ingestion_type == 'file_ingestion':
-                            response_data = abbyy_template_detection(data)
-                        else:
-                            response_data = algonox_template_detection(case_id)
-                        # print(response_data)
-                        if response_data['flag']:
-                            data = response_data['send_data'] if 'send_data' in response_data else {}
-                            data['workflow'] = workflow
-                            data['case_id'] = case_id
-
-                            query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
-                            logging.debug(f'topic - {topic} , workflow - {workflow}')
-                            message_flow = kafka_db.execute(query, params=[topic, workflow])
-                            if os.environ['MODE'] == 'Test':
-                                sent_topic = 'test_detection'
-                            elif message_flow.empty:
-                                logging.error('`folder_monitor` is not configured correctly in message flow table.')
-                            else:
-                                send_to_topic = list(message_flow.send_to_topic)[0]
-
-                                if send_to_topic is not None:
-                                    logging.info(f'Producing to topic {send_to_topic}')
-                                    produce(send_to_topic, data)
-                                else:
-                                    logging.info(f'There is no topic to send to for `{send_to_topic}`.')
-                        else:
-                            if 'send_to_topic' in response_data:
-                                send_to_topic_bypassed = response_data['send_to_topic']
-                                produce(send_to_topic_bypassed, {})
-                            else:
-                                logging.error('Message not consumed. Some error must have occured. Will try again!')
-                    else:
-                        logging.info("Consuming old message.")
-                except Exception as e:
-                    logging.exception(f"Error. Moving to next message. [{e}]")
-                consumer.commit()
+            except Exception as e:
+                logging.exception(f"Error. Moving to next message. [{e}]")
+            consumer.commit()
     except:
         logging.exception('Something went wrong in consumer. Check trace.')
 

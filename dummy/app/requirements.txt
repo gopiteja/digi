@@ -45,10 +45,10 @@ scikit-learn
 scipy
 spacy
 PyPDF2
-py_zipkin
 Flask-Caching
 imutils
 opencv-contrib-python
 opencv-contrib-python-headless
 opencv-python-headless
 Wand
+py_zipkin==0.18.3
