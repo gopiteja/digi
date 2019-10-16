@@ -21,7 +21,7 @@ logging = Logging()
 def http_transport(encoded_span):
     body = encoded_span
     requests.post(
-        'http://servicebridge:5002/zipkin',
+        'http://servicebridge:80/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'}, )
 
@@ -111,11 +111,12 @@ def consume(broker_url='broker:9092'):
                 zikpkin_atrr = ''
             # TODO add this again
             attr = ZipkinAttrs(
-                trace_id=generate_random_64bit_string() + ',' + tenant_id,
+                trace_id=generate_random_64bit_string(),
                 span_id=generate_random_64bit_string(),
                 parent_span_id=None,
                 flags=None,
                 is_sampled=False,
+                tenant_id=tenant_id
             )
             logging.debug(f'Zipkin headers: {zipkin_headers}')
             with zipkin_span(

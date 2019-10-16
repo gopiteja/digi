@@ -115,7 +115,7 @@ class zipkin_span(object):
         timestamp=None,
         duration=None,
         encoding=Encoding.V1_THRIFT,
-        _tracer=None,
+        _tracer=None
     ):
         """Logs a zipkin span. If this is the root span, then a zipkin
         trace is started as well.
@@ -296,7 +296,7 @@ class zipkin_span(object):
                 timestamp=self.timestamp,
                 duration=self.duration,
                 encoding=self.encoding,
-                _tracer=self._tracer,
+                _tracer=self._tracer
             ):
                 return f(*args, **kwargs)
         return decorated
@@ -366,6 +366,7 @@ class zipkin_span(object):
                     return True, create_attrs_for_span(
                         sample_rate=self.sample_rate,
                         trace_id=self.zipkin_attrs_override.trace_id,
+                        tenant_id=self.zipkin_attrs_override.tenant_id,
                     )
 
                 # If zipkin_attrs_override was not passed in, we simply generate
@@ -457,7 +458,7 @@ class zipkin_span(object):
                 client_context=self.kind == Kind.CLIENT,
                 max_span_batch_size=self.max_span_batch_size,
                 firehose_handler=self.firehose_handler,
-                encoding=self.encoding,
+                encoding=self.encoding
             )
             self.logging_context.start()
             self.get_tracer().set_transport_configured(configured=True)

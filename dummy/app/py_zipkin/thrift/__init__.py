@@ -139,6 +139,7 @@ def create_span(
     span_id,
     parent_span_id,
     trace_id,
+    tenant_id,
     span_name,
     annotations,
     binary_annotations,

@@ -77,7 +77,7 @@ def http_transport(encoded_span):
     # add header bytes that specify that what follows is a list of length 1.
     body = encoded_span
     requests.post(
-        'http://servicebridge:5002/zipkin',
+        'http://servicebridge:80/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'},
     )
@@ -1597,11 +1597,12 @@ def force_template():
         return {'flag': False, "message": message}
 
     attr = ZipkinAttrs(
-        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        trace_id=generate_random_64bit_string(),
         span_id=generate_random_64bit_string(),
         parent_span_id=None,
         flags=None,
         is_sampled=False,
+        tenant_id=tenant_id
     )
 
     with zipkin_span(
@@ -1735,11 +1736,12 @@ def retrain():
         return {'flag': False, "message": message}
 
     attr = ZipkinAttrs(
-        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        trace_id=generate_random_64bit_string(),
         span_id=generate_random_64bit_string(),
         parent_span_id=None,
         flags=None,
         is_sampled=False,
+        tenant_id=tenant_id
     )
 
     with zipkin_span(
@@ -1913,11 +1915,12 @@ def test_fields():
         return {'flag': False, "message": message}
 
     attr = ZipkinAttrs(
-        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        trace_id=generate_random_64bit_string(),
         span_id=generate_random_64bit_string(),
         parent_span_id=None,
         flags=None,
         is_sampled=False,
+        tenant_id=tenant_id
     )
 
     with zipkin_span(
@@ -2013,11 +2016,12 @@ def train():
         return {'flag': False, "message": message}
 
     attr = ZipkinAttrs(
-        trace_id=generate_random_64bit_string()+','+tenant_id,
+        trace_id=generate_random_64bit_string(),
         span_id=generate_random_64bit_string(),
         parent_span_id=None,
         flags=None,
         is_sampled=False,
+        tenant_id=tenant_id
     )
 
     with zipkin_span(
@@ -2295,11 +2299,12 @@ def get_ocr_data():
         return {'flag': False, "message": message}
 
     attr = ZipkinAttrs(
-        trace_id=generate_random_64bit_string() + ',' + tenant_id,
+        trace_id=generate_random_64bit_string(),
         span_id=generate_random_64bit_string(),
         parent_span_id=None,
         flags=None,
         is_sampled=False,
+        tenant_id=tenant_id
     )
 
     with zipkin_span(

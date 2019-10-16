@@ -15,7 +15,7 @@ Endpoint = namedtuple(
 
 _V1Span = namedtuple(
     'V1Span',
-    ['trace_id', 'name', 'parent_id', 'id', 'timestamp', 'duration', 'endpoint',
+    ['trace_id', 'tenant_id', 'name', 'parent_id', 'id', 'timestamp', 'duration', 'endpoint',
      'annotations', 'binary_annotations', 'remote_endpoint'],
 )
 
@@ -32,6 +32,7 @@ class Span(object):
     def __init__(
         self,
         trace_id,
+        tenant_id,
         name,
         parent_id,
         span_id,
@@ -76,6 +77,7 @@ class Span(object):
         :param tags: Optional dict of str -> str span tags.
         :type tags: dict
         """
+        self.tenant_id = tenant_id
         self.trace_id = trace_id
         self.name = name
         self.parent_id = parent_id
@@ -141,6 +143,7 @@ class Span(object):
 
         return _V1Span(
             trace_id=self.trace_id,
+            tenant_id=self.tenant_id,
             name=self.name,
             parent_id=self.parent_id,
             id=self.span_id,

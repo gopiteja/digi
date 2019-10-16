@@ -213,6 +213,8 @@ class _V1ThriftDecoder(IDecoder):
                 self._convert_from_thrift_binary_annotations(
                     thrift_span.binary_annotations,
                 )
+        if thrift_span.tenant_id:
+            tenant_id = thrift_span.tenant_id
 
         trace_id = self._convert_trace_id_to_string(
             thrift_span.trace_id,
@@ -221,6 +223,7 @@ class _V1ThriftDecoder(IDecoder):
 
         return Span(
             trace_id=trace_id,
+            tenant_id=tenant_id,
             name=thrift_span.name,
             parent_id=parent_id,
             span_id=self._convert_unsigned_long_to_lower_hex(thrift_span.id),

@@ -8,6 +8,7 @@ from db_utils import DB
 from table_api import predict_with_template
 from producer import produce
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.util import generate_random_64bit_string
 
 try:
     from app.ace_logger import Logging
@@ -23,7 +24,7 @@ def http_transport(encoded_span):
     # add header bytes that specify that what follows is a list of length 1.
     body = encoded_span
     requests.post(
-        'http://servicebridge:5002/zipkin',
+        'http://servicebridge:80/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'},
     )
@@ -73,12 +74,13 @@ def consume(broker_url='broker:9092'):
             data = message.value
 
             try:
-                tenant_id = data['tenant_id']
                 workflow = data['workflow']
             except Exception as e:
                 logging.warning(f'Received unknown data. [{data}] [{e}]')
                 consumer.commit()
                 continue
+
+            tenant_id = data.get('tenant_id', None)
 
             db_config = {
                 'host': os.environ['HOST_IP'],
@@ -95,15 +97,24 @@ def consume(broker_url='broker:9092'):
                 zipkin_headers = data['zipkin_headers']
             else:
                 zipkin_headers = ''
-            with zipkin_span(service_name='table_api', span_name='consumer',
-                             zipkin_attrs=ZipkinAttrs(trace_id=zipkin_headers['X-B3-TraceId'],
-                                                      span_id=zipkin_headers['X-B3-SpanId'],
-                                                      parent_span_id=zipkin_headers['X-B3-ParentSpanId'],
-                                                      flags=zipkin_headers['X-B3-Flags'],
-                                                      is_sampled=zipkin_headers['X-B3-Sampled'], ),
-                             transport_handler=http_transport,
-                             # port=5014,
-                             sample_rate=100, ):
+
+            attr = ZipkinAttrs(
+                trace_id=generate_random_64bit_string(),
+                span_id=generate_random_64bit_string(),
+                parent_span_id=None,
+                flags=None,
+                is_sampled=False,
+                tenant_id=tenant_id
+            )
+
+            with zipkin_span(
+                    service_name='table_api ',
+                    span_name='consume',
+                    zipkin_attrs=attr,
+                    transport_handler=http_transport,
+                    sample_rate=100,
+                    use_128bit_trace_id=True
+            ):
                 try:
                     query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
                     message_flow = kafka_db.execute(query, params=[topic, workflow])

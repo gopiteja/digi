@@ -37,7 +37,7 @@ def http_transport(encoded_span):
     # add header bytes that specify that what follows is a list of length 1.
     body =encoded_span
     requests.post(
-            'http://servicebridge:5002/zipkin',
+            'http://servicebridge:80/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'},
     )

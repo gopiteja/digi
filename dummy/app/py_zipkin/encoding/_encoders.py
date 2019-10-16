@@ -130,6 +130,7 @@ class _V1ThriftEncoder(IEncoder):
             span.id,
             span.parent_id,
             span.trace_id,
+            span.tenant_id,
             span.name,
             thrift_annotations,
             thrift_binary_annotations,
@@ -217,6 +218,8 @@ class _V1JSONEncoder(_BaseJSONEncoder):
             'binaryAnnotations': [],
         }
 
+        if span.tenant_id:
+            json_span['tenant_id'] = span.tenant_id
         if span.parent_id:
             json_span['parentId'] = span.parent_id
         if span.timestamp:
@@ -263,6 +266,9 @@ class _V2JSONEncoder(_BaseJSONEncoder):
             'traceId': span.trace_id,
             'id': span.span_id,
         }
+
+        if span.tenant_id:
+            json_span['tenant_id'] = span.tenant_id
 
         if span.name:
             json_span['name'] = span.name

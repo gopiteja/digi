@@ -115,6 +115,7 @@ class ZipkinLoggingContext(object):
 
             span_sender.add_span(Span(
                 trace_id=self.zipkin_attrs.trace_id,
+                tenant_id=self.zipkin_attrs.tenant_id,
                 name=self.span_name,
                 parent_id=self.zipkin_attrs.parent_span_id,
                 span_id=self.zipkin_attrs.span_id,

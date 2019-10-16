@@ -24,7 +24,15 @@ COPY ./app/jinja2ext.py /usr/local/lib/python3.6/dist-packages/flask_cache
 COPY ./app/db_utils.py /usr/lib/python3.6
 COPY ./app/ace_logger.py /usr/lib/python3.6
 COPY ./app/producer.py /usr/lib/python3.6
+
 COPY ./app/py_zipkin/zipkin.py /usr/local/lib/python3.6/dist-packages/py_zipkin
 COPY ./app/py_zipkin/__init__.py /usr/local/lib/python3.6/dist-packages/py_zipkin
+COPY ./app/py_zipkin/logging_helper.py /usr/local/lib/python3.6/dist-packages/py_zipkin
+
+COPY ./app/py_zipkin/encoding/_decoders.py /usr/local/lib/python3.6/dist-packages/py_zipkin
+COPY ./app/py_zipkin/encoding/_decoders.py /usr/local/lib/python3.6/dist-packages/py_zipkin
+COPY ./app/py_zipkin/encoding/_encoders.py /usr/local/lib/python3.6/dist-packages/py_zipkin
+COPY ./app/py_zipkin/encoding/_helpers.py /usr/local/lib/python3.6/dist-packages/py_zipkin
+
 
 COPY policy.xml /etc/ImageMagick-6

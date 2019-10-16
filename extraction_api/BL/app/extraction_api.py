@@ -27,6 +27,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from nltk import edit_distance
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.util import generate_random_64bit_string
 
 from db_utils import DB
 from producer import produce
@@ -77,7 +78,7 @@ DISTANCE_THRESHOLD = 2
 def http_transport(encoded_span):
     body = encoded_span
     requests.post(
-        'http://servicebridge:5002/zipkin',
+        'http://servicebridge:80/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'}, )
 
@@ -186,9 +187,11 @@ def extraction_with_keyword(ocr_data, keyword, scope, fte, fte_data, key_page, o
     else:
         try:
             if context:
-                val, word_highlights, method_used = keyword_selector_inside_word(ocr_data, keyword, scope, fte_data,
-                                                                                 key_page, context,
-                                                                                 field_conf_threshold=field_conf_threshold)
+                val, word_highlights, method_used = \
+                    keyword_selector_inside_word(
+                        ocr_data, keyword, scope, fte_data,key_page,
+                        context,key_val_meta=key_val_meta,field_conf_threshold=field_conf_threshold
+                    )
             else:
                 # val,word_highlights=closest_field_extract(ocr_data[i],keyword,scope,fte_data,
                 # field_conf_threshold=field_conf_threshold)
@@ -1606,7 +1609,7 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
 
 
 @zipkin_span(service_name='extraction_api', span_name='keyword_selector_inside_word')
-def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, context=None, field_conf_threshold=100):
+def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, context=None, key_val_meta=None, field_conf_threshold=100):
     '''
     Get closest keyword to the trained keyword.
     '''
@@ -1645,9 +1648,9 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
             if (data['word'] == keyList[0] or (regex.search(data['word']) != None and re.search('[a-zA-Z]',
                                                                                                 data['word'].replace(
                                                                                                     keyList[0],
-                                                                                                    '')) == None and
+                                                                                                    '')) is not None and
                                                keyList[0] in data['word']) or keyList[0] in data['word']):
-                if (keyLength > 1):
+                if keyLength > 1:
                     x = 0
                     key_words_idx = 0
                     while (key_words_idx < keyLength and x < keyLength):
@@ -1656,14 +1659,12 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
                             check = False
                             break
                         else:
-                            if (ocr_data[page_no][i + x]['word'] == keyList[key_words_idx] or (
-                                    regex.search(ocr_data[page_no][i + x]['word']) != None and re.search('[a-zA-Z]',
-                                                                                                         data[
-                                                                                                             'word'].replace(
-                                                                                                             keyList[
-                                                                                                                 x],
-                                                                                                             '')) == None and
-                                    keyList[key_words_idx] in ocr_data[page_no][i + x]['word'])):
+                            if (
+                                    ocr_data[page_no][i + x]['word'] == keyList[key_words_idx] or (
+                                    regex.search(ocr_data[page_no][i + x]['word']) is not None and re.search('[a-zA-Z]',
+                                    data['word'].replace(keyList[x],'')) is None and
+                                    keyList[key_words_idx] in ocr_data[page_no][i + x]['word'])
+                            ):
                                 check = True
                             elif (keyList[key_words_idx] in ocr_data[page_no][i + x]['word']):
                                 check = True
@@ -1775,12 +1776,30 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
 
 @app.route('/extract_for_template', methods=['POST', 'GET'])
 def extract_for_template():
+    try:
+        data = request.json
+    except:
+        return jsonify({'flag': False, 'Message': 'Empty data'})
+
+    tenant_id = data.get('tenant_id', None)
+
+    attr = ZipkinAttrs(
+        trace_id=generate_random_64bit_string(),
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
+        tenant_id=tenant_id
+    )
+
     with zipkin_span(
-            service_name='extraction_api',
-            span_name='extract_for_template',
+            service_name='table_api',
+            span_name='predict_with_ui_data',
             transport_handler=http_transport,
-            port=5010,
-            sample_rate=0.5, ):
+            zipkin_attrs=attr,
+            # port=5014,
+            sample_rate=0.5,
+    ):
         try:
             data = request.json
             logging.debug(f'UI data: {data}')

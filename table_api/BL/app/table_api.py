@@ -40,7 +40,7 @@ except:
 def http_transport(encoded_span):
     body = encoded_span
     requests.post(
-        'http://servicebridge:5002/zipkin',
+        'http://servicebridge:80/zipkin',
         data=body,
         headers={'Content-Type': 'application/x-thrift'}, )
 
@@ -241,24 +241,25 @@ def predict_with_ui_data():
     data = request.json
     logging.info(f'data{data}')
 
-    if 'tenant_id' in data:
-        tenant_id = data['tenant_id']
-    else:
-        message = f'tenant_id not present'
-        return {'flag': False, "message": message}
+    tenant_id = data.get('tenant_id', None)
 
     attr = ZipkinAttrs(
-    trace_id=generate_random_64bit_string() + ',' + tenant_id,
-    span_id=generate_random_64bit_string(),
-    parent_span_id=None,
-    flags=None,
-    is_sampled=False,
+        trace_id=generate_random_64bit_string(),
+        span_id=generate_random_64bit_string(),
+        parent_span_id=None,
+        flags=None,
+        is_sampled=False,
+        tenant_id=tenant_id
+    )
 
-    with zipkin_span(service_name='table_api', span_name='predict_with_ui_data',
-                     transport_handler=http_transport,
-                    zipkin_attrs=attr,
-                     # port=5014,
-                     sample_rate=0.5, ):
+    with zipkin_span(
+            service_name='table_api',
+            span_name='predict_with_ui_data',
+            transport_handler=http_transport,
+            zipkin_attrs=attr,
+            # port=5014,
+            sample_rate=0.5,
+    ):
         try:
             case_id = data['case_id']
             image_width = data['img_width']
