@@ -1,6 +1,8 @@
 import logging
 import os
 
+from inspect import getframeinfo, stack
+
 from py_zipkin.storage import get_default_tracer
 
 
@@ -50,6 +52,8 @@ class Logging(logging.Logger):
     def set_ids(self):
         tenant_id = None
         trace_id = None
+        line_no = None
+        file_name = None
         try:
             # logging.debug('Setting tenant ID from zipkin...', extra=self.extra)
 
@@ -63,14 +67,26 @@ class Logging(logging.Logger):
             message = 'Failed to get tenant and trace ID from zipkin header. Setting tenant/trace ID to None.'
             logging.warning(message)
 
+        try:
+            caller = getframeinfo(stack()[2][0])
+            file_name = caller.filename
+            line_no = caller.lineno
+        except:
+            message = 'Failed to get caller stack'
+
         # logging.debug(f'Tenant ID: {tenant_id}', extra=self.extra)
         # logging.debug(f'Trace ID: {trace_id}', extra=self.extra)
 
         self.tenant_id = tenant_id
         self.trace_id = trace_id
+        self.line_no = line_no
+        self.file_name = file_name
+
         self.extra = {
             'tenantID': self.tenant_id,
-            'traceID': self.trace_id
+            'traceID': self.trace_id,
+            'fileName': self.file_name,
+            'lineNo': self.line_no
         }
 
     def basicConfig(self, *args, **kwargs):

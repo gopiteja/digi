@@ -3528,7 +3528,7 @@
             "decision_info",
             "Date_Of_Notice"
           ],
-          "file_name": "output_folder/2000470835.pdf",
+          "file_name": "test/2000470835.pdf",
           "flag": true,
           "mandatory_fields": [
             "Fax_senders_name",
