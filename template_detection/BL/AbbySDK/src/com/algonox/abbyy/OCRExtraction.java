@@ -134,7 +134,7 @@ public class OCRExtraction {
 			
 			String xml_string = processImage(outputFile);
 // 			System.out.println("{'blob': "+imageStr+", 'xml_string':"+ xml_string+"}");
-            System.out.println(xml_string)
+            System.out.println(xml_string);
 		} finally {
 			
 			if (ifrDoc != null)
