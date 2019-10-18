@@ -133,7 +133,7 @@ public class OCRExtraction {
 			String imageStr = Base64.getEncoder().encodeToString(imageBytes);
 			
 			String xml_string = processImage(outputFile);
-			System.out.println("{'blob': "+imageStr+", 'xml_string':"+ xml_string+"}");
+			System.out.println("{'blob': '"+imageStr+"', 'xml_string':'"+ xml_string+"'}");
 
 		} finally {
 			
