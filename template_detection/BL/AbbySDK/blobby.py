@@ -36,6 +36,7 @@ def file_ocr():
         count = 0
         while True:
             try:
+                print('logging to save the file')
                 file_data.save(file_name)
                 break
             except:

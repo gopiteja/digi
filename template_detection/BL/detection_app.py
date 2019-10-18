@@ -465,7 +465,7 @@ def abbyy_template_detection(data):
                     return tail or ntpath.basename(head)
 
                 file_name_ = path_leaf(Path(file_path).absolute())
-                files_data = {'file': (file_name_, open(file_path, 'rb'))}
+                files_data = {'file': open(file_path, 'rb').read()}
                 url = os.environ['ABBYY_URL']
 
                 logging.debug(url)
