@@ -2354,6 +2354,7 @@ def get_ocr_data():
         except Exception as e:
             logging.exception(f'Error getting mandatory fields: {e}')
             mandatory_fields = []
+            fields = []
 
         # Get data related to the case from invoice table
         invoice_files_df = db.get_all('process_queue')
