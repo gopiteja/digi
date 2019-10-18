@@ -46,8 +46,7 @@ def file_ocr():
 
         print(f'{type(file_data)}')
 
-        case_id = request.json['case_id']
-        inp = './Run.sh ' + str(case_id)
+        # inp = './Run.sh ' + file_name
         # inp = "/usr/bin/java -classpath '.:bin/.:libs/abbyy.FREngine.jar:libs/mysql-connector-java-8.0.17.jar' com.algonox.abbyy.OCRExtraction " + case_id
         xml_string = subprocess.check_output(['./Run.sh', file_name]).decode('utf-8').replace('\\r\\n', '')
         return jsonify({'xml_string': xml_string[1:]})
