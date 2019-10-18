@@ -32,7 +32,7 @@ public class OCRExtraction {
 
 		try {
 			java.io.InputStream inputStream = extraction.getClass().getClassLoader()
-					.getResourceAsStream("resources/config.properties");
+					.getResourceAsStream("config.properties");
 			configProperties.load(inputStream);
 			String fileName = args[0];
 			extraction.loadEngine();
