@@ -38,10 +38,17 @@ def sdk():
 
     logging.debug(f'{type(file_data)}')
 
-    abbyy = ABBYY()
+    case_id = request.json['case_id']
+    inp = './Run.sh '+ str(case_id)
+    #inp = "/usr/bin/java -classpath '.:bin/.:libs/abbyy.FREngine.jar:libs/mysql-connector-java-8.0.17.jar' com.algonox.abbyy.OCRExtraction " + case_id
+    xml_string = subprocess.check_output(['./Run.sh',str(case_id)]).decode('utf-8').replace('\\r\\n','')
+    return jsonify({'xml_string': xml_string[1:]})
 
-    sdk_output = abbyy.rotation_and_ocr("C:/Users/t00004100/Desktop/abbyy/received/ocr_file.pdf")
-    return jsonify(sdk_output)
+
+    # abbyy = ABBYY()
+    #
+    # sdk_output = abbyy.rotation_and_ocr("C:/Users/t00004100/Desktop/abbyy/received/ocr_file.pdf")
+    # return jsonify(sdk_output)
 
 
 if __name__ == '__main__':
