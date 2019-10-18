@@ -65,7 +65,7 @@ class Logging(logging.Logger):
 
         except:
             message = 'Failed to get tenant and trace ID from zipkin header. Setting tenant/trace ID to None.'
-            logging.warning(message)
+            print(message)
 
         try:
             caller = getframeinfo(stack()[2][0])
