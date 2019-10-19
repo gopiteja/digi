@@ -134,8 +134,8 @@ def actual_get_orientations(crop_box, keyword_box):
 
     keyword_box_mid_x = get_mid(keyword_box['left'], keyword_box['right'])
     keyword_box_mid_y = get_mid(keyword_box['top'], keyword_box['bottom'])
-    logging.debug("crop_box_mid ", [crop_box_mid_x, crop_box_mid_y])
-    logging.debug("keyword ", keyword_box)
+    logging.debug(f"crop_box_mid {[crop_box_mid_x, crop_box_mid_y]}")
+    logging.debug(f"keyword {keyword_box}")
     orientation = []
 
     x_dis = crop_box_mid_x - keyword_box_mid_x
@@ -218,8 +218,8 @@ def break_boundaries(ocr_data, field_data, box, field_conf_threshold):
 
     orientations, crop_box = get_orientations(field_data)
 
-    logging.debug("orientations - ", orientations)
-    logging.debug("box before - ", box)
+    logging.debug(f"orientations - {orientations}")
+    logging.debug(f"box before - {box}")
     box = expand_along_orientation(box, orientations)
 
     # box = [box['left'],box['right'],box['bottom'],box['top']]
@@ -227,7 +227,7 @@ def break_boundaries(ocr_data, field_data, box, field_conf_threshold):
     keyList=keyword.split()
     keyList = [i.strip() for i in keyList]
 
-    logging.debug("box = ", box)
+    logging.debug(f"box = {box}")
     word = []
     temp_highlight = []
     for data in ocr_data:

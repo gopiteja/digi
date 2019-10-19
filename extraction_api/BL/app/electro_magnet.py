@@ -10,7 +10,7 @@ logging = Logging()
 
 def get_histogram(img,type):
     histogram = np.sum(img[:,:], axis=type)
-    logging.debug(img.shape)
+    logging.debug(f'Image shape: {img.shape}')
     return histogram
 
 
@@ -105,7 +105,8 @@ def get_cv_lines(src_img,rf=None,scale = 6.5):
         logging.warning('No horizontal lines')
         hors = []
 
-    logging.debug(hors,vers)
+    logging.debug(f'Hors: {hors}')
+    logging.debug(f'Vers: {vers}')
 
     # for ver in vers:
     #     cv2.line(src_img,(ver,0),(ver,4000),(0,0,255),2)
@@ -123,8 +124,6 @@ def get_cv_lines(src_img,rf=None,scale = 6.5):
     # plt.show()
     # vers = [int(ver*rf) for ver in vers]
     # hors = [int(hor*rf) for hor in hors]
-    logging.debug('vers',vers)
-    logging.debug('hors',hors)
 
     for hor in hors:
         cv2.line(src_img,(0,int(hor)),(4000,int(hor)),(255,255,255),7)

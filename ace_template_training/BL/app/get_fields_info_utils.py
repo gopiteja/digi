@@ -106,7 +106,7 @@ def merge_fields(box_list,page_number=0):
     Merge 2 or more words and get combined coordinates
     '''
     if box_list and type(box_list[0]) is dict:
-        logging.debug('box_list',box_list)
+        logging.debug(f'box_list {box_list}')
         min_left = min([word['left'] for word in box_list])
         min_top = min([word['top'] for word in box_list])
         max_right = max([word['right'] for word in box_list])
