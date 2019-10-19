@@ -63,7 +63,7 @@ def insertstitchedBLOB(name, photo):
         if(connection.is_connected()):
             cursor.close()
             connection.close()
-            logging.info("MySQL connection is closed")
+            logging.debug("MySQL connection is closed")
 
 def make_chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -101,14 +101,14 @@ def database_upload():
             query = "SELECT * from ocr_info where case_id = %s"
             case_id_process = queue_db.execute(query,params=[key])
             if case_id_process.empty:
-                logging.info("Calling Abbyy")
+                logging.debug("Calling Abbyy")
                 host = os.environ['HOST_IP']
                 port = 5555
                 route = 'database_ocr'
                 data = {
                     'case_id': key
                 }
-                logging.info ("calling the bloblby")
+                logging.debug ("calling the blobby")
                 response = requests.post(f'http://{host}:{port}/{route}', json=data)
 
                 xml_string = response.json()['xml_string']
@@ -131,7 +131,7 @@ def database_upload():
                     'VALUES (%s)')
                 params = [key]
                 queue_db.execute(insert_query, params=params)
-                logging.info(f' - {key} inserted successfully into the database')
+                logging.debug(f' - {key} inserted successfully into the database')
 
             # Produce message to detection
 
@@ -154,10 +154,10 @@ def database_upload():
                 topic = list(message_flow.send_to_topic)[0]
 
                 if topic is not None:
-                    logging.info(f'Producing to topic {topic}')
+                    logging.debug(f'Producing to topic {topic}')
                     produce(topic, data)
                 else:
-                    logging.info(f'There is no topic to send to for `database_ingestion`. [{topic}]')
+                    logging.debug(f'There is no topic to send to for `database_ingestion`. [{topic}]')
         except:
             logging.exception('')
             query = f"delete from merged_blob where case_id = '{key}'"
