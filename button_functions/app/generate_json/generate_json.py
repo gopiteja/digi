@@ -130,7 +130,7 @@ def export_json(content, tenant_id):
 
     json_export = JSONExport(**json_export_config)
 
-    return json_export.export(case_data, data)
+    return json_export.export(case_data, combined_data)
 
 def consume(broker_url='broker:9092'):
     try:
