@@ -90,9 +90,9 @@ def validate_fields_(raw, field_data):
     '''
     for field in raw:
         if 'amount' in field.lower() and parameters['clean'] == "yes":
-            logging.debug("Cleaning amounts..")
+            logging.debug(f"Cleaning amounts..")
             val_list = raw[field].split()
-            logging.debug("Val List", val_list)
+            logging.debug(f"Val List {val_list}")
 
             temp = []
             for val in val_list:
@@ -101,7 +101,7 @@ def validate_fields_(raw, field_data):
                 else:
                     temp.append(val.replace(',', ''))
 
-            logging.debug("Cleaned:", temp)
+            logging.debug(f"Cleaned: {temp}")
             raw[field] = ' '.join(temp)
 
         for fte, fte_data in field_data.items():
@@ -118,7 +118,7 @@ def validate_fields_(raw, field_data):
                         raw[field] = parse(raw[field].replace('suspicious', '').replace('validation failed!', ''),
                                            dayfirst=True).strftime("%d-%b-%y")
                     except Exception as e:
-                        logging.debug("error in date conversion", e)
+                        logging.exception(f"error in date conversion")
                         pass
                 if "invoice number" in field.lower() and raw[field]:
                     try:
@@ -151,7 +151,7 @@ def validate_fields_(raw, field_data):
 @zipkin_span(service_name='extraction_api', span_name='extraction_with_keyword')
 def extraction_with_keyword(ocr_data, keyword, scope, fte, fte_data, key_page, ocr_length, context=None,
                             key_val_meta=None, field_conf_threshold=100, pre_process_char=[]):
-    logging.info('Extracting with keyword')
+    logging.info(f'Extracting with keyword')
     logging.info(fte)
     logging.info(fte_data)
     val = ''
@@ -199,7 +199,7 @@ def extraction_with_keyword(ocr_data, keyword, scope, fte, fte_data, key_page, o
                 # val,word_highlights=keyword_selector_inside_word(ocr_data,keyword,scope,fte_data,key_page,
                 # field_conf_threshold=field_conf_threshold)
         except:
-            logging.warning("Closest not found")
+            logging.info(f"Closest not found")
             pass
 
     if not val:
@@ -399,7 +399,7 @@ def value_extract(result, api=False, retrained=False):
             output_[fte] = fte_data['keyword']
             output[fte] = fte_data['keyword']
         elif 'boundary_data' in fte_data and fte_data['boundary_data']:
-            logging.debug("Trying to use FUED")
+            logging.debug(f"Trying to use FUED")
             # print('in boundary data')
 
             val, _ = find_field(fte, field_data, 'template_name', ocr_data)
@@ -412,8 +412,8 @@ def value_extract(result, api=False, retrained=False):
                 output_[fte] = val
                 extract = False
         if not val:
-            logging.debug("Unfortunately FUED was unsuccessful")
-            logging.debug("But fear not keywords is here to rescue")
+            logging.debug(f"Unfortunately FUED was unsuccessful")
+            logging.debug(f"But fear not keywords is here to rescue")
             try:
                 scope = json.loads(fte_data['scope'])
                 scope_value = json.loads(fte_data['scope_value'])
@@ -465,7 +465,7 @@ def value_extract(result, api=False, retrained=False):
                         output_['method_used'][fte] = '2D'
 
                     except Exception as e:
-                        logging.debug('Failed to predict using multikey method')
+                        logging.debug(f'Failed to predict using multikey method')
                         val = ''
 
                 else:
@@ -617,7 +617,7 @@ def value_extract(result, api=False, retrained=False):
                     if field_value:
                         output_[field_name] = field_value.replace(' ', '') + 'suspicious'
 
-    logging.debug('\nExtracted data:')
+    logging.debug(f'\nExtracted data:')
     logging.debug(json.dumps(output_, indent=2))
 
     # * Field Validation
@@ -634,7 +634,7 @@ def value_extract(result, api=False, retrained=False):
         logging.exception(f'Error in validation. Skipping validation.')
 
     if api:
-        logging.info('Its API fields')
+        logging.info(f'Its API fields')
         output_.pop('method_used', 0)
         return output_
 
@@ -678,7 +678,7 @@ def value_extract(result, api=False, retrained=False):
     update_queue_trace(queues_db, case_id, updated_queue)
 
     # * Add the fields to the OCR table of extraction DB
-    logging.debug('Adding extracted data to the database')
+    logging.debug(f'Adding extracted data to the database')
     extraction_db_config = {
         'host': os.environ['HOST_IP'],
         'user': os.environ['LOCAL_DB_USER'],
@@ -702,9 +702,9 @@ def value_extract(result, api=False, retrained=False):
         stats_db.insert_dict(audit_data, 'audit')
 
         if update_status:
-            logging.debug('Updated successfully.')
+            logging.debug(f'Updated successfully.')
         else:
-            logging.error('Update error.')
+            logging.error(f'Update error.')
 
         common_db_config = {
             'host': os.environ['HOST_IP'],
@@ -1080,7 +1080,7 @@ def value_split_method(key_val_meta, keycoord, ocr_data, page_no):
     now the split method in this new shiny package
     """
     # return '', {}
-    logging.debug('using value split method')
+    logging.debug(f'using value split method')
     logging.debug(f'keycoord - {keycoord}')
     logging.debug(f'key_val_meta - {key_val_meta}')
 
@@ -1124,9 +1124,10 @@ def find_value_using_box(keyList, ocr_data, page_no, box, field_data, field_conf
                 and data['right'] - int(parameters['box_right_margin_ratio'] * data['width']) <= box[1]
                 and data['top'] + int(parameters['box_top_margin_ratio'] * data['height']) >= box[3]
                 and data['bottom'] - int(parameters['box_bottom_margin_ratio'] * data['height']) <= box[2]):
-            logging.debug('keyword select word - ', data['word'])
+            w = data['word']
+            logging.debug(f'keyword select word - {w}')
             word_box = [data['left'], data['right'], data['bottom'], data['top']]
-            logging.debug('word box - ', word_box)
+            logging.debug(f'word box - {word_box}')
             if (percentage_inside(box, word_box) > parameters['overlap_threshold']
                     and data['word'] not in keyList):
                 if 'junk' in field_data:
@@ -1339,7 +1340,7 @@ def get_pre_process_char(pre_process_char, ocr_data, page_no):
     """
     """
     if not pre_process_char:
-        logging.warning('pre prossesing not done, VERY BADDDDD!!!')
+        logging.info(f'pre prossesing not done, VERY BADDDDD!!!')
         char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(ocr_data[page_no])
     else:
         try:
@@ -1470,7 +1471,7 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
     rel_right = field_data['right']
 
     keyList = keyword.split()
-    # logging.debug("\nKeyList:\n%s" % keyList)
+    # logging.debug(f"\nKeyList:\n%s" % keyList)
     keyLength = len(keyList)
     page_no = page
 
@@ -1530,7 +1531,7 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
                         # If multi word key
                         if (keyLength > 1):
                             if (ocr_data[page_no][i + x]['word'] == keyList[x]):
-                                logging.debug("%s" % keyList[x])
+                                logging.debug(f"%s" % keyList[x])
                                 if (ocr_data[page_no][i + x]['top'] < top):
                                     top = ocr_data[page_no][i + x]['top']
                                 if (ocr_data[page_no][i + x]['bottom'] > bottom):
@@ -1544,9 +1545,9 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
                     logging.debug(tempCords)
                     keyCords.append(tempCords[0])
 
-    logging.debug("No of occurences of %s: %s" % (keyword, counter))
+    logging.debug(f"No of occurences of %s: %s" % (keyword, counter))
     if context is not None:
-        logging.debug('Context available. Finding context box.')
+        logging.debug(f'Context available. Finding context box.')
         # Find context box and get new scope box
         context = get_context_box(ocr_data[page_no], keyCords, context)
         if context:
@@ -1567,7 +1568,7 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
             y = abs(midwidth - inpY)
             dist = math.sqrt((x * x) + (y * y))
             DistList.append(round(dist, 2))
-        logging.debug("Key distance dictionary: %s" % DistList)
+        logging.debug(f"Key distance dictionary: %s" % DistList)
         try:
             closestKey = min(DistList)
         except:
@@ -1590,7 +1591,7 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
                 method_used = 'VALUE_SPLIT'
 
         if not val:
-            logging.debug('now using our plain old box method')
+            logging.debug(f'now using our plain old box method')
             box = [box_left, box_right, box_bottom, box_top]
             logging.debug(f'box - {box}')
 
@@ -1604,7 +1605,7 @@ def keyword_selector(ocr_data, keyword, inp, field_data, page, context=None, key
 
 
     else:
-        logging.warning('Exact Keyword not found in OCR')
+        logging.info(f'Exact Keyword not found in OCR')
         return [''.strip(), highlight, method_used]
 
 
@@ -1626,7 +1627,7 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
     rel_right = field_data['right']
 
     keyList = keyword.split()
-    logging.debug("\nKeyList:\n%s" % keyList)
+    logging.debug(f"\nKeyList:\n%s" % keyList)
     keyLength = len(keyList)
     logging.debug(f'key list length - {keyLength}')
     page_no = page
@@ -1640,7 +1641,7 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
             regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
             check = False
             # if data['word'] == 'Fori':
-            #     logging.debug('yes hihi')
+            #     logging.debug(f'yes hihi')
             #     logging.debug(data['word'])
             #     logging.debug(keyList[0] in data['word'])
             #     logging.debug(regex.search(data['word'])!=None)
@@ -1695,7 +1696,7 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
                     while (key_words_idx < keyLength and x < keyLength):
                         # Right is of the last word
                         if (key_words_idx == (keyLength - 1)):
-                            logging.debug('word', ocr_data[page_no][i + x])
+                            logging.debug(f'word {ocr_data[page_no][i + x]}')
                             tempCords[0]['right'] = ocr_data[page_no][i + x]['right']
 
                         # If multi word key
@@ -1721,9 +1722,9 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
                     tempCords[0]['bottom'] = bottom
                     keyCords.append(tempCords[0])
 
-    logging.debug("No of occurences of %s: %s" % (keyword, counter))
+    logging.debug(f"No of occurences of %s: %s" % (keyword, counter))
     if context is not None:
-        logging.debug('Context available. Finding context box.')
+        logging.debug(f'Context available. Finding context box.')
         # Find context box and get new scope box
         inp = get_context_box(ocr_data[page_no], keyCords, context)
 
@@ -1741,7 +1742,7 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
             y = abs(midwidth - inpY)
             dist = math.sqrt((x * x) + (y * y))
             DistList.append(round(dist, 2))
-        logging.debug("\nKey distance dictionary: %s" % DistList)
+        logging.debug(f"\nKey distance dictionary: %s" % DistList)
         closestKey = min(DistList)
         minIndex = DistList.index(closestKey)
 
@@ -1770,7 +1771,7 @@ def keyword_selector_inside_word(ocr_data, keyword, inp, field_data, page, conte
 
 
     else:
-        logging.warning('Exact Keyword not found in OCR')
+        logging.info(f'Exact Keyword not found in OCR')
         return [''.strip(), highlight, '']
 
 
@@ -1840,7 +1841,7 @@ def extract_for_template():
             # Return the number of cases that are being processed
             return jsonify({'flag': True, 'data': f'Processing {len(case_ids) - 1} other cases.'})
         except Exception as e:
-            logging.exception('Something went wrong extracting from template. Check trace.')
+            logging.exception(f'Something went wrong extracting from template. Check trace.')
             return jsonify({'flag': False, 'message': 'System error! Please contact your system administrator.'})
 
 
@@ -1852,5 +1853,5 @@ def predict_field():
         logging.debug(response_data)
         return jsonify(response_data)
     except Exception as e:
-        logging.exception('Something went wrong while extracting. Check trace.')
+        logging.exception(f'Something went wrong while extracting. Check trace.')
         return jsonify({'flag': False, 'message': 'System error! Please contact your system administrator.'})

@@ -475,18 +475,19 @@ def abbyy_template_detection(data):
                 sdk_output = response.json()
                 logging.debug(type(sdk_output))
                 logging.debug(sdk_output.keys())
-                try:
+                if 'blob' in sdk_output:
                     pdf = base64.b64decode(sdk_output['blob'])
                     with open(file_path, 'wb') as f:
                         f.write(pdf)
-                except:
-                    logging.error('no blob data')
+                else:
+                    logging.warning('no blob in sdk_output')
+
 
                 shutil.copyfile(file_path, 'angular/' + file_parent_input + file_name)
                 # shutil.copyfile(file_path, 'training_ui/' + file_parent_input + file_name)
                 os.remove(file_path)
 
-                xml_string = sdk_output['xml_string'].encode('utf-8')
+                xml_string = sdk_output['xml_string'].replace('\r', '').replace('\n', '').replace('\ufeff', '')
 
                 classification = sdk_output.pop('classification', None)
 

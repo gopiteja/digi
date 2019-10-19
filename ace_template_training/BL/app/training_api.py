@@ -473,7 +473,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
     if checkb:
         logging.debug('enterred here')
         pattern = validation
-        logging.debug('checkbox_keys', checkboxes.keys())
+        logging.debug(f'checkbox_keys {checkboxes.keys()}')
 
         for keyword_ch, ch_field_box in checkboxes.items():
             if keyword_ch == 'id':
@@ -483,7 +483,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
 
             field_box = ch_field_box
             # logging.debug(field_box)
-            logging.debug('keyyyy', keyword_ch)
+            logging.debug(f'keyyyy {keyword_ch}')
 
             # Resize field box
             field_box["width"] = int(field_box["width"] / resize_factor)
@@ -542,22 +542,22 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 Finding keyword using different method
                 bcoz I don't trust old method.Hence keyword_box_new
             '''
-            logging.debug('scope of checkbox ', scope)
+            logging.debug(f'scope of checkbox {scope}')
             haystack = ocrDataLocal(scope['y'], scope['x'], scope['x'] + scope['width'], scope['y'] + scope['height'],
                                     ocr_data[int(page_no)])
             try:
-                logging.debug('haystach ', keyword_ch)
+                logging.debug(f'haystach {keyword_ch}')
                 keyword_box_new = needle_in_a_haystack(keyword_ch, haystack)
-                logging.debug('keybox new ', keyword_box_new)
+                logging.debug(f'keybox new {keyword_box_new}')
             except Exception as e:
                 keyword_box_new = {}
-                logging.exception('Exception in finding keyword:', keyword_ch, '\nError:', e)
+                logging.exception(f'Exception in finding keyword:')
 
             try:
                 value_meta = needle_in_a_haystack(field_value, haystack)
             except Exception as e:
                 value_meta = {}
-                logging.exception('Exception in finding keyword', e)
+                logging.exception('Exception in finding keyword')
 
             # Box's Top, Right, Bottom, Left
             box_t = field_box['y']
@@ -569,11 +569,11 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
             # relative distance from keyword to box's edges
             # else save the box coordinates directly
             if keyword_ch:
-                logging.debug('key_ch ', keyword_ch)
+                logging.debug(f'key_ch {keyword_ch}')
                 regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:;]')
                 alphareg = re.compile(r'[a-zA-Z]')
                 keyList = keyword_ch.split()
-                logging.debug('key ist', keyList)
+                logging.debug(f'key ist {keyList}')
                 if len(keyList) > 1:
                     logging.debug('Keyword greater than 1')
                     if regex.search(keyList[-1]) != None and alphareg.search(keyList[-1]) == None:
@@ -584,7 +584,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 # Get keyword's box coordinates
                 keyword_box = keyword_extract(ocr_data[int(page_no)], keyword_ch, scope)
 
-                logging.debug('keywooooorddd', keyword_box)
+                logging.debug(f'keyword box {keyword_box}')
                 if not keyword_box:
                     keyword_2, junk = correct_keyword(ocr_data[int(page_no)], keyword_ch, scope, field_value)
                     keyword_box = keyword_extract(ocr_data[int(page_no)], keyword_2, scope)
@@ -623,7 +623,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 bottom = box_b
                 left = box_l
 
-            logging.debug('top', top, 'b', bottom, 'r', right, 'l', left)
+            logging.debug(f't {top} b {bottom} r {right} l {left}')
             try:
                 logging.debug('in try loop')
                 cbdict = {
@@ -640,7 +640,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                     checkboxes_all[field_type] = [cbdict]
                 else:
                     checkboxes_all[field_type].append(cbdict)
-                logging.debug('final checkbox ', checkboxes_all)
+                logging.debug(f'final checkbox {checkboxes_all}')
             except Exception as e:
                 pass
     else:
@@ -663,7 +663,7 @@ def get_pre_processed_char(ocr_data):
 
 @zipkin_span(service_name='ace_template_training', span_name='get_trained_info')
 def get_trained_info(ocr_data, fields, resize_factor, keywords=[], ocr_field_keyword={}, pre_processed_char=[]):
-    logging.debug('fields', fields)
+    logging.debug(f'fields {fields}')
     field_data = {}
     extracted_data = {}
 
@@ -1142,7 +1142,8 @@ def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEI
         logging.debug(f'field - {field}')
         logging.debug(f'neighbours - {field_neighbourhood[field]}')
         for keyword in field_neighbourhood[field]:
-            logging.debug(f'field_data - ', field_data['scope'])
+            s = field_data['scope']
+            logging.debug(f'field_data - {s}')
             if keyword['right'] - keyword['left'] > 0 \
                     and field_data['scope']['right'] - field_data['scope']['left'] > 0:
 
@@ -1677,7 +1678,7 @@ def force_template():
         cluster_query = "SELECT `id`,`cluster` from `process_queue` where `case_id` = %s"
         cluster = list(queue_db.execute(cluster_query, params=[case_id]).cluster)[0]
 
-        logging.debug(cluster, '##############')
+        logging.debug(cluster)
 
         queue_db.update('process_queue', update=fields, where={'case_id': case_id})
         audit_data = {
@@ -2001,7 +2002,7 @@ def test_fields():
         logging.debug(f'Sending Data: {value_extract_params}')
         headers = {'Content-type': 'application/json; charset=utf-8', 'Accept': 'text/json'}
         response = requests.post(f'http://{host}:{port}/{route}', json=value_extract_params, headers=headers)
-        logging.debug('response', response.content)
+        logging.debug(f'response {response.content}')
         return jsonify({'flag': 'true', 'data': response.json()})
 
 
@@ -2033,7 +2034,7 @@ def train():
     ) as zipkin_context:
         # ! Requires `template_name`, `extracted_data`, `case_id`, `trained_data`, `resize_factor`
         # ! `header_ocr`, `footer_ocr`, `address_ocr`
-        logging.debug('ui_data', ui_data)
+        logging.debug(f'ui_data {ui_data}')
         # Database configuration
         db_config = {
             'host': os.environ['HOST_IP'],
@@ -2190,7 +2191,7 @@ def train():
         extracted_column_values = {'case_id': case_id}
         columns_in_ocr = extraction_db.get_column_names('ocr')
         extracted_column_values['highlight'] = {}
-        logging.debug(fields, '*' * 50)
+        logging.debug(fields)
         for _, field in fields.items():
             column_name = field['field']
             value = field['value']
@@ -2354,6 +2355,7 @@ def get_ocr_data():
         except Exception as e:
             logging.exception(f'Error getting mandatory fields: {e}')
             mandatory_fields = []
+            fields = []
 
         # Get data related to the case from invoice table
         invoice_files_df = db.get_all('process_queue')
@@ -2398,7 +2400,7 @@ def get_ocr_data():
 
         ocr_field_keyword = get_keywords_in_quadrant(mandatory_fields, ocr_field_keyword, case_id, standard_width=parameters['default_img_width'], tenant_id=tenant_id)
 
-        logging.debug('ocr_field_keyword- ', ocr_field_keyword)
+        logging.debug(f'ocr_field_keyword- {ocr_field_keyword}')
         # ocr_keywords = json.loads(list(ocr_info.keywords)[0])
 
         # ocr_field_keyword = json.loads(list(ocr_info.fields_keywords)[0])

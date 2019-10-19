@@ -37,8 +37,7 @@ parent_dir = os.getcwd()
 logging = Logging()
 
 def checkbox_selector(file_name, checkbox_data, ocr_data, cordextract, output, output_):
-    logging.debug('checkbox_data')
-    logging.debug(checkbox_data)
+    logging.debug(f'checkbox_data {checkbox_data}')
     logging.debug(f'corddd {cordextract}')
     ocr_length = len(ocr_data)
     pages = None
@@ -342,12 +341,11 @@ def closest_field_extract(ocr_og, keyword_sentence, scope, field_data, filename,
             logging.debug('ocr word is {} and kw is{} and ed is{}'.format(ocr_word,kw, ed))
             if not ( ( ed<=1 and 1<len(ocr_word)<=4)  or ( ed <=2 and 10>=len(ocr_word)>4 )  or ( ed <=3 and len(ocr_word)>10  )  )   :
                 flag = False
-                logging.debug("---")
             else:
                 og_words.append(with_special[line_no + index]['word'].lower())
             index += 1
         if flag == True and index == length:
-            logging.debug(f"{og_words} ++++")
+            logging.debug(f"OG Words: {og_words}")
             # keyCords = [with_special[line_no + index]['left'], with_special[line_no + index]['lef']]
             # logging.debug("\nKeywords coords to merge:\n",sorted_data[line_no: line_no + length])
             result=merge_fields(sorted_data[line_no: line_no + length])#get combined coordinates
@@ -446,9 +444,7 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
             logging.debug(f'Hitting URL: http://{host}:{port}/{route}')
             logging.debug(f'Sending Data: "case_id":{filename}')
             response = requests.post(f'http://{host}:{port}/{route}', json= {'case_id':filename})
-            logging.debug("step 1")
             blob_resp = response.json()
-            logging.debug("step 2")
             blob = blob_resp['data'].replace('data:application/pdf;base64,','').strip()
 
             try:
@@ -496,8 +492,8 @@ def extract_checkbox_cords(filename, selected_box, keycords, page_no, field_name
         image.crop(selected_box[0],selected_box[3],keycords['left'], selected_box[2])  # left,top,right,bottom
         
         new_image = image.clone()
-        logging.debug(new_image.height)
-        logging.debug(new_image.width)
+        logging.debug(f'Image Height: {new_image.height}')
+        logging.debug(f'Image Width: {new_image.width}')
         img_buffer=np.asarray(bytearray(new_image.make_blob()), dtype=np.uint8)
         image = cv2.imdecode(img_buffer, cv2.IMREAD_GRAYSCALE)
         scaleX = 0.6

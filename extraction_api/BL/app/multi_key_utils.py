@@ -132,7 +132,7 @@ def crop_ocr_data(ocr_data, box):
 def get_box(option, value):
   box = {}
 
-  logging.debug('Option:', option)
+  logging.debug(f'Option: {option}')
   if 'left' in option:
     box['top'] = option['left']['top']
     box['bottom'] = option['left']['bottom']
@@ -195,9 +195,9 @@ def field_extract_with_cell_method(ocr_data,cell_data,value):
         logging.exception('Something went wrong in field_extract_with_cell_method. Check trace.')
   except:
     option = {}
-  logging.debug('Option',option)
+  logging.debug(f'Option {option}')
   box = get_box(option, value)
-  logging.debug('Box',box)
+  logging.debug(f'Box {box}')
   return crop_ocr_data(ocr_data, box)
 
 

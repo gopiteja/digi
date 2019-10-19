@@ -277,85 +277,28 @@ def flip_card():
     ui_data = request.json
     header = ui_data['header']   
     flip_side = ui_data['flip_side']
-    
-    if header.lower() == 'aht(bot)':
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as screenshot_time from queue_time where state = 'Screenshots Completed'"
-        try:
-            screenshot = int(list(stats_db.execute(query).screenshot_time)[0])
-        except:
-            screenshot = 0
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as icue_creation from queue_time where state = 'ICUE Creation InProgress'"
-        try:
-            icue_case = int(list(stats_db.execute(query).icue_creation)[0])
-        except:
-            icue_case = 0
-        values = [screenshot,0,icue_case]
-        if flip_side == 'front':
-            data = {
-                "data": {
-                    "name": "AHT for Bot",
-                    "value": sum(values),
-                    "chartHeading": "",
-                    "chartHeadingData": [],
-                    "chartData": []
-                }
-                }
 
-        else:
-            legend_data = ["AHT for Screenshot by Bot","AHT for ICUE validation by bot","AHT for ICUE case creation by bot"] 
-            stacked_cols = {
-                "AHT for Screenshot by Bot": screenshot,
-                "AHT for ICUE validation by bot":0,
-                "AHT for ICUE case creation by bot":icue_case
+    if flip_side == 'front':
+        data = {
+            "data": {
+                "name": "Sample front flip",
+                "value": 0,
+                "chartHeading": "",
+                "chartHeadingData": [],
+                "chartData": []
             }
-            data = {
-                "axiscolumns" : legend_data,
-                "barname": "Avg Time Taken",
-                "axisvalues": values,
-                "stackedcolumns":stacked_cols,
-                "heading":'Cases in progress',
-                "subheading": '',
-                "chart_type": "column"
-                }
-    if header.lower() == 'aht(manual)':
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as fax_time from queue_time where state = 'Maker'"
-        try:
-            maker = int(list(stats_db.execute(query).fax_time)[0])
-        except:
-            maker = 0
-        query = "select id, CAST(`aht_in_sec` as UNSIGNED)/60 as manual_time from queue_time where state = 'Manual'"
-        try:
-            manual = int(list(stats_db.execute(query).manual_time)[0])
-        except:
-            manual = 0
-        values = [maker,manual,4]
-        if flip_side == 'front':
-            data = {
-                "data": {
-                    "name": "AHT for Manual Processing",
-                    "value": sum(values),
-                    "chartHeading": "",
-                    "chartHeadingData": [],
-                    "chartData": []
-                }
-                }
+            }
 
-        else:
-            legend_data = ["AHT for Ace Fax Fields","AHT for Fax making manually","AHT for Decisioning in ACE"] 
-            stacked_cols = {
-                "AHT for Ace Fax Fields":maker,
-                "AHT for Fax making manually":manual,
-                "AHT for Decisioning in ACE":4,
+    else:
+        data = {
+            "axiscolumns" : [],
+            "barname": "Avg Time Taken",
+            "axisvalues": [],
+            "stackedcolumns":{},
+            "heading":'Sample back flip',
+            "subheading": '',
+            "chart_type": "column"
             }
-            data = {
-                "axiscolumns" : legend_data,
-                "barname": "Avg Time Taken",
-                "axisvalues": values,
-                "stackedcolumns":stacked_cols,
-                "heading":'Cases in progress',
-                "subheading": '',
-                "chart_type": "column"
-                }
 
     return jsonify(data)
      
