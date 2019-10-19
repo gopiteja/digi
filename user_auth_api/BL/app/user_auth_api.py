@@ -180,7 +180,7 @@ def verify_session():
         data = request.json
 
         session_id = data.pop('session_id', None)
-        tenant_id = data.pop('session_id', None)
+        tenant_id = data.pop('tenant_id', None)
 
         if session_id is None:
             message = f'No session ID provided. Cannot proceed.'

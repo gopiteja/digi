@@ -575,7 +575,7 @@ def get_checkbox(field_type, field, checkboxes_all, validation):
                 keyList = keyword_ch.split()
                 logging.debug('key ist', keyList)
                 if len(keyList) > 1:
-                    logging.debug('hereeeeee')
+                    logging.debug('Keyword greater than 1')
                     if regex.search(keyList[-1]) != None and alphareg.search(keyList[-1]) == None:
                         # if the last word of keyword sentence containes only special characters
                         junk = keyList[-1]
