@@ -2344,7 +2344,7 @@ def get_ocr_data():
             tab_df = db.get_all('tab_definition')
             ocr_tab_id = tab_df.loc[tab_df['source'] == 'ocr'].index.values.tolist()
 
-            tab_list = ', '.join(ocr_tab_id)
+            tab_list = ', '.join([str(i) for i in ocr_tab_id])
             logging.debug(f'Tab List: {tab_list}')
             query = f'SELECT * FROM `field_definition` WHERE `tab_id`in ({tab_list})'
 
