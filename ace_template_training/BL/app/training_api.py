@@ -2344,8 +2344,9 @@ def get_ocr_data():
             tab_df = db.get_all('tab_definition')
             ocr_tab_id = tab_df.index[tab_df['source'] == 'ocr'].tolist()
 
-            tab_list = str(tuple(ocr_tab_id))
-            query = f'SELECT * FROM `field_definition` WHERE `tab_id`in {tab_list}'
+            tab_list = ', '.join(ocr_tab_id)
+            logging.debug(f'Tab List: {tab_list}')
+            query = f'SELECT * FROM `field_definition` WHERE `tab_id`in ({tab_list})'
 
             ocr_fields_df = db.execute(query)
             mandatory_fields = list(ocr_fields_df.loc[ocr_fields_df['mandatory'] == 1]['display_name'])
