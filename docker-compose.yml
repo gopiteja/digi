@@ -62,34 +62,6 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_merger_tag"
 
-  # Business Rules
-  business_rules_api:
-    image: 'business_rules_api'
-    container_name: 'business_rules_api'
-    build:
-      context: ./business_rules_api/BL
-      dockerfile: api.Dockerfile
-    networks:
-      service_bridge:
-        aliases:
-          - businessrulesapi
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-      - LOCAL_DB_USER=${LOCAL_DB_USER}
-      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
-    depends_on:
-      - apache_base
-      - service_bridge
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "table_merger_tag"
-
   # To test kafka
   producer:
     image: 'producer'
