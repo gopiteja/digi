@@ -2137,6 +2137,8 @@ def train():
             logging.exception('table info not saved')
             table_trained_info = {}
 
+        logging.exception('Reached step 1')
+
         query = "SELECT * from process_queue where queue = 'Template Exceptions'"
         process_queue_df = queue_db.execute(query)
         # latest_process_queue = queue_db.get_latest(process_queue_df, 'case_id', 'created_date')
@@ -2161,7 +2163,12 @@ def train():
             char_index_list, haystack = convert_ocrs_to_char_dict_only_al_num(page)
             pre_processed_char.append([char_index_list, haystack])
 
+        logging.exception('Reached step 2')
+
         update_field_dict_with_neighbour(trained_data, ocr_data, pre_processed_char, case_id, tenant_id=tenant_id)
+
+        logging.exception('Reached step 3')
+
 
         # * Add trained information & template name into `trained_info` table
         trained_data_column_values = {
