@@ -2342,7 +2342,7 @@ def get_ocr_data():
         # Get all OCR mandatory fields
         try:
             tab_df = db.get_all('tab_definition')
-            ocr_tab_id = tab_df.index[tab_df['source'] == 'ocr'].tolist()
+            ocr_tab_id = tab_df.loc[tab_df['source'] == 'ocr'].index.values.tolist()
 
             tab_list = ', '.join(ocr_tab_id)
             logging.debug(f'Tab List: {tab_list}')
