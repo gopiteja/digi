@@ -2174,6 +2174,9 @@ def train():
             'unique_fields': unique_fields,
             'operator': condition
         }
+
+        logging.exception(f' - `{trained_data_column_values}` does not exist in `ocr` table. Skipping field.')
+
         trained_db.insert_dict(trained_data_column_values, 'trained_info')
 
         ui_train_data = {
