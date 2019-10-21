@@ -1464,16 +1464,28 @@ def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char,
     """
     Author : Akshat Goyal
     """
+
+    logging.exception('Reached step 2.1')
+
     dictionary = get_field_dict_from_info(trained_info)
+
+    logging.exception('Reached step 2.2')
 
     update_field_dict(dictionary, tenant_id=tenant_id)
 
+    logging.exception('Reached step 2.3')
+
     field_with_variation = get_field_dict(tenant_id=tenant_id)
+
+    logging.exception('Reached step 2.4')
 
     _, ocr_field_keyword = get_keywords(ocr_data, field_with_variation, pre_processed_char, field_with_variation=field_with_variation , tenant_id=tenant_id)
 
+    logging.exception('Reached step 2.5')
+
     field_neighbourhood = prepare_neighbours(ocr_field_keyword, trained_info)
     # ocr_keywords = covert_keyword_to_trianed_info(ocr_keywords)
+    logging.exception('Reached step 2.6')
 
     neighbour_dict = get_nearest_neighbour(trained_info, field_neighbourhood)
 
@@ -1481,7 +1493,11 @@ def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char,
 
     update_field_neighbour_dict(neighbour_dict, trained_info, tenant_id)
 
+    logging.exception('Reached step 2.7')
+
     quadrant_dict = extract_quadrant_information(trained_info, case_id, tenant_id=tenant_id)
+ 
+    logging.exception('Reached step 2.8')
 
     update_quadrant_dict(quadrant_dict, tenant_id=tenant_id)
 
