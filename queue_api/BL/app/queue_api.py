@@ -1497,8 +1497,10 @@ def get_queues_cache(tenant_id=None):
         if value and len(value) > 1:
             classify_users[user] = list(set.intersection(*map(set,value)))
         else:
-            classify_users[user] = value[0]
-
+            if len(value) > 0:
+                classify_users[user] = value[0]
+            else:
+                pass
 
     query = "SELECT * from queue_access"
     queue_group_id = group_db.execute(query)
