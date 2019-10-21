@@ -1133,7 +1133,7 @@ def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEI
     """
     neighbour_dict = {}
 
-    logging.debug(f'trained_info - {trained_info}')
+    logging.debug(f'trained_info - {json.dumps(trained_info)}')
 
     for field, field_data in trained_info.items():
         if 'scope' not in field_data or not field_data['scope']:
