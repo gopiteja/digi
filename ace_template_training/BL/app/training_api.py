@@ -1126,7 +1126,7 @@ def get_trained_data_format(field):
     return field_data
 
 
-@zipkin_span(service_name='ace_template_training', span_name='get_nearest_neighbour')
+# @zipkin_span(service_name='ace_template_training', span_name='get_nearest_neighbour')
 def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEIGHBOURS):
     """
     Author : Akshat Goyal
