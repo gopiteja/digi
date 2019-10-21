@@ -1489,8 +1489,6 @@ def update_field_dict_with_neighbour(trained_info, ocr_data, pre_processed_char,
 
     neighbour_dict = get_nearest_neighbour(trained_info, field_neighbourhood)
 
-    logging.debug(f'neighbour_dict - {neighbour_dict}')
-
     update_field_neighbour_dict(neighbour_dict, trained_info, tenant_id)
 
     logging.exception('Reached step 2.7')
