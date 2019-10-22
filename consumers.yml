@@ -174,28 +174,6 @@ services:
     #   options:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "table_consumer_tag"
-
-  business_rules_consumer:
-    image: 'business_rules_consumer'
-    container_name: 'business_rules_consumer'
-    build:
-      context: ./business_rules_api/BL/app
-      dockerfile: consumer.Dockerfile
-    networks:
-      - service_bridge
-    restart: on-failure:3
-    environment:
-      - HOST_IP=${HOST_IP}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - LOG_FORMAT=${LOG_FORMAT}
-      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
-      - LOCAL_DB_USER=${LOCAL_DB_USER}
-      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
-    # logging:
-    #   driver: gelf
-    #   options:
-    #     gelf-address: udp://127.0.0.1:12201
-    #     tag: "business_rules_consumer_tag"
   
   # Generate JSON
   generate_json:
