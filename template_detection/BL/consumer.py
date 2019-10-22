@@ -142,6 +142,7 @@ def consume(broker_url='broker:9092'):
                             data = response_data['send_data'] if 'send_data' in response_data else {}
                             data['workflow'] = workflow
                             data['case_id'] = case_id
+                            data['tenant_id'] = tenant_id
 
                             query = 'SELECT * FROM `message_flow` WHERE `listen_to_topic`=%s AND `workflow`=%s'
                             logging.debug(f'topic - {topic} , workflow - {workflow}')
