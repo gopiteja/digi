@@ -86,7 +86,10 @@ def save_changes(case_id, data, tenant_id):
         for unique_name, value in fields.items():
             logging.debug(f'Unique name: {unique_name}')
             unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
-            print(f'heeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrrrrrrreeeeeeeeeeeeeeeeeeeeeeee{unique_field_def.display_name}')
+
+            if unique_field_def.empty:
+                logging.debug(f'`{unique_name}` not in field definition. Skipping.')
+                
             display_name = list(unique_field_def.display_name)[0]
             tab_id = list(unique_field_def.tab_id)[0]
             tab_info = tabs_def_df.ix[tab_id]
