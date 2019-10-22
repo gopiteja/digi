@@ -715,16 +715,19 @@ def get_queue(queue_id=None):
                         except:
                             pass
 
-                        for row in query_result_list:
-                            row_case_id = row['case_id']
-                            logging.debug(f'Row Case: {row_case_id}')
-                            for col, val in row.items():
-                                doc_case = document['case_id']
-                                logging.debug(f'Doc Case: {doc_case}')
-                                if row_case_id == doc_case:
-                                    logging.debug(f'Case matched!\n')
-                                    document[col] = val
-                                    continue
+                        try:
+                            for row in query_result_list:
+                                row_case_id = row['case_id']
+                                logging.debug(f'Row Case: {row_case_id}')
+                                for col, val in row.items():
+                                    doc_case = document['case_id']
+                                    logging.debug(f'Doc Case: {doc_case}')
+                                    if row_case_id == doc_case:
+                                        logging.debug(f'Case matched!\n')
+                                        document[col] = val
+                                        continue
+                        except:
+                            pass
 
                         query = "select column_name from column_definition where date = 1"
                         columns_to_change = list(db.execute_(query).column_name)
