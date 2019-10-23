@@ -1207,13 +1207,11 @@ def update_field_dict(config, tenant_id):
                                                                                                  field_type)
                     db.execute(update)
             except:
-                insert = "INSERT INTO {} (`field_type`, `variation`) VALUES ('{}', '{}')".format(table_name, field_type,
-                                                                                                 var)
-                db.execute(insert)
+                insert = "INSERT INTO %s (`field_type`, `variation`) VALUES (%s, %s)"
+                db.execute(insert, params=[table_name,field_type,var])
         else:
-            insert = "INSERT INTO {} (`field_type`, `variation`) VALUES ('{}', '{}')".format(table_name, field_type,
-                                                                                             var)
-            db.execute(insert)
+            insert = "INSERT INTO %s (`field_type`, `variation`) VALUES (%s, %s)"
+            db.execute(insert, params=[table_name,field_type,var])
 
     return "Updated Field Dict"
 
