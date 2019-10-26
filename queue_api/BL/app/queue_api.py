@@ -1443,7 +1443,13 @@ def get_queues_cache(tenant_id=None):
     logging.info('First time. Caching.')
     logging.debug(f'Tenant ID: {tenant_id}')
 
-    db_config['tenant_id'] = tenant_id
+    db_config = {
+        'host': os.environ['HOST_IP'],
+        'port': 3306,
+        'user': 'root',
+        'password': 'AlgoTeam123',
+        'tenant_id': tenant_id
+    }
 
     group_db = DB('group_access', **db_config)
     queue_db = DB('queues', **db_config)
@@ -1481,6 +1487,8 @@ def get_queues_cache(tenant_id=None):
         except:
             user_info[name] = {attribute_name: attribute_value}
     
+
+    # Optimize below   
     group_dict = {}
     for k, v in user_info.items():
         group_list = []
@@ -1505,11 +1513,12 @@ def get_queues_cache(tenant_id=None):
             else:
                 pass
 
+    users_mesh = get_users_mesh(tenant_id, classify_users, group_db)
+            
     query = "SELECT * from queue_access"
     queue_group_id = group_db.execute(query)
-
+    
     user_queues = {}
-
     for user, group_id in classify_users.items():
         user_queues[user] = list(set(queue_group_id.loc[queue_group_id['group_id'].isin(group_id)].queue_id))
 
@@ -1529,6 +1538,7 @@ def get_queues_cache(tenant_id=None):
                 queue = {}
                 queue['name'] = definition['name']
                 tokens = definition['unique_name'].split()
+                # queue['path'] = tokens[0].lower() + ''.join(x.title() for x in tokens[1:]) if len(tokens) > 1 else tokens[0].lower()
                 queue['path'] = definition['unique_name'].replace(' ','')
                 queue['pathId'] = definition['id']
                 queue['type'] = definition['type']
@@ -1538,7 +1548,7 @@ def get_queues_cache(tenant_id=None):
                 
         user_queues[user] = queues
 
-    return user_queues
+    return user_queues, users_mesh
 
 @app.route('/get_queues', methods=['POST', 'GET'])
 def get_queues():
@@ -1554,20 +1564,34 @@ def get_queues():
         username = data.pop('username', None)
         tenant_id = data.pop('tenant_id', None)
 
+        logging.debug('Getting queues')
+
+        # queues = user_queues_get[username]
+        logging.info('User name - {username}')
+        user_queues, user_mesh = get_queues_cache(tenant_id)
 
         if not username:
             return jsonify({'flag': False, 'message': 'logout'})
 
-        logging.debug('Getting queues')
-        queues = get_queues_cache(tenant_id)[username]
-        if not queues:
+        if not user_queues[username]:
             message = f'No queues available for role `{username}`.'
             logging.error(message)
             return jsonify({'flag': False, 'message': message})
-
+        
+        if user_mesh:     
+            if not user_mesh[username]:
+                message = f'No apps available for role `{username}`.'
+                logging.error(message)
+        else:
+            message = f'Something went wrong while fetching apps for the tenant_id `{tenant_id}`.'
+            logging.error(message)
         logging.info('Successfully got queues.')
-        return jsonify({'flag': True, 'data': {'queues': queues}})
-    except Exception as e:
+        data = {
+            'queues': user_queues[username],
+            'mesh': user_mesh[username]
+            }
+        return jsonify({'flag': True, 'data': data})
+    except Exception:
         logging.exception('Something went wrong getting queues. Check trace.')
         return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
 
