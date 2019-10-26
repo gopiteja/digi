@@ -696,3 +696,11 @@ volumes:
       type: 'none'
       o: 'bind'
       device: ${REPORT_OUTPUT_PATH}
+
+  excel_templates_input:
+    driver: local
+    name: excel_templates_input
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${EXCEL_TEMPLATES_PATH}
