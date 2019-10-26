@@ -230,5 +230,17 @@
   "builder_queues": {
     "host": "usermanagement",
     "port": "80"
+  },
+  "upload_master_blob": {
+    "host": "masterupload",
+    "port": "80"
+  },
+  "download_master_blob": {
+    "host": "masterupload",
+    "port": "80"
+  },
+  "get_master_data": {
+    "host": "masterupload",
+    "port": "80"
   }
 }

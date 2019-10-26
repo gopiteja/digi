@@ -477,7 +477,25 @@ services:
       - LOCAL_DB_PORT=${LOCAL_DB_PORT}
     depends_on: 
       - apache_base
-
+  
+  #master_upload
+  master_upload:
+    image: 'master_upload'
+    container_name: 'master_upload'
+    build: ./master_upload/BL/
+    networks:
+      service_bridge:
+        aliases:
+          - masterupload
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+    
   # Apache Base
   apache_base:
     image: apache_base
