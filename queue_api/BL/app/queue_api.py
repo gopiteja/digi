@@ -400,6 +400,24 @@ def get_recon_data(queue_id, queue_name, tenant_id):
     #Add button_attributes_key
     return to_return
 
+def get_users_mesh(tenant_id, classify_users, group_db):
+    try:
+        app_def_df = group_db.execute_("SELECT * FROM `app_definition`")
+        app_access_df = group_db.execute_("SELECT * FROM `app_access`")
+        logging.info(classify_users)
+        users_mesh = {}
+        for user, group_list in classify_users.items():
+            user_app_ids = list(app_access_df[app_access_df['group_id'].isin(group_list)]['app_id'])
+            user_app_defs = app_def_df.loc[app_def_df['id'].isin(user_app_ids)]
+            users_mesh[user] = user_app_defs.to_dict(orient= 'records')
+        return users_mesh
+    except:
+        traceback.print_exc()
+        message = f"Something went wrong while fetching app tables"
+        logging.exception(message)
+        logging.error("Setting mesh to empty dictionary")
+        return {}
+
 @app.route('/get_recon_secondary_table', methods = ['GET', 'POST'])
 def get_recon_secondary_table():
     data = request.json
