@@ -170,5 +170,65 @@
   "update_addon_table": {
     "host": "queueapi",
     "port": "80"
+  },
+  "modify_user": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "show_existing_users": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "attribute_definition": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "get_action_table": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "queue_definition": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "show_existing_reports": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "modify_reports": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "download_excel_blob": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "bank_master_trigger": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "bot_button_trigger_accept": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "get_queue_definition": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "upload_excel_blob": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "get_tenant_info": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "builder_stats": {
+    "host": "usermanagement",
+    "port": "80"
+  },
+  "builder_queues": {
+    "host": "usermanagement",
+    "port": "80"
   }
 }
