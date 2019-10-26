@@ -777,7 +777,9 @@ def get_queue(queue_id=None):
                 'pagination': pagination,
                 'column_mapping': column_mapping,
                 'column_order': list(column_mapping.keys()),
-                'children_dropdown': children_dropdown
+                'children_dropdown': children_dropdown,
+                'pdf_type': 'folder' if tenant_id else 'blob'
+
             }
             logging.debug(f'Total time taken to get `{queue_name}` {time()-rt_time}')
 
