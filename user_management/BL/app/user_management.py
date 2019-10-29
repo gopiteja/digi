@@ -423,11 +423,21 @@ def show_existing_users():
     
     pagination = {"start": start_point, "end": end_point, "total": total_users}
     
+    try:
+        field_definition_query = f"SELECT * FROM `field_definition` WHERE `status` = 1"
+        field_definition_df = group_access_db.execute_(active_directory_query)
+        field_defintion_dict = field_defintion_df.to_dict(orient= 'records')    
+    except:
+        traceback.print_exc()
+        message = "Could not load from Active Directory"
+        return jsonify({"flag": False, "message" : message})
+    
     data = {
         "header" : columns_to_display,
         "rowdata" : active_directory_dict,
         "dropdown_definition": dropdown_definition,
-        'pagination': pagination
+        "pagination": pagination,
+        "field_def": field_definition_dict
     }
     
     return jsonify({"flag": True, "data" : data})
