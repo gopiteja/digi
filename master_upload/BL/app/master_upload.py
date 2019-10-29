@@ -71,7 +71,7 @@ def upload_master_blob():
     database = 'extraction'
     extraction_db = DB(database, tenant_id=tenant_id,**db_config)
     try:
-        blob_data = blob_data.replace("data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,", "")
+        blob_data = blob_data.replace("data:application/octet-stream;base64,", "")
         #Padding
         blob_data += '='*(-len(blob_data)%4)
         file_stream = BytesIO(base64.b64decode(blob_data))
