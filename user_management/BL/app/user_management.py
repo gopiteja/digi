@@ -425,8 +425,8 @@ def show_existing_users():
     
     try:
         field_definition_query = f"SELECT * FROM `field_definition` WHERE `status` = 1"
-        field_definition_df = group_access_db.execute_(active_directory_query)
-        field_defintion_dict = field_defintion_df.to_dict(orient= 'records')    
+        field_definition_df = group_access_db.execute_(field_definition_query)
+        field_definition_dict = field_definition_df.to_dict(orient= 'records')    
     except:
         traceback.print_exc()
         message = "Could not load from Active Directory"
