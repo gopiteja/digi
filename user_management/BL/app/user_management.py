@@ -121,7 +121,7 @@ def edit_user(row_data, group_access_db):
     
     if to_insert:
         try:
-            organisation_mapping_delete_query = f"DELETE FROM `user_organisation_mapping` WHERE `PSID` = '{user_id}'" 
+            organisation_mapping_delete_query = f"DELETE FROM `user_organisation_mapping` WHERE `user_id` = '{user_id}'" 
             result = group_access_db.execute(organisation_mapping_delete_query)
             if not result:
                 message = f"Something went wrong while deleting the user {user_name} | user_id {user_id} from user_organisation_mapping"
