@@ -41,7 +41,7 @@ def get_attribute_value_pairs():
 
 def delete_user(data, group_access_db):
     try:
-        user_id = data['id']
+        user_id = data['PSID']
         user_name = data['username']
     except:
         traceback.print_exc()
@@ -49,7 +49,7 @@ def delete_user(data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        organisation_mapping_query = f"DELETE FROM `user_organisation_mapping` WHERE `user_id` = '{user_id}'" 
+        organisation_mapping_query = f"DELETE * FROM `user_organisation_mapping` WHERE `user_id` = (SELECT id FROM active_directory WHERE `PSID` = '{user_id}')" 
         result = group_access_db.execute(organisation_mapping_query)
         if not result:
             message = f"Something went wrong while deleting the user {user_name} | user_id {user_id} from user_organisation_mapping"
@@ -60,7 +60,7 @@ def delete_user(data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        active_directory_query = f"DELETE FROM `active_directory` WHERE `id` = '{user_id}'" 
+        active_directory_query = f"DELETE FROM `active_directory` WHERE `PSID` = '{user_id}'" 
         result = group_access_db.execute(active_directory_query)
         if not result:
             message = f"Something went wrong while deleting the user {user_name} | user_id {user_id} from active_directory"
@@ -75,7 +75,7 @@ def delete_user(data, group_access_db):
 
 def edit_user(row_data, group_access_db):
     try:
-        user_id = row_data.pop('id')
+        user_id = row_data.pop('PSID')
         user_name = row_data['username']
         attributes = row_data.pop('attributes', {})
     except:
@@ -84,7 +84,7 @@ def edit_user(row_data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        result= group_access_db.update(table='active_directory', update= row_data, where= {'id': user_id})
+        result= group_access_db.update(table='active_directory', update= row_data, where= {'PSID': user_id})
         if not result:
             message = f"Something went wrong while updating the user {user_name} | user_id {user_id} in active directory"
             return {"flag": False, "message" : message}
@@ -94,7 +94,7 @@ def edit_user(row_data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        query = f"SELECT * FROM `active_directory` WHERE `username` = '{user_name}'"
+        query = f"SELECT * FROM `active_directory` WHERE `PSID` = '{user_id}'"
         active_directory_df = group_access_db.execute_(query)
         user_id = list(active_directory_df['id'])[0]
     except:
@@ -121,7 +121,7 @@ def edit_user(row_data, group_access_db):
     
     if to_insert:
         try:
-            organisation_mapping_delete_query = f"DELETE FROM `user_organisation_mapping` WHERE `user_id` = '{user_id}'" 
+            organisation_mapping_delete_query = f"DELETE FROM `user_organisation_mapping` WHERE `PSID` = '{user_id}'" 
             result = group_access_db.execute(organisation_mapping_delete_query)
             if not result:
                 message = f"Something went wrong while deleting the user {user_name} | user_id {user_id} from user_organisation_mapping"
