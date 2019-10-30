@@ -55,6 +55,9 @@ def upload_master_blob():
     data = request.json
     logging.info(f'Request data: {data}')
     tenant_id = data.pop('tenant_id', None)
+    duplicate_check = data.pop('duplicate_check', False)
+    insert_flag = data.pop('insert_flag', 'overwrite')
+        
     try:
         master_table_name = data.pop('master_table_name')
     except:
@@ -68,8 +71,10 @@ def upload_master_blob():
         message = f"Blob data not provided"
         return jsonify({"flag": False, "message" : message})
 
+    
     database = 'extraction'
     extraction_db = DB(database, tenant_id=tenant_id,**db_config)
+    
     try:
         blob_data = blob_data.replace("data:application/octet-stream;base64,", "")
         #Padding
@@ -82,13 +87,36 @@ def upload_master_blob():
         message = f"Could not convert blob to dataframe"
         return jsonify({"flag": False, "message" : message})
     
-    try:
-        data_frame.to_sql(name= master_table_name, con = extraction_db.engine, if_exists='replace', index= False, method= 'multi')
-    except:
-        traceback.print_exc()
-        message = f"Could not update {master_table_name}"
-        return jsonify({"flag": False, "message" : message})
+    if duplicate_check == True and insert_flag == 'append':
+        try:
+            data_frame.to_sql(name= 'temp_table', con = extraction_db.engine, if_exists='replace', index= False, method= 'multi')
+            table_insert_query = f'INSERT IGNORE INTO `{master_table_name} SELECT * FROM `temp_table`'
+            result = extraction_db.execute(table_insert_query)
+            if not result:
+                message = f"Something went wrong while executing query {table_insert_query}"
+                return jsonify({"flag": False, "message" : message})
+        except:
+            traceback.print_exc()
+            message = f"Could not append data to {master_table_name}"
+            return jsonify({"flag": False, "message" : message})
     
+    elif duplicate_check == False and insert_flag == 'append':
+        try:
+            data_frame = data_frame.drop(columns = ['id'])
+            data_frame.to_sql(name= master_table_name, con = extraction_db.engine, if_exists='append', index= False, method= 'multi')
+        except:
+            traceback.print_exc()
+            message = f"Could not update {master_table_name}"
+            return jsonify({"flag": False, "message" : message})
+    
+    elif insert_flag == 'overwrite':    
+        try:
+            data_frame.to_sql(name= master_table_name, con = extraction_db.engine, if_exists='replace', index= False, method= 'multi')
+        except:
+            traceback.print_exc()
+            message = f"Could not update {master_table_name}"
+            return jsonify({"flag": False, "message" : message})
+        
     message = f"Successfully update {master_table_name} in {database}"
     return jsonify({'flag': True, 'message': message})
 
@@ -97,6 +125,8 @@ def download_master_blob():
     data = request.json
     logging.info(f'Request data: {data}')
     tenant_id = data.pop('tenant_id', None)
+    download_type = data.pop('dowload_type')
+    
     try:
         master_table_name = data.pop('master_table_name')
     except:
@@ -107,16 +137,26 @@ def download_master_blob():
     database = 'extraction'
     extraction_db = DB(database,tenant_id=tenant_id, **db_config)
     
-    try:
-        data_frame = extraction_db.execute_(f"SELECT * FROM `{master_table_name}`")
-        data_frame = data_frame.astype(str)
-        data_frame.replace(to_replace= 'None', value= '', inplace= True)
-        blob_data = dataframe_to_blob(data_frame)
-    except:
-        traceback.print_exc()
-        message = f"Could not load from {master_table_name}"
-        return jsonify({"flag": False, "message" : message})
-    
+    if download_type == 'Data':
+        try:
+            data_frame = extraction_db.execute_(f"SELECT * FROM `{master_table_name}`")
+            data_frame = data_frame.astype(str)
+            data_frame.replace(to_replace= 'None', value= '', inplace= True)
+            blob_data = dataframe_to_blob(data_frame)
+        except:
+            traceback.print_exc()
+            message = f"Could not load from {master_table_name}"
+            return jsonify({"flag": False, "message" : message})
+    elif download_type == 'template':
+        try:
+            data_frame = extraction_db.execute_(f"SELECT * FROM `{master_table_name}` LIMIT 0")
+            data_frame = data_frame.astype(str)
+            data_frame.replace(to_replace= 'None', value= '', inplace= True)
+            blob_data = dataframe_to_blob(data_frame)
+        except:
+            traceback.print_exc()
+            message = f"Could not load from {master_table_name}"
+            return jsonify({"flag": False, "message" : message})
     return jsonify({'flag': True, 'blob': blob_data.decode('utf-8'), 'file_name' : master_table_name + '.xlsx'})
 
 @app.route('/get_master_data', methods= ['GET', 'POST'])
