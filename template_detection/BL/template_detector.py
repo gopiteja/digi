@@ -38,14 +38,13 @@ def load_trained_info(tenant_id):
     query = "SELECT * from trained_info"
     template_db = DB('template_db', tenant_id=tenant_id, **db_config)
     trained_info_data = template_db.execute(query).to_dict(orient='records')
-
     trained_info = {}
     for i in trained_info_data:
         trained_info[i['template_name']] = {
-            'header_ocr': i['header_ocr'],
-            'footer_ocr': i['footer_ocr'],
+            'header_ocr': i['header_ocr'].encode('utf-8').decode(),
+            'footer_ocr': i['footer_ocr'].encode('utf-8').decode(),
             'address_ocr': i['address_ocr'],
-            'unique_fields': i['unique_fields'],
+            'unique_fields': i['unique_fields'].encode('utf-8').decode(),
             'condition': i['operator'],
             'ad_trained_info': i['ad_train_info']
         }
@@ -67,7 +66,7 @@ def get_trained_templates(tenant_id, lower=False):
 
 
 def remove_all_except_al_num(text):
-    return re.sub('[^A-Za-z0-9]', '', text.lower())
+    return re.sub(',!@#$%^&*()_-=`~\'";:<>/?', '', text.lower())
 
 
 class TemplateDetector():
@@ -630,14 +629,20 @@ class TemplateDetector():
 
     def unique_fields(self, ocr_data):
         sorted_ocr_data = []
+        first_text = []
+
         for data in ocr_data:
             sorted_ocr_data.append(sorted(data, key=lambda k: k['top']))
+
+        for i in sorted_ocr_data[0]:
+            first_text.append(i['word'].encode('utf-8').decode().lower())
+
+        first_text = ''.join(first_text)
+        first_text = remove_all_except_al_num(first_text)
 
         trained_templates = self.trained_info
 
         for template, template_data in trained_templates.items():
-            first_text = []
-
             unique_fields = template_data['unique_fields'].lower().split(',')
             condition = template_data['condition']
 
@@ -646,12 +651,7 @@ class TemplateDetector():
                 unique_fields_list.append(remove_all_except_al_num(word))
 
             #        for page in sorted_ocr_data:
-            for i in sorted_ocr_data[0]:
-                # first_text.append(re.sub('[^A-Za-z0-9 ]', '', i['word'].lower()))
-                first_text.append(i['word'].lower())
 
-            first_text = ''.join(first_text)
-            first_text = remove_all_except_al_num(first_text)
             # first_text = ''.join(e for e in first_text if e.isalnum()).lower()
 
             found_template = False
