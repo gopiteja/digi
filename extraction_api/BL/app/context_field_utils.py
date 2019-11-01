@@ -47,7 +47,7 @@ def get_context_box(ocr_data, keyword_boxes, context):
 
         # Compare text from OCR data with context text
         ocr_box_text = ' '.join([data['word'] for data in ocr_box_data])
-        context_text = context['text']
+        context_text = context['text'].encode('utf-8').decode()
         
         # If score is greater than some percentage get return the box, else return None
         logging.debug(f'ocr_box_text - {ocr_box_text}')

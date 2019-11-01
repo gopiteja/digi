@@ -420,7 +420,7 @@ def value_extract(result, api=False, retrained=False):
             except:
                 scope = fte_data['scope']
                 scope_value = fte_data['scope_value']
-            keyword = fte_data['keyword']
+            keyword = fte_data['keyword'].encode('utf-8').decode()
             page_no = int(fte_data['page'])
             split_check = fte_data.pop('split_check', '')
             validation = fte_data.pop('validation', '')
@@ -1031,7 +1031,9 @@ def get_area_intersection(box, word, area_of_word):
 def sort_ocr(data):
     data = sorted(data, key=lambda i: i['top'])
     for i in range(len(data) - 1):
+        data[i]['word'] = data[i]['word'].encode('utf-8').decode()
         data[i]['word'] = data[i]['word'].strip()
+
         data[i + 1]['word'] = data[i + 1]['word'].strip()
         if abs(data[i]['top'] - data[i + 1]['top']) < 6:
             data[i + 1]['top'] = data[i]['top']
