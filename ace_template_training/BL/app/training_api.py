@@ -1136,24 +1136,25 @@ def get_nearest_neighbour(trained_info, field_neighbourhood, no_of_neighbour=NEI
     logging.debug(f'trained_info')
 
     for field, field_data in trained_info.items():
-        if 'scope' not in field_data or not field_data['scope']:
-            continue
-        dis = set()
-        logging.debug(f'field - {field}')
-        logging.debug(f'neighbours - {field_neighbourhood[field]}')
-        for keyword in field_neighbourhood[field]:
-            s = field_data['scope']
-            logging.debug(f'field_data - {s}')
-            if keyword['right'] - keyword['left'] > 0 \
-                    and field_data['scope']['right'] - field_data['scope']['left'] > 0:
-
-                distance = caculate_dis(field_data['scope'], keyword)
-                if keyword['word']:
-                    dis.add((keyword['word'], distance))
-        if dis:
-            dis = list(dis)
-            dis = sorted(dis, key=lambda x: x[1])
-            neighbour_dict[field] = dis[:no_of_neighbour]
+        if field in field_neighbourhood:
+            if 'scope' not in field_data or not field_data['scope']:
+                continue
+            dis = set()
+            logging.debug(f'field - {field}')
+            logging.debug(f'neighbours - {field_neighbourhood[field]}')
+            for keyword in field_neighbourhood[field]:
+                s = field_data['scope']
+                logging.debug(f'field_data - {s}')
+                if keyword['right'] - keyword['left'] > 0 \
+                        and field_data['scope']['right'] - field_data['scope']['left'] > 0:
+    
+                    distance = caculate_dis(field_data['scope'], keyword)
+                    if keyword['word']:
+                        dis.add((keyword['word'], distance))
+            if dis:
+                dis = list(dis)
+                dis = sorted(dis, key=lambda x: x[1])
+                neighbour_dict[field] = dis[:no_of_neighbour]
 
     return neighbour_dict
 
