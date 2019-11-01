@@ -1685,7 +1685,7 @@ def force_template():
             stats_db.insert_dict(audit_data, 'audit')
 
             # Send case ID to extraction topic
-            produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id})
+            produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id, 'workflow': workflow})
 
             return jsonify({'flag': True, 'message': 'Successfully extracting with new template. Please wait!'})
 
@@ -1703,7 +1703,7 @@ def force_template():
         stats_db.insert_dict(audit_data, 'audit')
 
         # Send case ID to extraction topic
-        produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id})
+        produce(send_to_topic, {'case_id': case_id, 'tenant_id': tenant_id, 'workflow': workflow})
 
         if cluster is not None:
             cluster_ids_query = "SELECT * from `process_queue` where `cluster` = %s"
