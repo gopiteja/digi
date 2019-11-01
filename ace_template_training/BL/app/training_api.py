@@ -1664,6 +1664,7 @@ def force_template():
         message_flow = kafka_db.get_all('message_flow')
         listen_to_topic_df = message_flow.loc[message_flow['listen_to_topic'] == 'train']
         send_to_topic = list(listen_to_topic_df.send_to_topic)[0]
+        workflow = list(listen_to_topic_df.workflow)[0]
 
         stats_db = DB('stats', **stats_db_config)
 
