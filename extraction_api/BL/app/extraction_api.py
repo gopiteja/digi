@@ -1851,8 +1851,9 @@ def extract_for_template():
 def predict_field():
     try:
         data = request.json
+        logging.debug(f"predict_field request data - {data}")
         response_data = value_extract(data, api=True)
-        logging.debug(response_data)
+        logging.debug(f"predict_field response data - {response_data}")
         return jsonify(response_data)
     except Exception as e:
         logging.exception(f'Something went wrong while extracting. Check trace.')
