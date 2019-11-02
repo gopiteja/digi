@@ -100,6 +100,7 @@ def save_changes(case_id, data, tenant_id):
                 fields_w_name[table_name] = {}
 
             fields_w_name[table_name][display_name] = value
+            value_changes[display_name] = table_name
 
         changed_fields_w_name = {}
         for unique_name, value in changed_fields.items():
@@ -129,14 +130,8 @@ def save_changes(case_id, data, tenant_id):
 
             #getting highlight
 
-            query = 'select `id`, `highlight` from ocr where `case_id`="%s"'
 
-            try:
-                highlight_df = extraction_db.execute(query, params=[case_id])
-
-                highlight = list(highlight_df['highlight'])[0]
-            except:
-                highlight = {}
+            highlight = {}
 
             for unique_name, cropped_ui_fields in data['cropped_ui_fields'].items():
                 unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
@@ -145,12 +140,25 @@ def save_changes(case_id, data, tenant_id):
 
                 width = cropped_ui_fields['width']
 
-                value = value_changes[display_name]
+                table_name = value_changes[display_name]
+
+                if table_name not in highlight:
+                    query = 'select `id`, `highlight` from %s where `case_id`="%s"'
+
+                    try:
+                        highlight_df = extraction_db.execute(query, params=[table_name, case_id])
+
+                        highlight[table_name] = list(highlight_df['highlight'])[0]
+                    except:
+                        highlight[table_name] = {}
+
+
+                value = fields_w_name[table_name][display_name]
 
                 trained_info[index] = prepare_trained_info(coordinates, display_name, value, width)
                 index += 1
 
-                highlight[display_name] = coordinates
+                highlight[table_name][display_name] = coordinates
 
             value_extract_params = {    
                                         "case_id":case_id,
@@ -166,7 +174,8 @@ def save_changes(case_id, data, tenant_id):
             fields.pop('Case ID', None)
             extraction_db.update(table, update=fields, where={'case_id': case_id})
 
-        extraction_db.update('ocr', update={'highlight':json.dumps(highlight)}, where={'case_id': case_id})
+        for table, highlight_field in highlight.items():
+            extraction_db.update(table, update={'highlight':json.dumps(highlight_field)}, where={'case_id': case_id})
 
         for table, fields in changed_fields_w_name.items():
             audit_data = {
