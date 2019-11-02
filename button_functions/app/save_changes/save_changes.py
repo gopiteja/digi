@@ -126,6 +126,18 @@ def save_changes(case_id, data, tenant_id):
             trained_info = {}
             index = 0
             print(data['cropped_ui_fields'])
+
+            #getting highlight
+
+            query = 'select `id`, `highlight` from ocr where `case_id`="%s"'
+
+            try:
+                highlight_df = extraction_db.execute(query, params=[case_id])
+
+                highlight = list(highlight_df['highlight'])[0]
+            except:
+                highlight = {}
+
             for unique_name, cropped_ui_fields in data['cropped_ui_fields'].items():
                 unique_field_def = fields_def_df.loc[fields_def_df['unique_name'] == unique_name]
                 display_name = list(unique_field_def.display_name)[0]
@@ -138,6 +150,7 @@ def save_changes(case_id, data, tenant_id):
                 trained_info[index] = prepare_trained_info(coordinates, display_name, value, width)
                 index += 1
 
+                highlight[display_name] = coordinates
 
             value_extract_params = {    
                                         "case_id":case_id,
@@ -152,6 +165,8 @@ def save_changes(case_id, data, tenant_id):
         for table, fields in fields_w_name.items():
             fields.pop('Case ID', None)
             extraction_db.update(table, update=fields, where={'case_id': case_id})
+
+        extraction_db.update('ocr', update={'highlight':highlight}, where={'case_id': case_id})
 
         for table, fields in changed_fields_w_name.items():
             audit_data = {
