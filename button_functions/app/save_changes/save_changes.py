@@ -166,7 +166,7 @@ def save_changes(case_id, data, tenant_id):
             fields.pop('Case ID', None)
             extraction_db.update(table, update=fields, where={'case_id': case_id})
 
-        extraction_db.update('ocr', update={'highlight':highlight}, where={'case_id': case_id})
+        extraction_db.update('ocr', update={'highlight':json.dumps(highlight)}, where={'case_id': case_id})
 
         for table, fields in changed_fields_w_name.items():
             audit_data = {
