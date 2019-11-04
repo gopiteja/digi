@@ -15,6 +15,8 @@ import subprocess
 import sys
 import traceback
 
+from pyzbar.pyzbar import decode
+from pdf2image import convert_from_path
 from flask import Flask, request, jsonify, url_for
 from flask_cors import CORS
 from pathlib import Path
@@ -531,6 +533,7 @@ def abbyy_template_detection(data):
                     abbyy_ocr_data = []
                     logging.exception(f'Error parsing XML. Check trace.')
                     pass
+
                 pdfplumber_ocr_data = pdf_data
                 abbyy_word_count = get_count(abbyy_ocr_data)
                 if abbyy_word_count == 0:
@@ -543,6 +546,27 @@ def abbyy_template_detection(data):
                 else:
                     logging.info(f"pdf plumber ocr data is being used")
                     ocr_data = pdfplumber_ocr_data
+
+                pdf_file_image = convert_from_path(file_path)
+
+                size_ocr = len(ocr_data)
+                for idx, image in enumerate(pdf_file_image):
+                    barcode_datas = decode(image)
+                    for barcode_data in barcode_datas:
+                        new_word = {}
+                        new_word['word'] = barcode_data.data
+                        new_word['left'] = barcode_data.left
+                        new_word['right'] = barcode_data.left + barcode_data.width
+                        new_word['top'] = barcode_data.top
+                        new_word['bottom'] = barcode_data.top + barcode_data.height
+                        new_word['width'] = barcode_data
+                        new_word['height'] = barcode_data
+                        new_word['confidence'] = 100
+
+                        try:
+                            ocr_data[idx].append(new_word)
+                        except:
+                            ocr_data.append([new_word])
 
                 ocr_text = ' '.join([word['word'] for page in ocr_data for word in page])
                 query = 'INSERT into `ocr_info` (`case_id`, `ocr_text`, `xml_data`, `ocr_data`) values (%s, %s, %s ,%s)'
