@@ -299,13 +299,13 @@ def algonox_template_detection(case_id, tenant_id, file_path=''):
         return {'template_name': predicted_template, 'probability': -1}
 
 def resize(result,resize_factor):
-    for i in result:
-        i["width"] = int(i["width"] * resize_factor)
-        i["height"] = int(i["height"] * resize_factor)
-        i["top"] = int(i["top"] * resize_factor)
-        i["left"] = int(i["left"] * resize_factor)
-        i["bottom"] = int(i["bottom"] * resize_factor)
-        i["right"] = int(i["right"] * resize_factor)
+
+    result["width"] = int(result["width"] * resize_factor)
+    result["height"] = int(result["height"] * resize_factor)
+    result["top"] = int(result["top"] * resize_factor)
+    result["left"] = int(result["left"] * resize_factor)
+    result["bottom"] = int(result["bottom"] * resize_factor)
+    result["right"] = int(result["right"] * resize_factor)
     return result
 
 # @app.route('/abbyy_detect_template', methods=['POST', 'GET'])
@@ -566,12 +566,12 @@ def abbyy_template_detection(data):
                         new_word = {}
 
                         new_word['word'] = barcode_data.data.decode()
-                        new_word['left'] = resize([barcode_data.rect.left], 676)
-                        new_word['right'] = resize([barcode_data.rect.left + barcode_data.rect.width], 676)
-                        new_word['top'] = resize([barcode_data.rect.top], 676)
-                        new_word['bottom'] = resize([barcode_data.rect.top + barcode_data.rect.height], 676)
-                        new_word['width'] = resize([barcode_data.rect.width], 676)
-                        new_word['height'] = resize([barcode_data.rect.height], 676)
+                        new_word['left'] = resize(barcode_data.rect.left, 676)
+                        new_word['right'] = resize(barcode_data.rect.left + barcode_data.rect.width, 676)
+                        new_word['top'] = resize(barcode_data.rect.top, 676)
+                        new_word['bottom'] = resize(barcode_data.rect.top + barcode_data.rect.height, 676)
+                        new_word['width'] = resize(barcode_data.rect.width, 676)
+                        new_word['height'] = resize(barcode_data.rect.height, 676)
                         new_word['confidence'] = 100
 
                         try:
