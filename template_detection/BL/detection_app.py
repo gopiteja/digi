@@ -566,13 +566,14 @@ def abbyy_template_detection(data):
                         new_word = {}
 
                         new_word['word'] = barcode_data.data.decode()
-                        new_word['left'] = resize(barcode_data.rect.left, 676)
-                        new_word['right'] = resize(barcode_data.rect.left + barcode_data.rect.width, 676)
-                        new_word['top'] = resize(barcode_data.rect.top, 676)
-                        new_word['bottom'] = resize(barcode_data.rect.top + barcode_data.rect.height, 676)
-                        new_word['width'] = resize(barcode_data.rect.width, 676)
-                        new_word['height'] = resize(barcode_data.rect.height, 676)
+                        new_word['left'] = barcode_data.rect.left
+                        new_word['right'] = barcode_data.rect.left + barcode_data.rect.width
+                        new_word['top'] = barcode_data.rect.top
+                        new_word['bottom'] = barcode_data.rect.top + barcode_data.rect.height
+                        new_word['width'] = barcode_data.rect.width
+                        new_word['height'] = barcode_data.rect.height
                         new_word['confidence'] = 100
+                        new_word = resize(new_word, 676)
 
                         try:
                             ocr_data[idx].append(new_word)
