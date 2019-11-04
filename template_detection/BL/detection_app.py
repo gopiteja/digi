@@ -554,7 +554,7 @@ def abbyy_template_detection(data):
                     barcode_datas = decode(image)
                     for barcode_data in barcode_datas:
                         new_word = {}
-                        new_word['word'] = barcode_data.data
+                        new_word['word'] = barcode_data.data.decode()
                         new_word['left'] = barcode_data.rect.left
                         new_word['right'] = barcode_data.rect.left + barcode_data.rect.width
                         new_word['top'] = barcode_data.rect.top
