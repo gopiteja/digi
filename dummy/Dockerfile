@@ -8,7 +8,7 @@ RUN apt-get install -y libsm6 libxext6 libxrender-dev
 RUN ln /usr/bin/python3 /usr/bin/python
 RUN apt-get -y install python3-pip
 RUN ln /usr/bin/pip3 /usr/bin/pip
-sudo apt-get install libzbar0
+RUN apt-get install libzbar0
 RUN apt-get update
 RUN apt-get install -y libmagickwand-dev
 # RUN apt-get install libmagickcore5-extra
