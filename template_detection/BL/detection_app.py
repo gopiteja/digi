@@ -555,12 +555,12 @@ def abbyy_template_detection(data):
                     for barcode_data in barcode_datas:
                         new_word = {}
                         new_word['word'] = barcode_data.data
-                        new_word['left'] = barcode_data.left
-                        new_word['right'] = barcode_data.left + barcode_data.width
-                        new_word['top'] = barcode_data.top
-                        new_word['bottom'] = barcode_data.top + barcode_data.height
-                        new_word['width'] = barcode_data
-                        new_word['height'] = barcode_data
+                        new_word['left'] = barcode_data.rect.left
+                        new_word['right'] = barcode_data.rect.left + barcode_data.rect.width
+                        new_word['top'] = barcode_data.rect.top
+                        new_word['bottom'] = barcode_data.rect.top + barcode_data.rect.height
+                        new_word['width'] = barcode_data.rect.width
+                        new_word['height'] = barcode_data.rect.height
                         new_word['confidence'] = 100
 
                         try:
