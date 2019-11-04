@@ -10,6 +10,7 @@ RUN apt-get -y install python3-pip
 RUN ln /usr/bin/pip3 /usr/bin/pip
 RUN apt-get install -y libzbar0
 RUN apt-get install -y python-poppler
+RUN apt-get install -y poppler-utils
 RUN apt-get update
 RUN apt-get install -y libmagickwand-dev
 # RUN apt-get install libmagickcore5-extra
