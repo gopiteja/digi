@@ -86,7 +86,7 @@ def isTab(child):
         if child.attrib['isTab'] == '1':
             return True
     return False
-def convert_to_json(xml,std_width=676):
+def convert_to_json(xml,std_width=670):
     # load and parse the file
     tree = ET.fromstring(xml)
     # maintain the list
