@@ -52,3 +52,4 @@ opencv-contrib-python-headless
 opencv-python-headless
 Wand
 py_zipkin==0.18.3
+pyzbar
