@@ -547,7 +547,7 @@ def abbyy_template_detection(data):
                     logging.info(f"pdf plumber ocr data is being used")
                     ocr_data = pdfplumber_ocr_data
 
-                pdf_file_image = convert_from_path(file_path)
+                pdf_file_image = convert_from_path('angular/' + file_parent_input + file_name)
 
                 size_ocr = len(ocr_data)
                 for idx, image in enumerate(pdf_file_image):
