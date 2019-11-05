@@ -1208,10 +1208,10 @@ def update_field_dict(config, tenant_id):
                                                                                                  field_type)
                     db.execute(update)
             except:
-                insert = f"INSERT INTO {table_name} (`field_type`, `variation`) VALUES ('{field_type}', {var})"
+                insert = f"INSERT INTO {table_name} (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
                 db.execute(insert)
         else:
-            insert = f"INSERT INTO {table_name} (`field_type`, `variation`) VALUES ('{field_type}', {var})"
+            insert = f"INSERT INTO {table_name} (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
             db.execute(insert)
 
     return "Updated Field Dict"
