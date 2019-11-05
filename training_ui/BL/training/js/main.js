@@ -1374,8 +1374,8 @@ $(document).ready(function () {
             id = crops_dummy[v.page].length;
             crops_dummy[v.page].push(v)
 
-            addFields(id, v.page, k, "fieldsAutoSuggest");
-            box_id = id + "-" + v.page
+            addFields(id, 0, k, "fieldsAutoSuggest");
+            box_id = id + "-" + 0
             // get_Ocr(k.word, box_id)
             text_ = v.word
             $(".inputLabel-" + box_id).val(text_)
@@ -1543,7 +1543,7 @@ $(document).ready(function () {
             count = count + 1;
             predicted_obj = predicted_data[predicted_data.findIndex(x => x.field === forFields[i])];
             pg = predicted_obj.coordinates.length > 0 ? predicted_obj.coordinates[0].page : 0
-            addFields(i, pg, forFields[i], "displayresults", count, predicted_obj)
+            addFields(i, 0, forFields[i], "displayresults", count, predicted_obj)
         }
 
         $('#inv_category_indicator').hide();
