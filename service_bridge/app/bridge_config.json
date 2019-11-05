@@ -75,13 +75,21 @@
     "host": "buttonfunctions",
     "port": "80"
   },
-  "get_ocr_data": {
+  "reset_data": {
     "host": "queueapi",
     "port": "80"
   },
-  "get_blob_data": {
+  "reset_data_cg": {
     "host": "queueapi",
     "port": "80"
+  },
+  "get_upload_files": {
+    "host": "folder_monitor",
+    "port": "5007"
+  },
+  "upload_selected_files": {
+    "host": "folder_monitor",
+    "port": "5007"
   },
   "extract_for_template": {
     "host": "extractionapi",
