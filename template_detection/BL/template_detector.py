@@ -655,13 +655,14 @@ class TemplateDetector():
             # first_text = ''.join(e for e in first_text if e.isalnum()).lower()
 
             found_template = False
+
             if condition == 'or':
                 for unique in unique_fields_list:
-                    if unique in first_text:
+                    if unique and unique in first_text:
                         return template
             elif condition == 'and':
                 for unique in unique_fields_list:
-                    if unique not in first_text:
+                    if unique and unique not in first_text:
                         return ''
                     else:
                         found_template = True
