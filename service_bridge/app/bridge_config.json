@@ -242,5 +242,9 @@
   "get_master_data": {
     "host": "masterupload",
     "port": "80"
+  },
+  "plumb": {
+    "host" : "pdf_plumber_api",
+    "port": "5022"
   }
 }
