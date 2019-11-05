@@ -1200,7 +1200,7 @@ def update_field_dict(config, tenant_id):
 
         if type(check) != bool:
             check = not check.empty
-        
+
         if check:
             try:
                 if value != old_field_dict[field_type]:
@@ -1208,9 +1208,11 @@ def update_field_dict(config, tenant_id):
                     db.execute(update)
             except:
                 insert = f"INSERT INTO `{table_name}` (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
+                logging.debug(insert)
                 db.execute(insert)
         else:
             insert = f"INSERT INTO `{table_name}` (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
+            logging.debug(insert)
             db.execute(insert)
 
     return "Updated Field Dict"
