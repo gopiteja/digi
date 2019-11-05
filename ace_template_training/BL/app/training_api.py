@@ -1194,6 +1194,7 @@ def update_field_dict(config, tenant_id):
 
     for field_type, value in new_fields.items():
         var = json.dumps(value)
+        var = var.replace('%','')
         check_query = "SELECT * FROM {} WHERE `field_type` = '{}'".format(table_name, field_type)
 
         check = db.execute(check_query)
@@ -1322,6 +1323,7 @@ def update_field_neighbour_dict(neighbour_dict, trained_info, tenant_id=None):
 
     for field_type, value in new_fields.items():
         var = json.dumps(value)
+        var = var.replace('%', '')
         check_query = "SELECT * FROM {} WHERE `field` = '{}'".format(table_name, field_type)
 
         check = db.execute(check_query)
