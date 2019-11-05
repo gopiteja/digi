@@ -74,8 +74,8 @@ def get_count(ocr_data):
     count = 0
     for page in ocr_data:
         for word in page:
-            if word['word'].lower() in words_dict.keys():
-                count += 1
+            # if word['word'].lower() in words_dict.keys():
+            count += 1
     return count
 
 
