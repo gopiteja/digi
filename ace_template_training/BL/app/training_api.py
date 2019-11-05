@@ -1200,18 +1200,17 @@ def update_field_dict(config, tenant_id):
 
         if type(check) != bool:
             check = not check.empty
-
+        
         if check:
             try:
                 if value != old_field_dict[field_type]:
-                    update = "UPDATE {} SET `variation` = '{}' WHERE `field_type` = '{}'".format(table_name, var,
-                                                                                                 field_type)
+                    update = f"UPDATE `{table_name}` SET `variation` = '{var}' WHERE `field_type` = '{field_type}'"
                     db.execute(update)
             except:
-                insert = f"INSERT INTO {table_name} (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
+                insert = f"INSERT INTO `{table_name}` (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
                 db.execute(insert)
         else:
-            insert = f"INSERT INTO {table_name} (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
+            insert = f"INSERT INTO `{table_name}` (`field_type`, `variation`) VALUES ('{field_type}', '{var}')"
             db.execute(insert)
 
     return "Updated Field Dict"
