@@ -150,6 +150,7 @@ def save_changes(case_id, data, tenant_id):
                     highlight[table_name] = list(highlight_df['highlight'])[0]
                     logging.debug(f'old_highlight - {highlight}')
                 except:
+                    logging.exception('empty highlight')
                     highlight[table_name] = {}
 
 
