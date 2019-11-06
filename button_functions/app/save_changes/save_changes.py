@@ -142,10 +142,10 @@ def save_changes(case_id, data, tenant_id):
 
                 table_name = value_changes[display_name]
 
-                query = 'select `id`, `highlight` from %s where `case_id`="%s"'
+                query = f'select `id`, `highlight` from `{table_name}` where `case_id`="{case_id}"'
 
                 try:
-                    highlight_df = extraction_db.execute(query, params=[table_name, case_id])
+                    highlight_df = extraction_db.execute(query)
 
                     highlight[table_name] = list(highlight_df['highlight'])[0]
                     logging.debug(f'old_highlight - {highlight}')
