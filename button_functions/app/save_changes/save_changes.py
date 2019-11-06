@@ -142,16 +142,15 @@ def save_changes(case_id, data, tenant_id):
 
                 table_name = value_changes[display_name]
 
-                if table_name not in highlight:
-                    query = 'select `id`, `highlight` from %s where `case_id`="%s"'
+                query = 'select `id`, `highlight` from %s where `case_id`="%s"'
 
-                    try:
-                        highlight_df = extraction_db.execute(query, params=[table_name, case_id])
+                try:
+                    highlight_df = extraction_db.execute(query, params=[table_name, case_id])
 
-                        highlight[table_name] = list(highlight_df['highlight'])[0]
-                        logging.debug(f'old_highlight - {highlight}')
-                    except:
-                        highlight[table_name] = {}
+                    highlight[table_name] = list(highlight_df['highlight'])[0]
+                    logging.debug(f'old_highlight - {highlight}')
+                except:
+                    highlight[table_name] = {}
 
 
                 value = fields_w_name[table_name][display_name]
