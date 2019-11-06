@@ -147,12 +147,11 @@ def save_changes(case_id, data, tenant_id):
                 try:
                     highlight_df = extraction_db.execute(query)
 
-                    highlight[table_name] = list(highlight_df['highlight'])[0]
+                    highlight[table_name] = json.loads(list(highlight_df['highlight'])[0])
                     logging.debug(f'old_highlight - {highlight}')
                 except:
                     logging.exception('empty highlight')
                     highlight[table_name] = {}
-
 
                 value = fields_w_name[table_name][display_name]
 
