@@ -115,6 +115,7 @@ def merge_highlights(box_list, page_number=0):
 
 @zipkin_span(service_name='ace_template_training', span_name='get_highlights')
 def get_highlights(value, ocr_data, scope, page_no):
+    suspicious_tag = False
     try:
         value = [val.lower() for val in value.split()]
     except:
@@ -124,8 +125,10 @@ def get_highlights(value, ocr_data, scope, page_no):
     value_ocr = []
     for word in ocr_data_box:
         if word['word'].lower() in value:
+            if word['confidence'] < 100:
+                suspicious_tag = True
             value_ocr.append(word)
-    return merge_highlights(value_ocr, page_no)
+    return merge_highlights(value_ocr, page_no), suspicious_tag
 
 
 @zipkin_span(service_name='ace_template_training', span_name='get_area_intersection')
@@ -2234,10 +2237,10 @@ def train():
 
             # Add highlight to the dict
             # extracted_column_values['highlight'] = highlight
-            highlight = get_highlights(value, ocr_data, value_scope[0], page_no)
+            highlight, suspicious_tag = get_highlights(value, ocr_data, value_scope[0], page_no)
             extracted_column_values['highlight'][column_name] = highlight
 
-            extracted_column_values[column_name] = value
+            extracted_column_values[column_name] = value + 'suspicious' if suspicious_tag else value
 
         # highlight = {}
         standardized_data = standardize_date(extracted_column_values)
