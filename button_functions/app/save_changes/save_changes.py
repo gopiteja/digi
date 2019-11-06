@@ -149,6 +149,7 @@ def save_changes(case_id, data, tenant_id):
                         highlight_df = extraction_db.execute(query, params=[table_name, case_id])
 
                         highlight[table_name] = list(highlight_df['highlight'])[0]
+                        logging.debug(f'old_highlight - {highlight}')
                     except:
                         highlight[table_name] = {}
 
@@ -174,6 +175,7 @@ def save_changes(case_id, data, tenant_id):
             fields.pop('Case ID', None)
             extraction_db.update(table, update=fields, where={'case_id': case_id})
 
+        logging.debug(f'new_highlight - {highlight}')
         for table, highlight_field in highlight.items():
             extraction_db.update(table, update={'highlight':json.dumps(highlight_field)}, where={'case_id': case_id})
 
