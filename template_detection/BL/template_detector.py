@@ -638,7 +638,7 @@ class TemplateDetector():
             first_text.append(i['word'].encode('utf-8').decode().lower())
 
         first_text = ''.join(first_text)
-        first_text = remove_all_except_al_num(first_text)
+        first_text = remove_all_except_al_num(first_text).replace(' ','')
 
         trained_templates = self.trained_info
 
@@ -648,7 +648,7 @@ class TemplateDetector():
 
             unique_fields_list = []
             for word in unique_fields:
-                unique_fields_list.append(remove_all_except_al_num(word))
+                unique_fields_list.append(remove_all_except_al_num(word).replace(' ',''))
 
             #        for page in sorted_ocr_data:
 
