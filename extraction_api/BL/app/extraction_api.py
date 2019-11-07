@@ -1033,7 +1033,6 @@ def sort_ocr(data):
     for i in range(len(data) - 1):
         data[i]['word'] = data[i]['word'].encode('utf-8').decode()
         data[i]['word'] = data[i]['word'].strip()
-
         data[i + 1]['word'] = data[i + 1]['word'].strip()
         if abs(data[i]['top'] - data[i + 1]['top']) < 6:
             data[i + 1]['top'] = data[i]['top']

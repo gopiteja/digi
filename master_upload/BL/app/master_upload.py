@@ -55,8 +55,8 @@ def upload_master_blob():
     data = request.json
     logging.info(f'Request data: {data}')
     tenant_id = data.pop('tenant_id', None)
-    duplicate_check = data.pop('duplicate_check', False)
-    insert_flag = data.pop('insert_flag', 'overwrite')
+    duplicate_check = data.pop('duplicate_check', True)
+    insert_flag = data.pop('insert_flag', 'append')
         
     try:
         master_table_name = data.pop('master_table_name')
@@ -76,7 +76,7 @@ def upload_master_blob():
     extraction_db = DB(database, tenant_id=tenant_id,**db_config)
     
     try:
-        blob_data = blob_data.replace("data:application/octet-stream;base64,", "")
+        blob_data = blob_data.split(",", 1)[1]
         #Padding
         blob_data += '='*(-len(blob_data)%4)
         file_stream = BytesIO(base64.b64decode(blob_data))
@@ -89,12 +89,30 @@ def upload_master_blob():
     
     if duplicate_check == True and insert_flag == 'append':
         try:
-            data_frame.to_sql(name= 'temp_table', con = extraction_db.engine, if_exists='replace', index= False, method= 'multi')
-            table_insert_query = f'INSERT IGNORE INTO `{master_table_name} SELECT * FROM `temp_table`'
-            result = extraction_db.execute(table_insert_query)
-            if not result:
-                message = f"Something went wrong while executing query {table_insert_query}"
+            master_df = extraction_db.execute_(f"SELECT * FROM `{master_table_name}`")
+            duplicate_check_df = extraction_db.execute_(f"SELECT * FROM `duplicate_check` WHERE `table_name` = '{master_table_name}'")
+            
+            if not duplicate_check_df.empty:
+                columns_string = list(duplicate_check_df['columns'])[0]
+            else:
+                message = f"Duplicate columns not defined in Extraction DB"
                 return jsonify({"flag": False, "message" : message})
+            
+            columns = columns_string.split(",")
+            
+            columns_ = list(data_frame.columns) 
+            columns_.remove('id') #ALL COLUMNS EXCEPT ID 
+            
+            data_frame.drop_duplicates(subset= columns_, keep = 'first', inplace = True)
+            df_all = data_frame.merge(master_df[columns], how = 'left', on= columns, indicator = True)
+            
+            unique_df = df_all[df_all['_merge'] == 'left_only'].drop(columns = ['_merge'])
+            duplicates_df = df_all[df_all['_merge'] == 'both'].drop(columns = ['_merge']) #NEED THIS FOR KARVY
+            
+            df_to_insert = unique_df.drop(columns = ['id'])
+            logging.info(f"Data to be inserted after duplicate check - ", df_to_insert)
+            df_to_insert.to_sql(name= master_table_name, con = extraction_db.engine, if_exists='append', index= False, method= 'multi')
+            
         except:
             traceback.print_exc()
             message = f"Could not append data to {master_table_name}"
@@ -111,7 +129,12 @@ def upload_master_blob():
     
     elif insert_flag == 'overwrite':    
         try:
-            data_frame.to_sql(name= master_table_name, con = extraction_db.engine, if_exists='replace', index= False, method= 'multi')
+            data_frame = data_frame.drop(columns = ['id'])
+            delete_query = f"DELETE FROM `{master_table_name}`"
+            ai_query = f"ALTER TABLE `{master_table_name}` AUTO_INCREMENT = 1"
+            extraction_db.execute(delete_query)
+            extraction_db.execute(ai_query)
+            data_frame.to_sql(name= master_table_name, con = extraction_db.engine, if_exists='append', index= False, method= 'multi')
         except:
             traceback.print_exc()
             message = f"Could not update {master_table_name}"
@@ -125,7 +148,7 @@ def download_master_blob():
     data = request.json
     logging.info(f'Request data: {data}')
     tenant_id = data.pop('tenant_id', None)
-    download_type = data.pop('dowload_type')
+    download_type = data.pop('dowload_type', 'Data')
     
     try:
         master_table_name = data.pop('master_table_name')
@@ -215,17 +238,52 @@ def get_master_data():
         "pagination": pagination
     }
     
+    button_options_data=button_options(extraction_db)
+    if button_options_data['flag']==True:
+        options_data=button_options_data["options_data"]
+    else:
+        message=f"unable to load options data"
+        return jsonify({'flag':False,'message':message})
+    
     if master_table_name:
         to_return = {
             'flag': True,
-            'data': data
+            'data': {
+                'data': data,
+                'options_data':options_data
+                }
             }
     else:        
         to_return = {
             'flag': True,
             'data': {
                 'master_data': tables_list,
-                'data': data
+                'data': data,
+                'options_data':options_data
                 }
             }
     return jsonify(to_return)
+
+def button_options(extraction_db):
+    try:   
+        button_options_query=f"SELECT * FROM `button_options`"
+        button_options_query_df=extraction_db.execute_(button_options_query)
+        button_options_query_df.to_dict(orient='records')
+        for idx, row in button_options_query_df.iterrows():
+            if row['type'] == 'dropdown':
+                button_options_query_df.at[idx, 'options'] = json.loads(row['options'])
+        button_list=[]
+        options_data={}
+        for row in button_options_query_df['button'].unique():
+            button_list=[]
+            button_options_df =button_options_query_df[button_options_query_df['button']==row]
+            for display_name in button_options_df['display_name'].unique():
+                button_option_df=button_options_query_df[button_options_query_df['display_name']==display_name]
+                button_df=button_option_df.to_dict(orient='records')
+                button_list.append({"display_name":display_name,"options":button_df})
+            options_data[row]=button_list
+        return {"flag":True,"options_data":options_data }
+    except:
+        traceback.print_exc()
+        message = f"something went wrong while generating button_options data"
+        return {"flag": False, "message" : message}   

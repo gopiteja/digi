@@ -24,6 +24,23 @@ db_config = {
     'port': os.environ['LOCAL_DB_PORT'],
 }
 
+
+def generate_caseid(tenant_id, db):
+    query = f"SELECT `case_id` FROM `process_queue` where case_id like '%%{tenant_id}%%' ORDER BY `process_queue`.`case_id` DESC LIMIT 1"
+    row = db.execute_(query)
+    
+    try:
+        prev_id = list(row.case_id)[0]
+        _, item_id = prev_id.split('-')
+        new_id = '{0:08d}'.format(int(item_id) + 1)
+    except:
+        new_id = '{0:08d}'.format(1)
+
+    temp = [tenant_id, new_id]
+    new_case_id = '-'.join(temp)
+    print("NEW ID---",new_case_id)
+    return new_case_id
+
 def create_case(case_id, blob_data, tenant_id):
     logging.debug(f"tenant_id received - {tenant_id}")
 
@@ -35,8 +52,11 @@ def create_case(case_id, blob_data, tenant_id):
 
     first_queue = 'case_creation'
 
-    get_queue_name_query = 'SELECT `id`, `name`, `unique_name` FROM `queue_definition` WHERE `id` IN (SELECT `workflow_definition`.`move_to` FROM `queue_definition`, `workflow_definition` WHERE `queue_definition`.`name`=%s AND `workflow_definition`.`queue_id`=`queue_definition`.`id`)'
-    queue = list(db.execute(get_queue_name_query, params=[first_queue]).name)[0]
+    get_queue_name_query = 'SELECT `id`, `name`, `unique_name` FROM `queue_definition` WHERE `id` IN (SELECT `workflow_definition`.`move_to` FROM `queue_definition`, `workflow_definition` WHERE `queue_definition`.`unique_name`=%s AND `workflow_definition`.`queue_id`=`queue_definition`.`id`)'
+    queue = list(db.execute(get_queue_name_query, params=[first_queue]).unique_name)[0]
+
+    if case_id == '':
+        case_id = generate_caseid(tenant_id, db)
 
     process_queue_data = {
             "file_name": case_id+".pdf", "case_id": case_id, "queue": queue
@@ -59,10 +79,14 @@ def create_case(case_id, blob_data, tenant_id):
 
     blob_data = blob_data.replace("data:application/pdf;base64,", "")
 
-    with open('case_creation/ace_' + tenant_id + '/assets/pdf/' + case_id + ".pdf", "wb") as f:
+    final_path = 'case_creation/ace_' + tenant_id + '/assets/pdf/' + case_id + ".pdf"
+
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+
+    with open(final_path, "wb") as f:
         f.write(codecs.decode(blob_data.encode(), "base64"))
 
-    return {'flag': True, 'message': 'Case created successfully'}
+    return {'flag': True, 'message': 'Case created successfully', 'case_id': case_id}
 
 
 def consume(broker_url='broker:9092'):
@@ -111,10 +135,11 @@ def consume(broker_url='broker:9092'):
             logging.info(f'Message: {data}')
 
             try:
-                case_id = data['case_id']
+                case_id = data.get('case_id','')
                 functions = data['functions']
                 tenant_id = data['tenant_id']
-                blob_data = data['functions'][0]['parameters']['fields']['evidence_file_ocr']
+                blob_data = data['functions'][0]['parameters']['fields']['upload_file']
+                consumer.commit()
             except Exception as e:
                 logging.warning(f'Recieved unknown data. [{data}] [{e}]')
                 consumer.commit()
@@ -134,7 +159,6 @@ def consume(broker_url='broker:9092'):
             message_flow = kafka_db.get_all('grouped_message_flow')
             # Get which button (group in kafka table) this function was called from
             group = data['group']
-            case_id = data['case_id']
 
             # Get message group functions
             group_messages = message_flow.loc[message_flow['message_group'] == group]
@@ -143,6 +167,7 @@ def consume(broker_url='broker:9092'):
             first_flow = group_messages.head(1)
             first_topic = first_flow.loc[first_flow['listen_to_topic'] == route]
 
+            if case_id:
             query = 'UPDATE `process_queue` SET `status`=%s, `total_processes`=%s, `case_lock`=1 WHERE `case_id`=%s'
             if not first_topic.empty:
                 if list(first_flow['send_to_topic'])[0] is None:
@@ -163,7 +188,13 @@ def consume(broker_url='broker:9092'):
             # Call the function
             try:
                 logging.debug(f'Calling function `create_case`')
+                query = "select * from process_queue where case_id = %s"
+                entry = queue_db.execute(query, params=[case_id])
+                if entry.empty:
                 result = create_case(case_id, blob_data, tenant_id)
+                else:
+                    consumer.commit()
+                    continue
             except:
                 # Unlock the case.
                 logging.exception(f'Something went wrong while updating changes. Check trace.')
@@ -174,6 +205,7 @@ def consume(broker_url='broker:9092'):
 
             # Check if function was succesfully executed
             if result['flag']:
+                case_id = result['case_id']
                 # If there is only function for the group, unlock case.
                 if not first_topic.empty:
                     if list(first_flow['send_to_topic'])[0] is None:
@@ -194,6 +226,8 @@ def consume(broker_url='broker:9092'):
 
                     if next_topic is not None:
                         logging.debug('Not the last topic of the group.')
+                        data['case_id'] = result['case_id']
+                        data['fields'] = data['functions'][0]['parameters']['fields']
                         produce(next_topic, data)
 
                     # Update the progress count by 1

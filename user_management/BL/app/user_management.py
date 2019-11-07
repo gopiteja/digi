@@ -41,7 +41,7 @@ def get_attribute_value_pairs():
 
 def delete_user(data, group_access_db):
     try:
-        user_id = data['PSID']
+        user_id = data['id']
         user_name = data['username']
     except:
         traceback.print_exc()
@@ -49,7 +49,7 @@ def delete_user(data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        organisation_mapping_query = f"DELETE * FROM `user_organisation_mapping` WHERE `user_id` = (SELECT id FROM active_directory WHERE `PSID` = '{user_id}')" 
+        organisation_mapping_query = f"DELETE FROM `user_organisation_mapping` WHERE `user_id` = '{user_id}'" 
         result = group_access_db.execute(organisation_mapping_query)
         if not result:
             message = f"Something went wrong while deleting the user {user_name} | user_id {user_id} from user_organisation_mapping"
@@ -60,7 +60,7 @@ def delete_user(data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        active_directory_query = f"DELETE FROM `active_directory` WHERE `PSID` = '{user_id}'" 
+        active_directory_query = f"DELETE FROM `active_directory` WHERE `id` = '{user_id}'" 
         result = group_access_db.execute(active_directory_query)
         if not result:
             message = f"Something went wrong while deleting the user {user_name} | user_id {user_id} from active_directory"
@@ -75,7 +75,7 @@ def delete_user(data, group_access_db):
 
 def edit_user(row_data, group_access_db):
     try:
-        user_id = row_data.pop('PSID')
+        user_id = row_data.pop('id')
         user_name = row_data['username']
         attributes = row_data.pop('attributes', {})
     except:
@@ -84,7 +84,7 @@ def edit_user(row_data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        result= group_access_db.update(table='active_directory', update= row_data, where= {'PSID': user_id})
+        result= group_access_db.update(table='active_directory', update= row_data, where= {'id': user_id})
         if not result:
             message = f"Something went wrong while updating the user {user_name} | user_id {user_id} in active directory"
             return {"flag": False, "message" : message}
@@ -94,7 +94,7 @@ def edit_user(row_data, group_access_db):
         return {"flag": False, "message" : message}
     
     try:
-        query = f"SELECT * FROM `active_directory` WHERE `PSID` = '{user_id}'"
+        query = f"SELECT * FROM `active_directory` WHERE `username` = '{user_name}'"
         active_directory_df = group_access_db.execute_(query)
         user_id = list(active_directory_df['id'])[0]
     except:
@@ -990,17 +990,29 @@ def builder_stats():
         return jsonify({"flag": False, "message" : message})    
     
     stats_db = DB('stats', tenant_id=tenant_id,**db_config)
+    group_access_db = DB('group_access', tenant_id=tenant_id, **db_config)
     if flag == 'fetch':
         try:
             query = f"SELECT * FROM `stats_master`"
             stats_master_df = stats_db.execute_(query)
             stats_master_dict = stats_master_df.to_dict(orient= 'records')
-            return jsonify({"flag": True, "data" : stats_master_dict})
+            
+            access_query = f"SELECT * FROM `stats_access"
+            access_df = group_access_db.execute_(access_query)
+
+            group_def_query = f"SELECT * FROM `group_definition`"
+            group_def_df = group_access_db.execute_(group_def_query)
+            groups_dropdown_list = list(group_def_df.id)
+            
+            for idx, row in enumerate(stats_master_dict):
+                stats_master_dict[idx] = {**stats_master_dict[idx], **{'access_groups': list(access_df[access_df['stats_id'] == row['id']].group_id)}}
+
+            return jsonify({"flag": True, "data" : {"data": stats_master_dict, "groups_dropdown_list": groups_dropdown_list}})
         except:
             traceback.print_exc()
             message = f'Something went wrong while fetching stats'
             return jsonify({"flag": False, "message" : message})
-    if flag == 'save':
+    elif flag == 'save':
         try:
             stats_dict = data['data']
         except:
@@ -1008,14 +1020,29 @@ def builder_stats():
             message = "No data received to update"
             return jsonify({"flag": False, "message" : message}) 
         try:
+            delete_query = "DELETE FROM `stats_access`"
+            ai_query = "ALTER TABLE `stats_access` AUTO_INCREMENT=1"
+            group_access_db.execute(delete_query)
+            group_access_db.execute(ai_query)  
             delete_query = "DELETE FROM `stats_master`"
             ai_query = "ALTER TABLE `stats_master` AUTO_INCREMENT=1"
             stats_db.execute(delete_query)
             stats_db.execute(ai_query)    
+            groups_arr = []
+            for idx, row in enumerate(stats_dict):
+                groups_list = stats_dict[idx].pop("access_groups", [])
+                for group_id in groups_list:
+                    groups_arr.append({"group_id" : group_id, "stats_id": row["id"]})
+
             result = stats_db.execute_(generate_multiple_insert_query(stats_dict,'stats_master'))
             if result: 
-                message = f'Updated stats master'
+                result = group_access_db.execute_(generate_multiple_insert_query(groups_arr, "stats_access") )
+                if result:
+                    message = f'Updated stats master and stats_access'
                 return jsonify({"flag": True, "message" : message})
+                else:
+                    message = f"Something went wrong while updating stats access"
+                    return jsonify({"flag": False, "message" : message})
             else:
                 message = f"Something went wrong while updating stats master"
                 return jsonify({"flag": False, "message" : message})

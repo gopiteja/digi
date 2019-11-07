@@ -9,6 +9,5 @@ WORKDIR /app
 # Copy rest of the files
 COPY . /app/
 
-
 # Run yourr_api.py when the container launches
 CMD ["python", "-u", "consumer.py"]

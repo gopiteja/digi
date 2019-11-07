@@ -18,6 +18,7 @@ from itertools import chain, repeat, islice, combinations
 from ace_logger import Logging
   
 from py_zipkin.zipkin import zipkin_span, ZipkinAttrs, create_http_headers_for_new_span
+from py_zipkin.util import generate_random_64bit_string
     
 from app.get_fields_info import get_fields_info
 from app.get_fields_info_utils import sort_ocr
@@ -538,8 +539,30 @@ def get_recon_table_data():
 @app.route('/get_queue', methods=['POST', 'GET'])
 @app.route('/get_queue/<queue_id>', methods=['POST', 'GET'])
 def get_queue(queue_id=None):
-    with zipkin_span(service_name='button_functions', span_name='execute_button_function', 
-            transport_handler=http_transport, port=5007, sample_rate=0.5,) as zipkin_context:
+    try:
+        data = request.json
+        tenant_id = data.get('tenant_id', '')
+    except:
+        tenant_id = None
+    attr = ZipkinAttrs(
+                trace_id=generate_random_64bit_string(),
+                span_id=generate_random_64bit_string(),
+                parent_span_id=None,
+                flags=None,
+                is_sampled=False,
+                tenant_id=tenant_id
+            )
+
+    with zipkin_span(
+            service_name='button_functions',
+            span_name='execute_button_function',
+            zipkin_attrs=attr,
+            transport_handler=http_transport,
+            sample_rate=0.5,
+            port=5007,
+            use_128bit_trace_id=True
+        ):
+
         try:
             rt_time = time()
             data = request.json
@@ -550,8 +573,6 @@ def get_queue(queue_id=None):
             operator = data.get('user', None)
             tenant_id = data.get('tenant_id', '')
             
-            zipkin_context.update_binary_annotations({'Tenant':tenant_id})
-
             try:
                 start_point = data['start'] - 1
                 end_point = data['end']
@@ -631,12 +652,12 @@ def get_queue(queue_id=None):
 
                 return jsonify(response_data)
 
-            elif queue_type == 'snapshot':
-                logging.info(f' > Redirecting to `get_snapshot` route.')
+            # elif queue_type == 'snapshot':
+            #     logging.info(f' > Redirecting to `get_snapshot` route.')
 
-                response_data = get_snapshot(db, {'start': start_point, 'end': end_point}, queue_id, tenant_id)
+            #     response_data = get_snapshot(db, {'start': start_point, 'end': end_point}, queue_id, tenant_id)
 
-                return jsonify(response_data)
+            #     return jsonify(response_data)
             
             elif queue_type == 'recon':
                 logging.info(f' > Redirecting to `/get_recon` route.')
@@ -650,8 +671,13 @@ def get_queue(queue_id=None):
                 return jsonify({'data':response_data, 'flag' : True})
 
             all_st = time()
-            invoice_files_df = db.execute("SELECT * from `process_queue` where `queue`= %s ORDER by `failure_status` desc, `created_date` desc LIMIT %s, %s", params=[queue_uid, start_point, offset])
-            total_files = list(db.execute("SELECT id, COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=[queue_uid])['COUNT(DISTINCT `case_id`)'])[0]
+            logging.debug(f'Queue unique_name is {queue_uid}')
+            if queue_type == 'snapshot':
+                invoice_files_df = db.execute("SELECT * from `process_queue` ORDER by `failure_status` desc, `created_date` desc LIMIT %s, %s", params=[start_point, offset])
+                total_files = list(db.execute("SELECT id, COUNT(DISTINCT `case_id`) FROM `process_queue`")['COUNT(DISTINCT `case_id`)'])[0]
+            else:
+            	invoice_files_df = db.execute("SELECT * from `process_queue` where `queue`= %s ORDER by `failure_status` desc, `created_date` desc LIMIT %s, %s", params=[queue_uid, start_point, offset])
+            	total_files = list(db.execute("SELECT id, COUNT(DISTINCT `case_id`) FROM `process_queue` WHERE `queue`= %s", params=[queue_uid])['COUNT(DISTINCT `case_id`)'])[0]
             logging.debug(f'Loading process queue {time()-all_st}')
             case_ids = list(invoice_files_df['case_id'].unique())
             logging.debug(f'Case IDs: {case_ids}')
@@ -734,23 +760,32 @@ def get_queue(queue_id=None):
                             pass
 
                         try:
+                            logging.debug(f'Document (before): {document}')
                             for row in query_result_list:
                                 row_case_id = row['case_id']
-                                logging.debug(f'Row Case: {row_case_id}')
-                                for col, val in row.items():
                                     doc_case = document['case_id']
+
+                                logging.debug(f'Row Case: {row_case_id}')
                                     logging.debug(f'Doc Case: {doc_case}')
+                                
                                     if row_case_id == doc_case:
                                         logging.debug(f'Case matched!\n')
+                                    for col, val in row.items():
                                         document[col] = val
-                                        continue
+                            logging.debug(f'Document (after try): {document}')
                         except:
+                            logging.exception('Adding extracted value to process queue data failed.')
                             pass
 
                         query = "select column_name from column_definition where date = 1"
                         columns_to_change = list(db.execute_(query).column_name)
 
+                        logging.debug(f'Document (after): {document}')
                         for column in columns_to_change:
+                            if column in document and document[column] is None:
+                                logging.debug(f'`{column}` not in `document`')
+                                continue
+
                             try:
                                 document[column] = (document[column]).strftime(r'%B %d, %Y %I:%M %p')
                             except ValueError:
@@ -1574,6 +1609,29 @@ def get_queues_cache(tenant_id=None):
 def get_queues():
     try:
         data = request.json
+        tenant_id = data.get('tenant_id', '')
+    except:
+        tenant_id = None
+    attr = ZipkinAttrs(
+                trace_id=generate_random_64bit_string(),
+                span_id=generate_random_64bit_string(),
+                parent_span_id=None,
+                flags=None,
+                is_sampled=False,
+                tenant_id=tenant_id
+            )
+            
+    with zipkin_span(
+            service_name='button_functions',
+            span_name='execute_button_function',
+            zipkin_attrs=attr,
+            transport_handler=http_transport,
+            sample_rate=0.5,
+            port=5007,
+            use_128bit_trace_id=True
+            ):
+        try:
+            data = request.json
 
         logging.info(f'Request data: {data}')
         if data is None or not data:

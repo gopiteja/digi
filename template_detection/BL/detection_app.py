@@ -75,7 +75,7 @@ def get_count(ocr_data):
     for page in ocr_data:
         for word in page:
             # if word['word'].lower() in words_dict.keys():
-            count += 1
+                count += 1
     return count
 
 
@@ -542,7 +542,6 @@ def abbyy_template_detection(data):
                     abbyy_ocr_data = []
                     logging.exception(f'Error parsing XML. Check trace.')
                     pass
-
                 pdfplumber_ocr_data = pdf_data
                 abbyy_word_count = get_count(abbyy_ocr_data)
                 if abbyy_word_count == 0:

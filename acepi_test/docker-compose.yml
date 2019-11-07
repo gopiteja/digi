@@ -1,0 +1,26 @@
+version: '3.6'
+
+networks:
+  service_bridge:
+    name: service_bridge
+    driver: overlay
+
+services:
+  acepi:
+    image: acepi
+    container_name: acepi
+    build: .
+    ports:
+      - '5090:5090'
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    networks:
+      service_bridge:
+        aliases:
+          - servicebridge

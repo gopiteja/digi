@@ -1,0 +1,8 @@
+colorama
+Flask
+Flask-Cors
+mysqlclient
+pandas
+pillow
+requests
+sqlalchemy

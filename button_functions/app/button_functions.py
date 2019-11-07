@@ -58,7 +58,7 @@ def execute_button_function():
             transport_handler=http_transport, port=5007, sample_rate=0.5,):
         try:
             group = data['group']
-            case_id = data['case_id']
+            case_id = data.get('case_id', None)
             tenant_id = data['tenant_id']
 
             queue_db = DB('queues', tenant_id=tenant_id, **db_config)
@@ -83,8 +83,9 @@ def execute_button_function():
             except:
                 logging.exception("failed in the changes made in button functions")
 
-            query = 'UPDATE `process_queue` SET `case_lock`=1, `failure_status`=0, `completed_processes`=0, `total_processes`=0, `status`=NULL WHERE `case_id`=%s'
-            queue_db.execute(query, params=[case_id])
+            if case_id:
+                query = 'UPDATE `process_queue` SET `case_lock`=1, `failure_status`=0, `completed_processes`=0, `total_processes`=0, `status`=NULL WHERE `case_id`=%s'
+                queue_db.execute(query, params=[case_id])
             
             produce_with_zipkin(first_route, data)
 

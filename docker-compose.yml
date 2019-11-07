@@ -214,6 +214,56 @@ services:
     #     gelf-address: udp://127.0.0.1:12201
     #     tag: "queue_api_tag"
 
+  email_monitor_api:
+    image: 'email_monitor_api'
+    container_name: 'email_monitor_api'
+    build: ./email_monitor_api/BL
+    volumes:
+      - email_output:/var/www/email_monitor_api/app/Portal
+      - email_images:/var/www/email_monitor_api/app/email
+    networks:
+      service_bridge:
+        aliases:
+          - emailmonitorapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - EMAIL_ADD=${EMAIL_ADD}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_SERVER=${EMAIL_SERVER}
+    depends_on: 
+      - apache_base
+
+  email_trigger_api:
+    image: 'email_trigger_api'
+    container_name: 'email_trigger_api'
+    build: ./email_trigger_api/BL
+    volumes:
+      - email_output:/var/www/email_trigger_api/app/Portal
+      - email_images:/var/www/email_trigger_api/app/email
+    networks:
+      service_bridge:
+        aliases:
+          - emailtriggerapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - EMAIL_ADD=${EMAIL_ADD}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_SERVER=${EMAIL_SERVER}
+    depends_on: 
+      - apache_base
+
   # Button Functions
   button_functions:
     image: 'button_functions'
@@ -382,6 +432,29 @@ services:
       options:
         gelf-address: udp://127.0.0.1:12201
         tag: "training_api_tag"
+
+  # Merge Table
+  merge_table:
+    image: merge_table
+    container_name: merge_table
+    build: ./merge_table
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    networks:
+      service_bridge:
+        aliases:
+          - mergetable
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "merge_table_tag"
 
   # User Auth
   user_auth_api:
@@ -706,6 +779,15 @@ volumes:
       o: 'bind'
       device: ${XAMPP_PATH}/htdocs/ace/assets/pdf
 
+  # Email Images
+  email_images:
+    driver: local
+    name: email_images
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${XAMPP_PATH}/htdocs/ace/assets/email
+
   # Reports API
   reports_folder:
     driver: local
@@ -715,10 +797,20 @@ volumes:
       o: 'bind'
       device: ${REPORT_OUTPUT_PATH}
 
+  email_output:
+    driver: local
+    name: email_output
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${CSV_INPUT_PATH}
+
   excel_templates_input:
     driver: local
     name: excel_templates_input
     driver_opts:
       type: 'none'
       o: 'bind'
-      device: ${EXCEL_TEMPLATES_PATH}
+      device: ${CSV_INPUT_PATH}
+
+

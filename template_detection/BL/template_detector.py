@@ -38,6 +38,7 @@ def load_trained_info(tenant_id):
     query = "SELECT * from trained_info"
     template_db = DB('template_db', tenant_id=tenant_id, **db_config)
     trained_info_data = template_db.execute(query).to_dict(orient='records')
+
     trained_info = {}
     for i in trained_info_data:
         trained_info[i['template_name']] = {
@@ -655,7 +656,6 @@ class TemplateDetector():
             # first_text = ''.join(e for e in first_text if e.isalnum()).lower()
 
             found_template = False
-
             if condition == 'or':
                 for unique in unique_fields_list:
                     if unique and unique in first_text:

@@ -1,0 +1,40 @@
+version: '3'
+
+networks:
+  service_bridge:
+    external: true
+
+services:
+  email_monitor:
+    image: 'email_monitor'
+    container_name: 'email_monitor'
+    build: ./BL
+    ports:
+      - '5005:5005'
+    volumes:
+      - csv_input:/app/PortalTest
+    networks:
+      - service_bridge
+    restart: on-failure
+
+  db:
+    image: mysql:5.7
+    container_name: 'email_db'
+    ports:
+      - '32003:3306'
+    volumes:
+      - ./DL:/docker-entrypoint-initdb.d/:ro
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - service_bridge
+    restart: on-failure
+
+  volumes:
+    csv_input:
+      driver: local
+      name: csv_input
+      driver_opts:
+        type: 'none'
+        o: 'bind'
+        device: 'c//Users/t00004100/Desktop/ashyam/PortalTest'
