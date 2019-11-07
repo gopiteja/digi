@@ -572,7 +572,7 @@ $(document).ready(function () {
                     $(".confirmForce").removeClass('nextToTable')
                     $(".confirmForce").addClass('forceThisTemp')
                     $(".fieldsDisplayTest").append("<div class='clear__'></div>");
-                    hovering2(highlight_list);
+                    // hovering2(highlight_list);
                 }
                 else if ($.type(msg) == 'string') {
                     $.alert('Something went wrong', 'Alert');
