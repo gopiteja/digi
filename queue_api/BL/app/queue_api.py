@@ -763,15 +763,15 @@ def get_queue(queue_id=None):
                             logging.debug(f'Document (before): {document}')
                             for row in query_result_list:
                                 row_case_id = row['case_id']
-                                    doc_case = document['case_id']
+                                doc_case = document['case_id']
 
                                 logging.debug(f'Row Case: {row_case_id}')
-                                    logging.debug(f'Doc Case: {doc_case}')
-                                
-                                    if row_case_id == doc_case:
-                                        logging.debug(f'Case matched!\n')
-                                    for col, val in row.items():
-                                        document[col] = val
+                                logging.debug(f'Doc Case: {doc_case}')
+                            
+                                if row_case_id == doc_case:
+                                    logging.debug(f'Case matched!\n')
+                                for col, val in row.items():
+                                    document[col] = val
                             logging.debug(f'Document (after try): {document}')
                         except:
                             logging.exception('Adding extracted value to process queue data failed.')
@@ -1633,45 +1633,45 @@ def get_queues():
         try:
             data = request.json
 
-        logging.info(f'Request data: {data}')
-        if data is None or not data:
-            message = f'Data recieved is none/empty.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-
-        username = data.pop('username', None)
-        tenant_id = data.pop('tenant_id', None)
-
-        logging.debug('Getting queues')
-
-        # queues = user_queues_get[username]
-        logging.info('User name - {username}')
-        user_queues, user_mesh = get_queues_cache(tenant_id)
-
-        if not username:
-            return jsonify({'flag': False, 'message': 'logout'})
-
-        if not user_queues[username]:
-            message = f'No queues available for role `{username}`.'
-            logging.error(message)
-            return jsonify({'flag': False, 'message': message})
-        
-        if user_mesh:     
-            if not user_mesh[username]:
-                message = f'No apps available for role `{username}`.'
+            logging.info(f'Request data: {data}')
+            if data is None or not data:
+                message = f'Data recieved is none/empty.'
                 logging.error(message)
-        else:
-            message = f'Something went wrong while fetching apps for the tenant_id `{tenant_id}`.'
-            logging.error(message)
-        logging.info('Successfully got queues.')
-        data = {
-            'queues': user_queues[username],
-            'mesh': user_mesh[username]
-            }
-        return jsonify({'flag': True, 'data': data})
-    except Exception:
-        logging.exception('Something went wrong getting queues. Check trace.')
-        return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
+                return jsonify({'flag': False, 'message': message})
+
+            username = data.pop('username', None)
+            tenant_id = data.pop('tenant_id', None)
+
+            logging.debug('Getting queues')
+
+            # queues = user_queues_get[username]
+            logging.info('User name - {username}')
+            user_queues, user_mesh = get_queues_cache(tenant_id)
+
+            if not username:
+                return jsonify({'flag': False, 'message': 'logout'})
+
+            if not user_queues[username]:
+                message = f'No queues available for role `{username}`.'
+                logging.error(message)
+                return jsonify({'flag': False, 'message': message})
+            
+            if user_mesh:     
+                if not user_mesh[username]:
+                    message = f'No apps available for role `{username}`.'
+                    logging.error(message)
+            else:
+                message = f'Something went wrong while fetching apps for the tenant_id `{tenant_id}`.'
+                logging.error(message)
+            logging.info('Successfully got queues.')
+            data = {
+                'queues': user_queues[username],
+                'mesh': user_mesh[username]
+                }
+            return jsonify({'flag': True, 'data': data})
+        except Exception:
+            logging.exception('Something went wrong getting queues. Check trace.')
+            return jsonify({'flag':False, 'message':'System error! Please contact your system administrator.'})
 
 
 def fix_JSON(json_message=None):
