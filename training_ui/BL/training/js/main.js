@@ -91,7 +91,7 @@ $(document).ready(function () {
         $("#edit_new_temp").hide();
     }
     case_id = case_id.split('.')[0];
-    
+
     var stepper = document.querySelector('.stepper');
     var stepperInstace = new MStepper(stepper, {
         // options
@@ -559,6 +559,8 @@ $(document).ready(function () {
                         if (!nullCheck(v)) {
                             v = ""
                         }
+                        v = v.replace(/suspicious/g, '');
+                        
                         tst = '<div class="col-sm-6">'
                         tst += '<div class="formFieldView hovering">'
                         tst += '<label>' + cnt + ")  " + k + '</label>'
