@@ -560,7 +560,6 @@ $(document).ready(function () {
                             v = ""
                         }
                         v = v.replace(/suspicious/g, '');
-                        
                         tst = '<div class="col-sm-6">'
                         tst += '<div class="formFieldView hovering">'
                         tst += '<label>' + cnt + ")  " + k + '</label>'
