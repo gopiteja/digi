@@ -64,6 +64,7 @@ def file_ocr():
         if page_data:
             command.update(page_data)
         command = json.dumps(command)
+        command = json.dumps(command)
         print(command)
         # inp = './Run.sh ' + file_name
         # inp = "/usr/bin/java -classpath '.:bin/.:libs/abbyy.FREngine.jar:libs/mysql-connector-java-8.0.17.jar' com.algonox.abbyy.OCRExtraction " + case_id
