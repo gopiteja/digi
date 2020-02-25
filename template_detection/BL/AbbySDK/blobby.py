@@ -38,7 +38,7 @@ def file_ocr():
         # print(curr_dir)
         file_data = data['file']
         try:
-            page_data = json.loads(data['json'])
+            page_data = json.loads(data['json'].read())
         except:
             page_data = {}
 
