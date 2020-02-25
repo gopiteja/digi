@@ -58,6 +58,7 @@ public class OCRExtraction {
 					}
 				}
 			}catch(Exception e) {
+			    e.printStackTrace();
 				fileName = json;
 			}
 			
