@@ -46,7 +46,7 @@ public class OCRExtraction {
 			List<DocPage> pages = null;
 			try {
 			    //System.out.println("json parser");
-			    System.out.println("*********"+json+"*********");
+// 			    System.out.println("*********"+json+"*********");
 				JSONObject jsonObj = (JSONObject) parser.parse(json);
 				fileName = (String) jsonObj.get("fileName");
 				Object obj = jsonObj.get("pages");
