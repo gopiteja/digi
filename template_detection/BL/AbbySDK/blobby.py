@@ -60,7 +60,7 @@ def file_ocr():
         # inp = "/usr/bin/java -classpath '.:bin/.:libs/abbyy.FREngine.jar:libs/mysql-connector-java-8.0.17.jar' com.algonox.abbyy.OCRExtraction " + case_id
         whole_load = subprocess.check_output(['./Run.sh', file_name]).decode('utf-8').replace('\\r\\n', '')
         # whole_load = ast.literal_eval(whole_load)
-        with open('/home/ubuntu/oasis-main/template_detection/BL/AbbySDK/o_ocr_file.pdf','rb') as f:
+        with open('/home/ubuntu/oasis-main/template_detection/BL/AbbySDK/ocr_file.pdf','rb') as f:
             blob = base64.b64encode(f.read())
 
         return jsonify({'xml_string': whole_load, 'blob': blob.decode()})
