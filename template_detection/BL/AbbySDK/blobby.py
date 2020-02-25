@@ -37,7 +37,10 @@ def file_ocr():
 
         # print(curr_dir)
         file_data = data['file']
-        page_data = data['json']
+        try:
+            page_data = json.loads(data['json'])
+        except:
+            page_data = {}
 
         file_name = os.path.join(curr_dir, 'ocr_file.pdf')
         count = 0
