@@ -37,6 +37,7 @@ def file_ocr():
 
         # print(curr_dir)
         file_data = data['file']
+        page_data = data['json']
 
         file_name = os.path.join(curr_dir, 'ocr_file.pdf')
         count = 0
@@ -56,9 +57,13 @@ def file_ocr():
 
         print(f'{type(file_data)}')
 
+        command = {'fileName': file_name}
+        if page_data:
+            command.update(page_data)
+        command = json.dumps(command)
         # inp = './Run.sh ' + file_name
         # inp = "/usr/bin/java -classpath '.:bin/.:libs/abbyy.FREngine.jar:libs/mysql-connector-java-8.0.17.jar' com.algonox.abbyy.OCRExtraction " + case_id
-        whole_load = subprocess.check_output(['./Run.sh', file_name]).decode('utf-8').replace('\\r\\n', '')
+        whole_load = subprocess.check_output(['./Run.sh', command]).decode('utf-8').replace('\\r\\n', '')
         # whole_load = ast.literal_eval(whole_load)
         with open('/home/ubuntu/oasis-main/template_detection/BL/AbbySDK/ocr_file.pdf','rb') as f:
             blob = base64.b64encode(f.read())
