@@ -45,24 +45,24 @@ public class OCRExtraction {
 			String fileName = null;
 			List<DocPage> pages = null;
 			try {
-			    //System.out.println("json parser");
-// 			    System.out.println("*********"+json+"*********");
 				JSONObject jsonObj = (JSONObject) parser.parse(json);
 				fileName = (String) jsonObj.get("fileName");
 				Object obj = jsonObj.get("pages");
-				
+
 				if (obj != null) {
 					JSONArray array = (JSONArray) obj;
 					pages = new ArrayList<DocPage>();
 					for (int i = 0; i < array.size(); i++) {
-						pages.add(DocPage.parse((JSONObject) array.get(i)));
+						DocPage page = DocPage.parse((JSONObject) array.get(i));
+						if(page!=null) {
+							pages.add(page);
+						}
 					}
 				}
 			}catch(Exception e) {
-			    e.printStackTrace();
 				fileName = json;
 			}
-			
+
 
 			extraction.loadEngine();
 			// Setup FREngine
@@ -70,8 +70,8 @@ public class OCRExtraction {
 			// Process sample document
 			extraction.processDoc(fileName, pages);
 		} catch (Exception e) {
-			System.out.println("ERROR:");
-			e.printStackTrace();
+			//System.out.println("ERROR:");
+			//e.printStackTrace();
 		} finally {
 			// Unload ABBYY FineReader Engine
 			try {
@@ -84,13 +84,13 @@ public class OCRExtraction {
 
 	/*
 	 * private String processImage(String fileName) throws Exception {
-	 * 
+	 *
 	 * InputStream inputStream = null; OutputStream outputStream = null;
-	 * 
+	 *
 	 * IFRDocument ifrDoc = null; String xml = null; try {
-	 * 
+	 *
 	 * // Create document ifrDoc = engine.CreateFRDocument();
-	 * 
+	 *
 	 * IDocumentProcessingParams dpp = engine.CreateDocumentProcessingParams();
 	 * dpp.getPageProcessingParams().getPagePreprocessingParams().
 	 * setCorrectOrientation(true);
@@ -98,7 +98,7 @@ public class OCRExtraction {
 	 * setCorrectInvertedImage(true);
 	 * dpp.getPageProcessingParams().getPagePreprocessingParams()
 	 * .setCorrectShadowsAndHighlights(ThreeStatePropertyValueEnum.TSPV_Yes);
-	 * 
+	 *
 	 * dpp.getPageProcessingParams().getRecognizerParams()
 	 * .SetPredefinedTextLanguage(configProperties.getProperty("abbyy.language"));
 	 * dpp.getPageProcessingParams().getRecognizerParams().
@@ -107,15 +107,15 @@ public class OCRExtraction {
 	 * setEnableAggressiveTextExtraction(true);
 	 * dpp.getPageProcessingParams().getObjectsExtractionParams().
 	 * setDetectTextOnPictures(true);
-	 * 
+	 *
 	 * ifrDoc.AddImageFile(fileName, null, null); ifrDoc.Process(dpp);
-	 * 
+	 *
 	 * IXMLExportParams xmlParams = engine.CreateXMLExportParams();
 	 * xmlParams.setWriteCharAttributes(XMLCharAttributesEnum.XCA_Ascii);
 	 * xmlParams.setWriteParagraphStyles(true); // Save results to pdf using
 	 * 'balanced' scenario Path path = Paths.get(fileName); String outputFile =
 	 * path.getParent() + File.separator + "x_" + path.getFileName();
-	 * 
+	 *
 	 * ifrDoc.Export(outputFile, FileExportFormatEnum.FEF_XML, xmlParams); byte[]
 	 * encoded = Files.readAllBytes(Paths.get(outputFile)); xml = new
 	 * String(encoded, StandardCharsets.UTF_8); } catch (Exception e) {
@@ -136,9 +136,9 @@ public class OCRExtraction {
 
 			IDocumentProcessingParams dpp = engine.CreateDocumentProcessingParams();
 			dpp.getPageProcessingParams().getPagePreprocessingParams().setCorrectOrientation(true);
-			dpp.getPageProcessingParams().getPagePreprocessingParams().setCorrectInvertedImage(true);
-			dpp.getPageProcessingParams().getPagePreprocessingParams()
-					.setCorrectShadowsAndHighlights(ThreeStatePropertyValueEnum.TSPV_Yes);
+			//dpp.getPageProcessingParams().getPagePreprocessingParams().setCorrectInvertedImage(true);
+			//dpp.getPageProcessingParams().getPagePreprocessingParams()
+			//		.setCorrectShadowsAndHighlights(ThreeStatePropertyValueEnum.TSPV_Yes);
 
 			dpp.getPageProcessingParams().getRecognizerParams()
 					.SetPredefinedTextLanguage(configProperties.getProperty("abbyy.language"));
@@ -148,11 +148,13 @@ public class OCRExtraction {
 			ifrDoc.AddImageFile(fileName, prepareImageMode, null);
 			// if pages details are provided
 			if (pages != null) {
+				dpp.getPageProcessingParams().getPagePreprocessingParams().setCorrectOrientation(false);
 				IFRPages imgPages = ifrDoc.getPages();
 				for (int i = 0; i < pages.size(); i++) {
 					if (i < imgPages.getCount()) {
 						IImageDocument imgDoc = ifrDoc.getPages().getElement(pages.get(i).getPageNum())
 								.getImageDocument();
+						//System.out.println(pages.get(i).getRotate());
 						imgDoc.Transform(pages.get(i).getRotate(), false, false);
 					}
 				}
@@ -165,7 +167,7 @@ public class OCRExtraction {
 			//Path path = Paths.get(fileName);
 			//String outputFile = path.getParent() + File.separator + "x_" + path.getFileName();
 			ifrDoc.Export(fileName, FileExportFormatEnum.FEF_PDF, pdfParams);
-			
+
 			IXMLExportParams xmlParams = engine.CreateXMLExportParams();
 			xmlParams.setWriteCharAttributes(XMLCharAttributesEnum.XCA_Ascii);
 			xmlParams.setWriteParagraphStyles(true);
@@ -215,3 +217,4 @@ public class OCRExtraction {
 		// "Default"
 	}
 }
+

@@ -146,6 +146,37 @@ def folder_monitor():
         logging.exception('Something went wrong watching folder. Check trace.')
         return jsonify({'flag': False, 'message':'System error! Please contact your system administrator.'})
 
+@app.route("/get_upload_files", methods = ["GET", "POST"])
+def get_upload_files():
+    try:
+        print('Hit. Getting files ')
+        upload_files = os.listdir('/app/upload/digi')
+        print('Upload files are ', upload_files)
+        return jsonify({'data':{'filename':list(upload_files)}})
+    except Exception as e:
+        print('Error getting upload files ', e)
+
+
+@app.route("/upload_selected_files", methods = ["GET", "POST"])
+def upload_selected_files():
+    print("REUQEST IS ",request.json)
+    print('reuest is ', type(request.json))
+    upload_files = request.json
+    upload_files = upload_files['selected_files']
+    print('upload files are ', upload_files)
+    for up_file in upload_files:
+        try:
+            old_path = '/app/upload/digi/' + up_file
+            new_path = '/app/input/digi/' + up_file
+            print('uploading ', up_file)
+            shutil.copyfile(old_path, new_path)
+        except Exception as e:
+            print('Error uploading files ', e)
+            return jsonify({"message":"Error uploading files", "flag":False})
+    return jsonify({"message":"Uploaded Successfully", "flag":True})
+        
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -1,5 +1,6 @@
 import Lib
 import pandas as pd
+import re
 
 # comment below two for local testing
 from ace_logger import Logging
@@ -34,6 +35,8 @@ def evaluate_static(self, function, parameters):
         return self.doCount(parameters)
     if function == 'Contains':
         return self.doContains(parameters)
+    if function == 'SplitCurrency':
+        return self.doSplitCurrency(parameters)
 
 @register_method
 def doGetLength(self, parameters):
@@ -54,6 +57,67 @@ def doGetLength(self, parameters):
         logging.error(f"giving the defalut lenght 0")
         value = 0
     return value
+
+@register_method
+def doSplitCurrency(self,parameters):
+    """Return the required index after spliting
+    eg:
+        'parameters': {
+            'value_to_split':{'source':'input_config', 'table': 'ocr', 'column': 'Total Amount'},
+            'pattern': ' ',
+            'table_to_assign':'ocr',
+            'amount_column': 'Total Amount',
+            'currency_column':'Currency'
+            }
+    """
+    logging.info(f"parameters got are {parameters}")
+    value_to_split = self.get_param_value(parameters['value_to_split'])
+    pattern = parameters['pattern']
+    logging.info(f"pattern  {pattern}")
+    logging.info(f"pattern type {type(pattern)}")
+    table_to_assign = parameters['table_to_assign']
+    logging.info(f"table_to_assign  {table_to_assign}")
+    amount_column = parameters['amount_column']
+    logging.info(f"amount_column  {amount_column}")
+    currency_column = parameters['currency_column']
+    logging.info(f"currency_column  {currency_column}")
+    
+    value_to_split = value_to_split.replace(" ","").replace("suspicious","")
+    logging.info(f"value_to_split  {value_to_split}")
+    try:
+        logging.info(f"Extracting amount")
+        amount = re.findall(pattern,value_to_split)
+        logging.info(f"amount_before_removing  {amount}")
+        amount = [i for i in amount if i][0]
+        logging.info(f"amount  {amount}")
+        currency = value_to_split.replace(amount,"")
+        logging.info(f"currency  {currency}")
+
+        
+    except Exception as e:
+        logging.error(e)
+        logging.error("Cannot find regex match")
+
+    try:
+        logging.info(f"Updated the data source with the values {table_to_assign} {amount_column} {currency_column}\n ")
+        self.data_source[table_to_assign][amount_column] = amount
+        self.data_source[table_to_assign][currency_column] = currency
+
+    except Exception as e:
+        logging.error(e)
+        logging.error("Cannot assign amount to table")
+
+    try:
+        if table_to_assign not in self.changed_fields:
+            self.changed_fields[table_to_assign] = {}
+        self.changed_fields[table_to_assign][amount_column] = amount
+        self.changed_fields[table_to_assign][currency_column] = currency
+        logging.info(f"updated the changed fields\n changed_fields are {self.changed_fields}")
+        return True
+    except Exception as e:
+        logging.error(f"error in assigning and updating the fields")
+        logging.error(e)
+    return False
 
 @register_method
 def doGetRange(self, parameters):

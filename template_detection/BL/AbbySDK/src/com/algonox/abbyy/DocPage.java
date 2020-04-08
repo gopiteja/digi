@@ -27,19 +27,23 @@ public class DocPage {
 	}
 
 	public static DocPage parse(JSONObject json) {
-		DocPage docPage = new DocPage();
+		DocPage docPage = null;
 		int rotate = ((Long)json.get("rotate")).intValue();
-		if(rotate==90) {
-			docPage.setRotate(RotationTypeEnum.RT_Clockwise);
-		}else if(rotate==-90) {
-			docPage.setRotate(RotationTypeEnum.RT_Counterclockwise);
-		}
-		else if(rotate==180) {
-			docPage.setRotate(RotationTypeEnum.RT_Upsidedown);
+		if (rotate>0) {
+			docPage = new DocPage();
+			if(rotate==90) {
+				docPage.setRotate(RotationTypeEnum.RT_Clockwise);
+			}else if(rotate==-90) {
+				docPage.setRotate(RotationTypeEnum.RT_Counterclockwise);
+			}
+			else if(rotate==180) {
+				docPage.setRotate(RotationTypeEnum.RT_Upsidedown);
+			}
+			docPage.setPageNum(((Long)json.get("pageNum")).intValue());
 		}
 		
-		docPage.setPageNum(((Long)json.get("pageNum")).intValue());
 		return docPage;
 
 	}
 }
+

@@ -67,6 +67,26 @@ class DB(object):
         except:
             raise Exception('Something went wrong while connecting. Check trace.')
 
+
+    def execute_2(self, query, **kwargs):
+        """
+        Executes an SQL query.
+
+        Args:
+            query (str): The query that needs to be executed.
+            params (list/tuple/dict): List of parameters to pass to in the query.
+
+        Returns:
+            (DataFrame) A pandas dataframe containing the data from the executed
+            query. (None if an error occurs)
+        """
+        
+        data = None
+        self.engine.execute(query, **kwargs)
+
+        return
+
+
     def execute(self, query, **kwargs):
         """
         Executes an SQL query.
@@ -79,8 +99,8 @@ class DB(object):
             (DataFrame) A pandas dataframe containing the data from the executed
             query. (None if an error occurs)
         """
+        
         data = None
-
         try:
             logging.debug(f'Query: {query}')
             data = pd.read_sql(query, self.engine, index_col='id', **kwargs)

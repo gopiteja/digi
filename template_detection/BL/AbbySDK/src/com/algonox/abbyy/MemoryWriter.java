@@ -20,7 +20,7 @@ public class MemoryWriter implements IFileWriter{
 			writer.write( data, 0, data.length);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 	

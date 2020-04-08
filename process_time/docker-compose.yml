@@ -1,0 +1,683 @@
+version: '3.6'
+
+networks:
+  service_bridge:
+    name: service_bridge
+    driver: overlay
+
+services:
+  # Service Bridge
+  service_bridge:
+    image: service_bridge
+    container_name: service_bridge
+    build: ./service_bridge
+    ports:
+      - '5002:80'
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    networks:
+      service_bridge:
+        aliases:
+          - servicebridge
+    depends_on:
+      - apache_base
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:12201
+        tag: "service_bridge_tag"
+  
+  extraction_api:
+    image: 'extraction_api'
+    container_name: 'extraction_api'
+    build:
+      context: ./extraction_api/BL
+      dockerfile: api.Dockerfile
+    networks:
+      service_bridge:
+        aliases:
+          - extractionapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    volumes:
+      - file_output:/app/invoice_files
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "table_merger_tag"
+
+  # To test kafka
+  producer:
+    image: 'producer'
+    container_name: 'producer'
+    build: ./kafka/producer
+    ports:
+      - '6969:6969'
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - broker
+
+  # To test kafka
+  consumer:
+    image: 'consumer'
+    container_name: 'consumer'
+    build: ./kafka/consumer
+    ports:
+      - '6968:6968'
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - broker
+  
+  # Table Extraction
+  table_api:
+    image: 'table_api'
+    container_name: 'table_api'
+    build:
+      context: ./table_api/BL
+      dockerfile: api.Dockerfile
+    networks:
+      service_bridge:
+        aliases:
+          - tableapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    volumes:
+      - file_output:/var/www/table_api/app/invoice_files
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "taple_api_tag"
+
+  # Reports
+  reports_api:
+    image: reports_api
+    container_name: reports_api
+    build: ./reports_api/BL
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    networks:
+      service_bridge:
+        aliases:
+          - reportsapi
+    depends_on:
+      - apache_base
+      - service_bridge
+    volumes:
+      - reports_folder:/var/www/reports_api/reports
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "reports_tag"
+
+  # Stats
+  stats:
+    image: stats
+    container_name: stats
+    build: ./stats/BL
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    networks:
+      service_bridge:
+        aliases:
+          - servicebridge
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "stats_tag"
+
+  # Queues
+  queue_api:
+    image: 'queue_api'
+    container_name: 'queue_api'
+    build: ./queue_api/BL
+    networks:
+      service_bridge:
+        aliases:
+          - queueapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "queue_api_tag"
+
+  # Button Functions
+  button_functions:
+    image: 'button_functions'
+    container_name: 'button_functions'
+    build: ./button_functions
+    networks:
+      service_bridge:
+        aliases:
+          - buttonfunctions
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "queue_api_tag"
+
+  # Database Ingestion
+  database_ingestion:
+    image: 'database_ingestion'
+    container_name: 'database_ingestion'
+    build: ./database_ingestion
+    networks:
+      service_bridge:
+        aliases:
+          - databaseingestion
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "queue_api_tag"
+
+  # Database Ingestion
+  recon_spark:
+    image: 'recon_spark'
+    container_name: 'recon_spark'
+    build: ./recon/BL
+    networks:
+      service_bridge:
+        aliases:
+          - reconspark
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+    
+  # Clustering
+  clustering:
+    image: 'clustering'
+    container_name: 'clustering'
+    build: ./template_clustering/BL
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "clustering_tag"
+      
+  # Folder Monitor
+  folder_monitor:
+    image: 'folder_monitor'
+    container_name: 'folder_monitor'
+    build: ./folder_monitoring_api/BL
+    volumes:
+      - file_input:/app/input
+      - file_output:/app/output
+      - upload_input:/app/upload
+      - angular_images:/app/angular
+    networks:
+      service_bridge:
+        aliases:
+          - foldermonitor
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+
+  abbyy_database:
+    image: 'abbyy_database'
+    container_name: 'abbyy_database'
+    build: ./abbyy_database/BL
+    networks:
+      service_bridge:
+        aliases:
+          - abbyydatabase
+    restart: on-failure:3
+    depends_on:
+      - apache_base
+  # logging:
+  #   driver: gelf
+  #   options:
+  #     gelf-address: udp://127.0.0.1:12201
+  #     tag: "abbyy_database_tag"
+
+  # ACE Template Training
+  training_api:
+    image: 'training_api'
+    container_name: 'training_api'
+    build: ./ace_template_training/BL
+    networks:
+      service_bridge:
+        aliases:
+          - trainingapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+      - MODE=${MODE}
+    volumes:
+      - file_output:/var/www/training_api/app/files
+    depends_on:
+      - apache_base
+      - service_bridge
+      - kibana
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:12201
+        tag: "training_api_tag"
+
+  # User Auth
+  user_auth_api:
+    image: 'user_auth_api'
+    container_name: 'user_auth_api'
+    build: ./user_auth_api/BL
+    networks:
+      service_bridge:
+        aliases:
+          - userauthapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "user_auth_tag"
+
+  # PDF Plumber
+  pdf_plumber_api:
+    image: 'pdf_plumber_api'
+    container_name: 'pdf_plumber_api'
+    build: ./pdf_plumber_api/BL
+    networks:
+      service_bridge:
+        aliases:
+          - pdfplumberapi
+    restart: on-failure:3
+    environment:
+      - HOST_IP=${HOST_IP}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - LOCAL_DB_PASSWORD=${LOCAL_DB_PASSWORD}
+      - LOCAL_DB_USER=${LOCAL_DB_USER}
+      - LOCAL_DB_PORT=${LOCAL_DB_PORT}
+    volumes:
+      - file_output:/app/invoice_files
+    depends_on:
+      - apache_base
+      - service_bridge
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "pdf_plumber_tag"
+
+  # Training UI
+  training_ui:
+    image: 'httpd:2.4'
+    container_name: 'training_ui'
+    volumes:
+      - ui_files:/usr/local/apache2/htdocs/training/
+      - ui_files_decision_tree:/usr/local/apache2/htdocs/decision/
+      - file_output:/usr/local/apache2/htdocs/training/images/invoices/
+    ports:
+      - '5021:80'
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    # logging:
+    #   driver: gelf
+    #   options:
+    #     gelf-address: udp://127.0.0.1:12201
+    #     tag: "training_ui_tag"
+
+  # Apache Base
+  apache_base:
+    image: apache_base
+    container_name: apache_base
+    build: ./dummy
+    restart: on-failure:3
+    networks:
+      - service_bridge
+
+  # Kafka
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    container_name: 'zookeeper'
+    networks:
+      - service_bridge
+    ports:
+      - '2181:2181'
+    restart: on-failure:3
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  broker:
+    image: 'broker'
+    container_name: 'broker'
+    build: ./kafka
+    networks:
+      - service_bridge
+    restart: on-failure:3
+    ports:
+      - '9092:9092'
+      - '7071:7071'
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_BROKER_ID=1
+      - KAFKA_OPTS=-javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafdrop:
+    container_name: kafdrop
+    image: obsidiandynamics/kafdrop
+    restart: on-failure:3
+    ports:
+      - "9000:9000"
+    networks:
+      - service_bridge
+    environment:
+      KAFKA_BROKERCONNECT: "broker:9092"
+      JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication"
+
+  prometheus:
+    container_name: prometheus
+    networks:
+      - service_bridge
+    image: prom/prometheus
+    ports:
+      - 9090:9090/tcp
+    volumes:
+      - ./kafka/prometheus:/etc/prometheus
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - service_bridge
+    # volumes:
+    #   - /var/lib/grafana:/var/lib/grafana
+
+  # ELK Stack
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:7.0.0
+    ports:
+      - "9201:9200"
+    networks:
+      - service_bridge
+    volumes:
+      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    restart: on-failure:3
+  
+  logstash:
+    container_name: logstash
+    image: logstash:7.0.0
+    ports:
+      - "127.0.0.1:12201:12201/udp"
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    command: logstash -f /usr/share/logstash/pipeline/ --config.reload.automatic
+    environment:
+      XPACK.MONITORING.ENABLED: "true"
+    links:
+      - elasticsearch:elasticsearch
+    networks:
+      - service_bridge
+    restart: on-failure:3    
+
+  kibana:
+    container_name: kibana
+    image: kibana:7.0.0
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      XPACK_SECURITY_ENABLED: "false"
+    links:
+      - "elasticsearch"
+    depends_on:
+      - elasticsearch
+      - logstash
+    ports:
+      - "5601:5601"
+    networks:
+      - service_bridge
+    restart: on-failure:3
+
+  # Zipkin related
+  storage:
+    image: openzipkin/zipkin-mysql
+    container_name: mysql
+    networks:
+      - service_bridge
+
+  # The zipkin process services the UI, and also exposes a POST endpoint that
+  # instrumentation can send trace data to. Scribe is enabled by default.
+  # Environment settings are defined here https://github.com/openzipkin/zipkin/tree/1.19.0/zipkin-server#environment-variables
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    networks:
+      - service_bridge
+    environment:
+      - STORAGE_TYPE=mysql
+      - MYSQL_HOST=mysql
+      - KAFKA_BOOTSTRAP_SERVERS=broker:9092
+    ports:
+      - 9410:9410
+      - 9411:9411
+    depends_on:
+      - storage
+      - dependencies
+      - service_bridge
+
+  # Adds a cron to process spans since midnight every hour, and all spans each day
+  # This data is served by http://192.168.99.100:8080/dependency
+  # For more details, see https://github.com/openzipkin/docker-zipkin-dependencies
+  dependencies:
+    image: openzipkin/zipkin-dependencies
+    container_name: dependencies
+    entrypoint: crond -f
+    networks:
+      - service_bridge
+    environment:
+      - STORAGE_TYPE=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=zipkin
+      - MYSQL_PASS=zipkin
+    depends_on:
+      - storage
+
+volumes:
+  # Folder Monitor
+  file_input:
+    driver: local
+    name: file_input
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${INPUT_PATH}
+
+  file_output:
+    driver: local
+    name: file_output
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${OUTPUT_PATH} 
+  upload_input:
+    driver: local
+    name: upload_input
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${UPLOAD_PATH}
+  # Training UI
+  ui_files:
+    driver: local
+    name: ui_files
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${PWD}/training_ui/BL/training
+
+   # Training UI
+  ui_files_decision_tree:
+    driver: local
+    name: ui_files_decision_tree
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${PWD}/training_ui/BL/decision
+
+  # Angular Images
+  angular_images:
+    driver: local
+    name: angular_images
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${XAMPP_PATH}/htdocs/ace/assets/pdf
+
+  # Reports API
+  reports_folder:
+    driver: local
+    name: reports_folder
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ${REPORT_OUTPUT_PATH}
